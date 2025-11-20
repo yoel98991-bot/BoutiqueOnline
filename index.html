@@ -196,6 +196,18 @@
         
     </div>
 
+      <div id="qr-modal" onclick="if(event.target === this) closeQRModal()">
+    <div class="qr-card">
+        <i class="fas fa-times" onclick="closeQRModal()" style="position: absolute; top: 15px; right: 20px; font-size: 1.5rem; color: #94a3b8; cursor: pointer;"></i>
+        <h3 style="margin: 0; color: var(--accent);">Escanea para Pagar</h3>
+        <p style="color:#64748b; font-size:0.9rem; margin-top:5px;">Pago Móvil / Transferencia</p>
+        
+        <img id="modal-qr-img" src="" class="qr-full-img">
+        
+        <button onclick="closeQRModal()" class="btn-add" style="margin-top:20px;">Cerrar</button>
+    </div>
+</div>
+
     <script>
         const SUPABASE_URL = 'https://cirrapytmbnjlhxunkaq.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnJhcHl0bWJuamxoeHVua2FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NzAyMDAsImV4cCI6MjA3ODU0NjIwMH0.OtJiLGj1EvhPICFaA9ruL02Z9kSQ2jT0t3Smqph81C4';
@@ -303,31 +315,49 @@
         }
 
         function renderPaymentInfo() {
-            if(!storePaymentInfo || !storePaymentInfo.banco_numero) return; 
+    if(!storePaymentInfo || !storePaymentInfo.banco_numero) return; 
 
-            const container = document.getElementById('payment-details');
-            const content = document.getElementById('pay-data-content');
-            
-            // --- FIX: Mostrar siempre si hay datos ---
-            container.style.display = 'block'; 
-            
-            content.innerHTML = `
-                <div class="payment-row"><span class="payment-label">Banco:</span> <span>${storePaymentInfo.banco_nombre || ''}</span></div>
-                <div class="payment-row"><span class="payment-label">Titular:</span> <span>${storePaymentInfo.banco_titular || ''}</span></div>
-                <div class="payment-row"><span class="payment-label">C.I./RIF:</span> <span>${storePaymentInfo.banco_ci || ''}</span></div>
-                <div class="payment-row"><span class="payment-label">Tipo:</span> <span>${storePaymentInfo.banco_tipo || ''}</span></div>
-                <div style="margin-top:5px;">
-                    <span class="payment-label">Cuenta / Teléfono:</span><br>
-                    <span class="payment-val">${storePaymentInfo.banco_numero}</span>
-                    <i class="fas fa-copy" onclick="navigator.clipboard.writeText('${storePaymentInfo.banco_numero}'); alert('Copiado!')" style="cursor:pointer; color:var(--accent); margin-left:5px;"></i>
-                </div>
-            `;
+    const container = document.getElementById('payment-details');
+    const content = document.getElementById('pay-data-content');
+    const qrContainer = document.getElementById('pay-qr-container');
+    
+    container.style.display = 'block'; 
+    
+    // Renderizamos los datos de texto
+    content.innerHTML = `
+        <div class="payment-row"><span class="payment-label">Banco:</span> <span>${storePaymentInfo.banco_nombre || ''}</span></div>
+        <div class="payment-row"><span class="payment-label">Titular:</span> <span>${storePaymentInfo.banco_titular || ''}</span></div>
+        <div class="payment-row"><span class="payment-label">C.I./RIF:</span> <span>${storePaymentInfo.banco_ci || ''}</span></div>
+        <div class="payment-row"><span class="payment-label">Tipo:</span> <span>${storePaymentInfo.banco_tipo || ''}</span></div>
+        <div style="margin-top:5px;">
+            <span class="payment-label">Cuenta / Teléfono:</span><br>
+            <span class="payment-val">${storePaymentInfo.banco_numero}</span>
+            <i class="fas fa-copy" onclick="navigator.clipboard.writeText('${storePaymentInfo.banco_numero}'); alert('Copiado!')" style="cursor:pointer; color:var(--accent); margin-left:5px;"></i>
+        </div>
+    `;
 
-            if(storePaymentInfo.qr_imagen_url) {
-                document.getElementById('pay-qr-container').style.display = 'block';
-                document.getElementById('pay-qr-img').src = storePaymentInfo.qr_imagen_url;
-            }
-        }
+    // LOGICA NUEVA: BOTÓN EN LUGAR DE IMAGEN DIRECTA
+    if(storePaymentInfo.qr_imagen_url) {
+        qrContainer.style.display = 'block';
+        qrContainer.innerHTML = `
+            <button type="button" class="btn-open-qr" onclick="openQRModal('${storePaymentInfo.qr_imagen_url}')">
+                <i class="fas fa-qrcode"></i> Pagar por QR
+            </button>
+        `;
+    } else {
+        qrContainer.style.display = 'none';
+    }
+}
+
+// --- FUNCIONES PARA EL MODAL ---
+function openQRModal(url) {
+    document.getElementById('modal-qr-img').src = url;
+    document.getElementById('qr-modal').classList.add('open');
+}
+
+function closeQRModal() {
+    document.getElementById('qr-modal').classList.remove('open');
+}
 
         // --- LOGICA CARRITO & DELIVERY ---
         
@@ -534,16 +564,6 @@
         function toggleChat() { document.getElementById('chat-box').classList.toggle('open'); scrollToBottom(); }
         function scrollToBottom() { const d = document.getElementById('chat-msgs'); d.scrollTop = d.scrollHeight; }
     </script>
-    <div id="qr-modal" onclick="if(event.target === this) closeQRModal()">
-    <div class="qr-card">
-        <i class="fas fa-times" onclick="closeQRModal()" style="position: absolute; top: 15px; right: 20px; font-size: 1.5rem; color: #94a3b8; cursor: pointer;"></i>
-        <h3 style="margin: 0; color: var(--accent);">Escanea para Pagar</h3>
-        <p style="color:#64748b; font-size:0.9rem; margin-top:5px;">Pago Móvil / Transferencia</p>
-        
-        <img id="modal-qr-img" src="" class="qr-full-img">
-        
-        <button onclick="closeQRModal()" class="btn-add" style="margin-top:20px;">Cerrar</button>
-    </div>
-</div>
+  
 </body>
 </html>
