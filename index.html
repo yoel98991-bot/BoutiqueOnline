@@ -61,17 +61,13 @@
         .btn-checkout { width: 100%; padding: 15px; background: var(--text-main); color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; margin-top: 15px; }
         .btn-geo { background: #eff6ff; color: var(--accent); border: 1px dashed var(--accent); padding: 10px; width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px; }
 
-        /* --- NUEVO: MODAL DE PAGO (Overlay completo) --- */
-        #payment-modal { position: fixed; top:0; left:0; width:100%; height:100%; background: white; z-index: 200; display: none; flex-direction: column; padding: 20px; overflow-y: auto; }
-        #payment-modal.active { display: flex; animation: fadeIn 0.3s; }
-        .payment-header { text-align: center; margin-bottom: 20px; }
-        .payment-card { background: #f0f9ff; border: 2px dashed #2563eb; border-radius: 16px; padding: 20px; text-align: center; margin-bottom: 20px; }
-        .data-row { display: flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 5px; font-size: 0.9rem; }
-        .data-val { font-weight: bold; font-family: monospace; font-size: 1.1rem; color: #1e293b; }
-        .copy-btn { color: var(--accent); cursor: pointer; margin-left: 8px; }
+        /* ESTILOS NUEVOS PARA PAGO */
+        .payment-info-card { background: #f0f9ff; border: 1px dashed #2563eb; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px; font-size: 0.9rem; display: none; /* Oculto por defecto */ }
+        .payment-row { display: flex; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 5px; }
+        .payment-label { font-weight: 600; color: #475569; }
+        .payment-val { font-family: monospace; font-size: 1rem; color: #1e293b; font-weight: bold; }
 
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -103,6 +99,7 @@
     <div class="chat-btn" onclick="toggleChat()">
         <i class="fas fa-comment-dots"></i>
     </div>
+
     <div class="chat-widget" id="chat-box">
         <div class="chat-header">
             <span>Atención al Cliente</span>
@@ -146,32 +143,25 @@
                 </div>
             </div>
 
+            <div id="payment-details" class="payment-info-card">
+                <h3 style="margin-top:0; font-size:1rem; color:#2563eb; margin-bottom:10px;">
+                    <i class="fas fa-wallet"></i> Datos para el Pago
+                </h3>
+                
+                <div id="pay-data-content"></div>
+                
+                <div id="pay-qr-container" style="text-align:center; margin-top:10px; display:none;">
+                    <p style="font-size:0.8rem; margin-bottom:5px;">Escanea para pagar:</p>
+                    <img id="pay-qr-img" src="" style="max-width:120px; border-radius:8px; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                </div>
+            </div>
+
             <div style="margin-bottom:15px; display:flex; justify-content:space-between; font-weight:bold; font-size:1.1rem;">
                 <span>Total:</span>
                 <span id="cart-final-total">$0.00</span>
             </div>
-            <button class="btn-checkout" onclick="handleCheckoutClick()">Confirmar Pedido</button>
+            <button class="btn-checkout" onclick="checkout()">Confirmar Pedido</button>
         </div>
-    </div>
-
-    <div id="payment-modal">
-        <div style="flex:1;">
-            <div class="payment-header">
-                <i class="fas fa-wallet" style="font-size: 3rem; color: var(--accent); margin-bottom: 10px;"></i>
-                <h2>Realizar Pago</h2>
-                <p style="color:#64748b;">Envía el pago a los siguientes datos para procesar tu delivery.</p>
-            </div>
-
-            <div class="payment-card" id="payment-data-container">
-                </div>
-        </div>
-        
-        <button class="btn-checkout" style="background: #10b981;" onclick="finalSubmitOrder()">
-            <i class="fas fa-check-circle"></i> Ya pagué, Enviar Pedido
-        </button>
-        <button onclick="closePaymentModal()" style="background:none; border:none; color:#64748b; padding:15px; width:100%; margin-top:10px; font-weight:600;">
-            Cancelar / Volver
-        </button>
     </div>
 
     <script>
@@ -187,7 +177,6 @@
         let chatChannel = null;
         let cart = [];
         let storePaymentInfo = null;
-        let productsCache = []; // --- NUEVO: Guardamos productos aquí para no romper el HTML ---
 
         // --- INIT ---
         if (session.storeId && session.clientId) {
@@ -244,29 +233,27 @@
                 .eq('creado_por', session.storeId)
                 .order('id', { ascending: false });
 
-            // GUARDAMOS EN CACHE GLOBAL
-            productsCache = data || [];
-
             const grid = document.getElementById('products-grid');
             
             if(!data || data.length === 0) { 
                 grid.innerHTML = '<p style="grid-column:1/-1; text-align:center;">Esta tienda aún no tiene productos.</p>'; 
             } else {
-                // --- CORRECCIÓN CRÍTICA: Pasamos solo el ID al onclick ---
-                grid.innerHTML = data.map(p => `
+                grid.innerHTML = data.map(p => {
+                    const pStr = JSON.stringify(p).replace(/"/g, '"'); 
+                    return `
                     <div class="card">
                         <img src="${p.imagen_url || 'https://via.placeholder.com/300'}" class="card-img">
                         <div class="card-body">
                             <div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div>
                             <div style="color:var(--accent); font-weight:bold; margin-bottom:5px;">$${p.precio}</div>
                             <div style="font-size:0.75rem; color:#64748b; margin-bottom:10px;">${p.descripcion || ''}</div>
-                            <button class="btn-add" onclick="addToCart(${p.id})">Agregar +</button>
+                            <button class="btn-add" onclick="addToCart(${pStr})">Agregar +</button>
                         </div>
-                    </div>`
-                ).join('');
+                    </div>`;
+                }).join('');
             }
 
-            // 2. Cargar Datos de Pago
+            // 2. Cargar Info de Pagos
             const { data: storeData } = await supabase
                 .from('usuarios')
                 .select('banco_nombre, banco_titular, banco_ci, banco_numero, banco_tipo, qr_imagen_url')
@@ -275,16 +262,40 @@
                 
             if(storeData) {
                 storePaymentInfo = storeData;
+                renderPaymentInfo();
             }
         }
 
-        // --- LOGICA CARRITO ---
-        
-        // Nueva función addToCart que busca por ID (sin comillas conflictivas)
-        function addToCart(productId) {
-            const product = productsCache.find(p => p.id === productId);
-            if (!product) return;
+        function renderPaymentInfo() {
+            if(!storePaymentInfo || !storePaymentInfo.banco_numero) return; 
 
+            const container = document.getElementById('payment-details');
+            const content = document.getElementById('pay-data-content');
+            
+            // --- MODIFICACIÓN: Hacemos visible el contenedor de pago ---
+            container.style.display = 'block'; 
+            // --------------------------------------------------------
+            
+            content.innerHTML = `
+                <div class="payment-row"><span class="payment-label">Banco:</span> <span>${storePaymentInfo.banco_nombre || ''}</span></div>
+                <div class="payment-row"><span class="payment-label">Titular:</span> <span>${storePaymentInfo.banco_titular || ''}</span></div>
+                <div class="payment-row"><span class="payment-label">C.I./RIF:</span> <span>${storePaymentInfo.banco_ci || ''}</span></div>
+                <div class="payment-row"><span class="payment-label">Tipo:</span> <span>${storePaymentInfo.banco_tipo || ''}</span></div>
+                <div style="margin-top:5px;">
+                    <span class="payment-label">Cuenta / Teléfono:</span><br>
+                    <span class="payment-val">${storePaymentInfo.banco_numero}</span>
+                    <i class="fas fa-copy" onclick="navigator.clipboard.writeText('${storePaymentInfo.banco_numero}'); alert('Copiado!')" style="cursor:pointer; color:var(--accent); margin-left:5px;"></i>
+                </div>
+            `;
+
+            if(storePaymentInfo.qr_imagen_url) {
+                document.getElementById('pay-qr-container').style.display = 'block';
+                document.getElementById('pay-qr-img').src = storePaymentInfo.qr_imagen_url;
+            }
+        }
+
+        // --- LOGICA CARRITO & DELIVERY & PAGOS ---
+        function addToCart(product) {
             cart.push(product);
             updateCartUI();
             if(navigator.vibrate) navigator.vibrate(50);
@@ -320,7 +331,13 @@
 
         function toggleDeliveryFields() {
             const method = document.getElementById('delivery-method').value;
-            document.getElementById('delivery-info').style.display = method === 'delivery' ? 'block' : 'none';
+            const info = document.getElementById('delivery-info');
+
+            // 1. Manejo de Dirección
+            info.style.display = method === 'delivery' ? 'block' : 'none';
+
+            // --- MODIFICACIÓN: Eliminada la lógica que ocultaba el pago aquí ---
+            // Ahora el pago permanece visible si ya fue renderizado por renderPaymentInfo()
         }
 
         function getGeoLocation() {
@@ -333,86 +350,52 @@
                 return;
             }
 
+            const options = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+
             navigator.geolocation.getCurrentPosition((position) => {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
                 const link = `https://www.google.com/maps?q=${lat},${lng}`;
+                
                 const textArea = document.getElementById('delivery-address');
                 textArea.value = `📍 Ubicación GPS Exacta: ${link}\n\n` + textArea.value;
-                btn.innerHTML = '<i class="fas fa-check"></i> ¡Ubicación Agregada!';
-            }, () => {
-                alert("No se pudo obtener la ubicación.");
+                
+                btn.innerHTML = '<i class="fas fa-check"></i> ¡Ubicación Precisa Agregada!';
+                if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                setTimeout(() => btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Actualizar ubicación', 3000);
+            }, (error) => {
+                console.error(error);
+                let msg = "No se pudo obtener la ubicación.";
+                if(error.code === 1) msg = "Permiso de ubicación denegado.";
+                alert(msg);
                 btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Intentar de nuevo';
-            }, { enableHighAccuracy: true });
+            }, options);
         }
 
-        // --- MANEJO DEL CHECKOUT Y MODAL DE PAGO ---
-
-        function handleCheckoutClick() {
+        async function checkout() {
             if (cart.length === 0) return alert("Agrega productos primero.");
             
             const method = document.getElementById('delivery-method').value;
             const address = document.getElementById('delivery-address').value.trim();
 
-            if (method === 'delivery') {
-                if (!address) return alert("Por favor ingresa tu dirección para el Delivery.");
-                
-                // Si es delivery y hay datos de pago, mostramos el MODAL
-                if (storePaymentInfo && storePaymentInfo.banco_numero) {
-                    openPaymentModal();
-                } else {
-                    finalSubmitOrder(); 
-                }
-            } else {
-                // Retiro en tienda
-                finalSubmitOrder();
-            }
-        }
-
-        function openPaymentModal() {
-            const modal = document.getElementById('payment-modal');
-            const container = document.getElementById('payment-data-container');
-            
-            container.innerHTML = `
-                <div class="data-row"><span>Banco:</span> <strong>${storePaymentInfo.banco_nombre || '-'}</strong></div>
-                <div class="data-row"><span>Titular:</span> <strong>${storePaymentInfo.banco_titular || '-'}</strong></div>
-                <div class="data-row"><span>C.I./RIF:</span> <strong>${storePaymentInfo.banco_ci || '-'}</strong></div>
-                <div class="data-row"><span>Tipo:</span> <strong>${storePaymentInfo.banco_tipo || '-'}</strong></div>
-                <div style="margin-top:15px; text-align:center;">
-                    <div style="font-size:0.9rem; color:#64748b;">Cuenta / Teléfono:</div>
-                    <div class="data-val">
-                        ${storePaymentInfo.banco_numero} 
-                        <i class="fas fa-copy copy-btn" onclick="navigator.clipboard.writeText('${storePaymentInfo.banco_numero}'); alert('Copiado!')"></i>
-                    </div>
-                </div>
-            `;
-
-            if (storePaymentInfo.qr_imagen_url) {
-                container.innerHTML += `
-                    <div style="margin-top:20px; text-align:center;">
-                        <img src="${storePaymentInfo.qr_imagen_url}" style="max-width:180px; border-radius:10px; border:2px solid #e2e8f0;">
-                    </div>`;
+            if (method === 'delivery' && !address) {
+                return alert("Por favor ingresa tu dirección o usa el botón de ubicación para el Delivery.");
             }
 
-            modal.classList.add('active');
-        }
+            const btn = document.querySelector('.btn-checkout');
+            const originalText = btn.textContent;
+            btn.disabled = true; btn.textContent = "Enviando...";
 
-        function closePaymentModal() {
-            document.getElementById('payment-modal').classList.remove('active');
-        }
-
-        async function finalSubmitOrder() {
-            const method = document.getElementById('delivery-method').value;
-            const address = document.getElementById('delivery-address').value.trim();
             const total = cart.reduce((sum, item) => sum + item.precio, 0);
             
+            const productsSummary = cart.map(p => ({ id: p.id, name: p.nombre, price: p.precio }));
             const orderMetadata = { 
-                items: cart.map(p => ({ id: p.id, name: p.nombre, price: p.precio })),
-                delivery: { method: method, address: method === 'delivery' ? address : 'N/A' }
+                items: productsSummary,
+                delivery: {
+                    method: method,
+                    address: method === 'delivery' ? address : 'N/A'
+                }
             };
-
-            const checkoutBtn = document.querySelector('.btn-checkout');
-            if(checkoutBtn) { checkoutBtn.disabled = true; checkoutBtn.textContent = "Enviando..."; }
 
             try {
                 const { error } = await supabase.from('pedidos').insert({
@@ -428,11 +411,13 @@
                 
                 if (method === 'delivery') {
                     autoMsg += `\n🛵 **Entrega:** Delivery.\n📍 **Dirección:** ${address}`;
-                    if(storePaymentInfo && storePaymentInfo.banco_numero) {
-                        autoMsg += `\n\n💳 **Pago:** He realizado el pago móvil/transferencia.`;
-                    }
                 } else {
                     autoMsg += `\n📍 **Entrega:** Retiro en Tienda.`;
+                }
+
+                // Mensaje de confirmación de pago visto
+                if(storePaymentInfo && storePaymentInfo.banco_numero) {
+                    autoMsg += `\n\n💳 He visto los datos de pago. Enviaré el comprobante por aquí.`;
                 }
 
                 await supabase.from('mensajes').insert({
@@ -447,18 +432,13 @@
                 cart = [];
                 updateCartUI();
                 toggleCart();
-                closePaymentModal(); 
                 alert("¡Pedido enviado con éxito!");
                 document.getElementById('chat-box').classList.add('open');
 
             } catch (err) {
                 alert("Error al enviar pedido: " + err.message);
             } finally {
-                document.querySelectorAll('.btn-checkout').forEach(b => {
-                    b.disabled = false; 
-                    if(b.innerText.includes("Pagué")) b.innerHTML = '<i class="fas fa-check-circle"></i> Ya pagué, Enviar Pedido';
-                    else b.textContent = "Confirmar Pedido";
-                });
+                btn.disabled = false; btn.textContent = originalText;
             }
         }
 
