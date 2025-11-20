@@ -10,37 +10,80 @@
     
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
-          appId: "af032e9f-716c-4d7f-8fd1-32894c2a4cd8",
-          notifyButton: {
-            enable: true,
-          },
-          allowLocalhostAsSecureOrigin: true,
-        });
-        
-        // --- ETIQUETADO AUTOMÁTICO DE ADMIN ---
-        const tagUserAsAdmin = () => {
-            console.log("Aplicando etiqueta 'admin'...");
-            OneSignal.User.addTag("rol", "admin");
-        };
+    const VAPID_PUBLIC_KEY = "BCkvES3UU5IUHo52kr0VegCslrRYrCo7LcgfJTFAfU-x8g7Ioca5Q-WHU8qyMPDhee6Lbls-l_cjqNQxQuUpoJw";
 
-        // Si ya está suscrito al entrar
-        if (OneSignal.User.PushSubscription.optedIn) {
-            tagUserAsAdmin();
+    // Función auxiliar para convertir la llave
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
         }
+        return outputArray;
+    }
 
-        // Si se suscribe por primera vez
-        OneSignal.User.PushSubscription.addEventListener("change", function(event) {
-            if (event.current.optedIn) {
-                tagUserAsAdmin();
-                alert("¡Dispositivo registrado como ADMIN! Ve a la pestaña 'Pagos' para probar.");
+    async function registerServiceWorker() {
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+            try {
+                const registration = await navigator.serviceWorker.register('./sw.js');
+                console.log('Service Worker registrado:', registration);
+                return registration;
+            } catch (error) {
+                console.error('Fallo SW:', error);
             }
-        });
-      });
-    </script>
+        } else {
+            alert("Tu navegador no soporta notificaciones push.");
+        }
+    }
 
+    async function subscribeUser() {
+        const registration = await registerServiceWorker();
+        if (!registration) return;
+
+        // Pedimos suscripción al navegador
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+
+        console.log("Usuario suscrito:", subscription);
+
+        // Guardar en Supabase
+        if (currentUser) {
+             // Convertimos el objeto subscription a JSON plano
+            const subData = JSON.parse(JSON.stringify(subscription));
+            
+            const { error } = await supabase.from('push_subscriptions').insert({
+                user_id: currentUser.id,
+                endpoint: subData.endpoint,
+                p256dh: subData.keys.p256dh,
+                auth: subData.keys.auth
+            });
+
+            if (error) {
+                // Si es error de duplicado (código 23505), lo ignoramos, significa que ya está registrado
+                if(error.code !== '23505') console.error("Error guardando sub:", error);
+                else console.log("Dispositivo ya registrado en DB.");
+            } else {
+                alert("✅ Notificaciones Activadas Correctamente");
+            }
+        } else {
+            alert("Debes iniciar sesión primero");
+        }
+    }
+
+    // Modificamos tu función de test existente para usar la nueva lógica local
+    async function testNotification() {
+        await subscribeUser();
+    }
+    
+    // Intentar registrar al cargar si hay usuario
+    setTimeout(() => {
+        if(currentUser) registerServiceWorker(); 
+    }, 2000);
+</script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
