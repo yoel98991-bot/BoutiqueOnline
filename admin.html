@@ -456,45 +456,76 @@
             loadChatsList();
         }
 
-        // --- LÓGICA DE CONFIGURACIÓN DE PAGOS (NUEVO) ---
-        document.getElementById('config-form').addEventListener('submit', async (e) => {
+      document.getElementById('config-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-save-config');
-            btn.textContent = "Guardando..."; btn.disabled = true;
+            btn.textContent = "Guardando..."; 
+            btn.disabled = true;
 
             try {
                 const file = document.getElementById('qr-input').files[0];
-                let qrUrl = document.getElementById('qr-preview').src;
+                // Si ya había una imagen cargada, mantenemos esa URL por defecto
+                let qrUrl = document.getElementById('qr-preview').src; 
                 
                 if (file) {
-                    const fileName = `qr_${currentUser.id}_${Date.now()}`;
-                    const { error: uploadErr } = await supabase.storage.from('imagenes-pagos').upload(fileName, file);
+                    // 1. Extraemos la extensión del archivo (ej: png, jpg)
+                    const fileExt = file.name.split('.').pop();
+                    
+                    // 2. Creamos un nombre único INCLUYENDO la extensión
+                    const fileName = `qr_${currentUser.id}_${Date.now()}.${fileExt}`;
+
+                    // 3. Subimos al bucket 'imagenes-pagos'
+                    const { error: uploadErr } = await supabase.storage
+                        .from('imagenes-pagos')
+                        .upload(fileName, file, {
+                            cacheControl: '3600',
+                            upsert: true // Sobrescribe si hay conflicto
+                        });
+
                     if(uploadErr) throw uploadErr;
                     
-                    const { data } = supabase.storage.from('imagenes-pagos').getPublicUrl(fileName);
+                    // 4. Obtenemos la URL pública válida
+                    const { data } = supabase.storage
+                        .from('imagenes-pagos')
+                        .getPublicUrl(fileName);
+                    
                     qrUrl = data.publicUrl;
                 }
 
+                // Preparamos los datos para guardar en la base de datos
                 const updates = {
                     banco_nombre: document.getElementById('conf-banco').value,
                     banco_titular: document.getElementById('conf-titular').value,
                     banco_ci: document.getElementById('conf-ci').value,
                     banco_numero: document.getElementById('conf-numero').value,
                     banco_tipo: document.getElementById('conf-tipo').value,
-                    qr_imagen_url: qrUrl.startsWith('http') ? qrUrl : null
+                    // Verificamos que sea una URL válida (http...) antes de guardar
+                    qr_imagen_url: qrUrl && qrUrl.startsWith('http') ? qrUrl : null
                 };
 
                 const { error } = await supabase.from('usuarios').update(updates).eq('id', currentUser.id);
                 if(error) throw error;
 
                 alert("¡Datos de pago actualizados!");
+                
+                // (Opcional) Actualizar la vista previa inmediatamente para confirmar visualmente
+                if(qrUrl && qrUrl.startsWith('http')) {
+                    const img = document.getElementById('qr-preview');
+                    img.src = qrUrl;
+                    img.style.display = 'block';
+                }
+
             } catch (err) {
-                alert("Error al guardar: " + err.message);
+                console.error(err); // Útil para ver el error real en la consola
+                alert("Error al guardar: " + (err.message || err.error_description || "Error desconocido"));
             } finally {
-                btn.disabled = false; btn.textContent = "Guardar Configuración";
+                btn.disabled = false; 
+                btn.textContent = "Guardar Configuración";
             }
         });
 
+
+        
         async function loadConfig() {
             const { data, error } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
             if (error || !data) return;
