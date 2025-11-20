@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Boutique Online</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        :root { --bg: #f8f9fa; --text-main: #1a1a1a; --accent: #2563eb; --radius: 12px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text-main); padding-bottom: 100px; }
+
+        /* Login Overlay */
+        #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .login-card { width: 100%; max-width: 350px; text-align: center; }
+        .login-input { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #e5e7eb; border-radius: 12px; font-size: 1rem; background: #f9fafb; }
+        
+        /* Header & Grid */
+        header { background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 50; padding: 1rem; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; }
+        
+        /* Product Card */
+        .card { background: white; border-radius: var(--radius); overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
+        .card-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background: #eee; }
+        .card-body { padding: 12px; display: flex; flex-direction: column; flex: 1; }
+        .btn-add { width: 100%; padding: 10px; background: var(--text-main); color: white; border: none; border-radius: 8px; margin-top: auto; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn-add:active { transform: scale(0.98); }
+
+        /* Chat Widget */
+        .chat-btn { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4); cursor: pointer; z-index: 100; transition: transform 0.2s; }
+        .chat-btn:active { transform: scale(0.9); }
+        
+        .chat-widget { display: none; position: fixed; bottom: 100px; right: 20px; width: 350px; max-width: 90%; height: 500px; background: white; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); flex-direction: column; z-index: 100; overflow: hidden; }
+        .chat-widget.open { display: flex; }
+        .chat-header { background: var(--accent); color: white; padding: 15px; font-weight: 600; display: flex; justify-content: space-between; }
+        .chat-body { flex: 1; padding: 15px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 10px; }
+        .chat-footer { padding: 10px; border-top: 1px solid #eee; display: flex; gap: 10px; background: white; }
+        
+        .msg { max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; word-wrap: break-word; }
+        .msg.me { background: var(--accent); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .msg.store { background: white; color: var(--text-main); align-self: flex-start; border-bottom-left-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .typing { font-size: 0.7rem; color: #94a3b8; margin-left: 10px; height: 15px; }
+
+        /* CART STYLES */
+        .cart-float { position: fixed; bottom: 30px; left: 30px; background: white; padding: 15px 25px; border-radius: 30px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); font-weight: bold; display: flex; gap: 10px; align-items: center; cursor: pointer; z-index: 90; border: 1px solid #eee; transition: transform 0.2s;}
+        .cart-float:active { transform: scale(0.95); }
+
+        .cart-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 150; display: none; align-items: flex-end; }
+        .cart-overlay.open { display: flex; }
+        .cart-panel { background: white; width: 100%; max-height: 90vh; border-radius: 20px 20px 0 0; padding: 20px; display: flex; flex-direction: column; animation: slideUp 0.3s ease; overflow-y: auto;}
+        
+        .cart-items { margin: 20px 0; flex: 1; overflow-y: auto; min-height: 100px; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .cart-item-info { font-size: 0.9rem; }
+        .btn-remove { color: #ef4444; background: none; border: none; padding: 5px; cursor: pointer; font-size: 1.1rem; }
+        
+        .btn-checkout { width: 100%; padding: 15px; background: var(--text-main); color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; margin-top: 15px; }
+        .btn-geo { background: #eff6ff; color: var(--accent); border: 1px dashed var(--accent); padding: 10px; width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px; }
+
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div id="login-overlay">
+        <div class="login-card">
+            <h1 style="margin-bottom: 10px;">Bienvenido</h1>
+            <p style="color:#6b7280; margin-bottom: 30px;">Ingresa tus datos para entrar a la tienda.</p>
+            <form id="login-form">
+                <input type="text" id="reg-code" class="login-input" placeholder="CÓDIGO DE TIENDA (Ej: TIENDA-XY12)" style="text-transform:uppercase; font-weight:bold; text-align:center; letter-spacing: 1px;" required>
+                <input type="text" id="reg-name" class="login-input" placeholder="Tu Nombre" required>
+                <input type="tel" id="reg-phone" class="login-input" placeholder="Tu WhatsApp" required>
+                <button type="submit" class="btn-add" style="padding: 15px; font-size: 1rem;">Entrar a Tienda</button>
+            </form>
+            <p id="login-error" style="color: red; margin-top: 10px; font-size: 0.9rem;"></p>
+        </div>
+    </div>
+
+    <header>
+        <div style="font-weight: 700; font-size: 1.2rem;"><i class="fas fa-store"></i> STUDIO</div>
+        <div id="client-info" style="font-size: 0.8rem; color: #6b7280;"></div>
+    </header>
+
+    <div class="container">
+        <h2 style="margin-bottom: 20px; font-weight: 300;">Catálogo</h2>
+        <div id="products-grid" class="grid"></div>
+    </div>
+
+    <div class="chat-btn" onclick="toggleChat()">
+        <i class="fas fa-comment-dots"></i>
+    </div>
+
+    <div class="chat-widget" id="chat-box">
+        <div class="chat-header">
+            <span>Atención al Cliente</span>
+            <i class="fas fa-times" style="cursor:pointer;" onclick="toggleChat()"></i>
+        </div>
+        <div class="chat-body" id="chat-msgs"></div>
+        <div class="typing" id="typing-ind"></div>
+        <form class="chat-footer" onsubmit="sendChatMsg(event)">
+            <input type="text" id="chat-input" placeholder="Escribe aquí..." class="login-input" style="margin:0; padding:10px;" oninput="notifyTyping()">
+            <button type="submit" style="border:none; background:none; color:var(--accent); font-size:1.2rem; cursor:pointer;"><i class="fas fa-paper-plane"></i></button>
+        </form>
+    </div>
+
+    <div class="cart-float" onclick="toggleCart()">
+        <i class="fas fa-shopping-bag"></i> <span id="cart-total-badge">$0.00</span>
+    </div>
+
+    <div class="cart-overlay" id="cart-overlay" onclick="if(event.target === this) toggleCart()">
+        <div class="cart-panel">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2 style="font-size: 1.2rem;">Tu Carrito</h2>
+                <i class="fas fa-times" style="cursor:pointer; padding:10px;" onclick="toggleCart()"></i>
+            </div>
+            
+            <div class="cart-items" id="cart-items-container">
+                <p style="text-align:center; color:#94a3b8;">Tu carrito está vacío.</p>
+            </div>
+            
+            <div style="background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
+                <label style="font-weight:bold; display:block; margin-bottom:8px; font-size:0.9rem;">Método de Entrega:</label>
+                <select id="delivery-method" class="login-input" style="padding:10px; margin-bottom:10px;" onchange="toggleDeliveryFields()">
+                    <option value="retiro">📍 Retiro en Tienda</option>
+                    <option value="delivery">🛵 Delivery</option>
+                </select>
+
+                <div id="delivery-info" style="display:none;">
+                    <textarea id="delivery-address" class="login-input" rows="2" placeholder="Escribe dirección exacta (Calle, Casa, Referencia)..." style="margin-bottom:5px;"></textarea>
+                    <button type="button" onclick="getGeoLocation()" class="btn-geo">
+                        <i class="fas fa-map-marker-alt"></i> Usar mi ubicación actual
+                    </button>
+                </div>
+            </div>
+
+            <div style="margin-bottom:15px; display:flex; justify-content:space-between; font-weight:bold; font-size:1.1rem;">
+                <span>Total:</span>
+                <span id="cart-final-total">$0.00</span>
+            </div>
+            <button class="btn-checkout" onclick="checkout()">Confirmar Pedido</button>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://cirrapytmbnjlhxunkaq.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnJhcHl0bWJuamxoeHVua2FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NzAyMDAsImV4cCI6MjA3ODU0NjIwMH0.OtJiLGj1EvhPICFaA9ruL02Z9kSQ2jT0t3Smqph81C4';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let session = {
+            storeId: localStorage.getItem('storeId'),
+            clientId: localStorage.getItem('clientId'),
+            clientName: localStorage.getItem('clientName')
+        };
+        let chatChannel = null;
+        let cart = [];
+
+        // --- INIT ---
+        if (session.storeId && session.clientId) {
+            initApp();
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const code = document.getElementById('reg-code').value.trim().toUpperCase();
+            const name = document.getElementById('reg-name').value.trim();
+            const phone = document.getElementById('reg-phone').value.trim();
+            const btn = e.target.querySelector('button');
+            const err = document.getElementById('login-error');
+
+            btn.disabled = true; btn.textContent = "Verificando...";
+            err.textContent = "";
+
+            try {
+                const { data: store, error: storeErr } = await supabase.from('usuarios').select('id').eq('codigo_tienda', code).single();
+                if (storeErr || !store) throw new Error("Código de tienda inválido.");
+
+                let { data: client } = await supabase.from('clientes').select('id').eq('telefono', phone).single();
+                if (!client) {
+                    const { data: newClient, error: createErr } = await supabase.from('clientes').insert({ nombre: name, telefono: phone, ultima_tienda_visitada: code }).select().single();
+                    if (createErr) throw createErr;
+                    client = newClient;
+                }
+
+                localStorage.setItem('storeId', store.id);
+                localStorage.setItem('clientId', client.id);
+                localStorage.setItem('clientName', name);
+                
+                session = { storeId: store.id, clientId: client.id, clientName: name };
+                initApp();
+
+            } catch (error) {
+                err.textContent = error.message;
+                btn.disabled = false; btn.textContent = "Entrar a Tienda";
+            }
+        });
+
+        function initApp() {
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('client-info').textContent = `Hola, ${session.clientName}`;
+            loadCatalog();
+            initChat();
+        }
+
+        async function loadCatalog() {
+            const { data } = await supabase
+                .from('productos')
+                .select('*')
+                .eq('creado_por', session.storeId)
+                .order('id', { ascending: false });
+
+            const grid = document.getElementById('products-grid');
+            
+            if(!data || data.length === 0) { 
+                grid.innerHTML = '<p style="grid-column:1/-1; text-align:center;">Esta tienda aún no tiene productos.</p>'; 
+                return; 
+            }
+            
+            grid.innerHTML = data.map(p => {
+                // CORRECCIÓN AQUÍ: Reemplazamos las comillas por &quot; para que no rompan el HTML
+                const pStr = JSON.stringify(p).replace(/"/g, '&quot;'); 
+                
+                return `
+                <div class="card">
+                    <img src="${p.imagen_url || 'https://via.placeholder.com/300'}" class="card-img">
+                    <div class="card-body">
+                        <div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div>
+                        <div style="color:var(--accent); font-weight:bold; margin-bottom:5px;">$${p.precio}</div>
+                        <div style="font-size:0.75rem; color:#64748b; margin-bottom:10px;">${p.descripcion || ''}</div>
+                        <button class="btn-add" onclick="addToCart(${pStr})">Agregar +</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+
+        // --- LOGICA CARRITO & DELIVERY ---
+        function addToCart(product) {
+            cart.push(product);
+            updateCartUI();
+            if(navigator.vibrate) navigator.vibrate(50);
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            const total = cart.reduce((sum, item) => sum + item.precio, 0);
+            document.getElementById('cart-total-badge').textContent = `$${total.toFixed(2)}`;
+            document.getElementById('cart-final-total').textContent = `$${total.toFixed(2)}`;
+
+            const container = document.getElementById('cart-items-container');
+            if (cart.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:20px;">Tu carrito está vacío.</p>';
+            } else {
+                container.innerHTML = cart.map((item, index) => `
+                    <div class="cart-item">
+                        <div class="cart-item-info">
+                            <div>${item.nombre}</div>
+                            <small style="color:#64748b;">$${item.precio}</small>
+                        </div>
+                        <button class="btn-remove" onclick="removeFromCart(${index})"><i class="fas fa-trash"></i></button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function toggleCart() { document.getElementById('cart-overlay').classList.toggle('open'); }
+
+        function toggleDeliveryFields() {
+            const method = document.getElementById('delivery-method').value;
+            const info = document.getElementById('delivery-info');
+            info.style.display = method === 'delivery' ? 'block' : 'none';
+        }
+
+        function getGeoLocation() {
+            const btn = document.querySelector('.btn-geo');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando satélites...';
+            
+            if (!navigator.geolocation) {
+                alert("Geolocalización no soportada.");
+                btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Usar mi ubicación actual';
+                return;
+            }
+
+            // OPCIONES DE ALTA PRECISION PARA GPS
+            const options = {
+                enableHighAccuracy: true, 
+                timeout: 10000,
+                maximumAge: 0
+            };
+
+            navigator.geolocation.getCurrentPosition((position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                
+                // Enlace exacto compatible con Google Maps
+                const link = `https://www.google.com/maps?q=${lat},${lng}`;
+                
+                const textArea = document.getElementById('delivery-address');
+                textArea.value = `📍 Ubicación GPS Exacta: ${link}\n\n` + textArea.value;
+                
+                btn.innerHTML = '<i class="fas fa-check"></i> ¡Ubicación Precisa Agregada!';
+                if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                setTimeout(() => btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Actualizar ubicación', 3000);
+            }, (error) => {
+                console.error(error);
+                let msg = "No se pudo obtener la ubicación.";
+                if(error.code === 1) msg = "Permiso de ubicación denegado.";
+                if(error.code === 2) msg = "GPS no disponible (sal al exterior).";
+                if(error.code === 3) msg = "Se agotó el tiempo de espera del GPS.";
+                alert(msg);
+                btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Intentar de nuevo';
+            }, options);
+        }
+
+        async function checkout() {
+            if (cart.length === 0) return alert("Agrega productos primero.");
+            
+            const method = document.getElementById('delivery-method').value;
+            const address = document.getElementById('delivery-address').value.trim();
+
+            if (method === 'delivery' && !address) {
+                return alert("Por favor ingresa tu dirección o usa el botón de ubicación para el Delivery.");
+            }
+
+            const btn = document.querySelector('.btn-checkout');
+            const originalText = btn.textContent;
+            btn.disabled = true; btn.textContent = "Enviando...";
+
+            const total = cart.reduce((sum, item) => sum + item.precio, 0);
+            
+            const productsSummary = cart.map(p => ({ id: p.id, name: p.nombre, price: p.precio }));
+            const orderMetadata = { 
+                items: productsSummary,
+                delivery: {
+                    method: method,
+                    address: method === 'delivery' ? address : 'N/A'
+                }
+            };
+
+            try {
+                const { error } = await supabase.from('pedidos').insert({
+                    cliente_id: session.clientId,
+                    total: total,
+                    productos: orderMetadata,
+                    estado: 'pendiente'
+                });
+
+                if (error) throw error;
+
+                let autoMsg = `✅ ¡Nuevo pedido! Total: $${total.toFixed(2)} (${cart.length} items).`;
+                
+                if (method === 'delivery') {
+                    autoMsg += `\n🛵 **Entrega:** Delivery.\n📍 **Dirección:** ${address}`;
+                } else {
+                    autoMsg += `\n📍 **Entrega:** Retiro en Tienda.`;
+                }
+
+                await supabase.from('mensajes').insert({
+                    tienda_id: session.storeId,
+                    cliente_id: session.clientId,
+                    enviado_por_rol: 'cliente',
+                    contenido: autoMsg
+                });
+                
+                renderMsg({ contenido: autoMsg, enviado_por_rol: 'cliente' });
+
+                cart = [];
+                updateCartUI();
+                toggleCart();
+                alert("¡Pedido enviado con éxito!");
+                document.getElementById('chat-box').classList.add('open');
+
+            } catch (err) {
+                alert("Error al enviar pedido: " + err.message);
+            } finally {
+                btn.disabled = false; btn.textContent = originalText;
+            }
+        }
+
+        // --- CHAT LOGIC ---
+        async function initChat() {
+            const { data } = await supabase.from('mensajes').select('*').eq('tienda_id', session.storeId).eq('cliente_id', session.clientId).order('created_at', { ascending: true });
+            if(data) data.forEach(renderMsg);
+            scrollToBottom();
+
+            const room = `chat_room_${session.storeId}_${session.clientId}`;
+            chatChannel = supabase.channel(room)
+                .on('broadcast', { event: 'typing' }, () => {
+                    const el = document.getElementById('typing-ind');
+                    el.textContent = "La tienda está escribiendo...";
+                    setTimeout(() => el.textContent = '', 3000);
+                })
+                .subscribe();
+
+            supabase.channel('client-inbox-' + session.clientId)
+                .on('postgres_changes', 
+                    { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `cliente_id=eq.${session.clientId}` }, 
+                    payload => {
+                        if (payload.new.enviado_por_rol !== 'cliente') {
+                            renderMsg(payload.new);
+                        }
+                    }
+                )
+                .subscribe();
+        }
+
+        function renderMsg(msg) {
+            const div = document.createElement('div');
+            div.className = `msg ${msg.enviado_por_rol === 'cliente' ? 'me' : 'store'}`;
+            div.innerHTML = msg.contenido.replace(/\n/g, '<br>');
+            document.getElementById('chat-msgs').appendChild(div);
+            scrollToBottom();
+        }
+
+        async function sendChatMsg(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if(!text) return;
+
+            input.value = '';
+            renderMsg({ contenido: text, enviado_por_rol: 'cliente' });
+
+            await supabase.from('mensajes').insert({
+                tienda_id: session.storeId,
+                cliente_id: session.clientId,
+                enviado_por_rol: 'cliente',
+                contenido: text
+            });
+        }
+
+        function notifyTyping() { if(chatChannel) chatChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); }
+        function toggleChat() { document.getElementById('chat-box').classList.toggle('open'); scrollToBottom(); }
+        function scrollToBottom() { const d = document.getElementById('chat-msgs'); d.scrollTop = d.scrollHeight; }
+    </script>
+</body>
+</html>
