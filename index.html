@@ -239,7 +239,8 @@
                 grid.innerHTML = '<p style="grid-column:1/-1; text-align:center;">Esta tienda aún no tiene productos.</p>'; 
             } else {
                 grid.innerHTML = data.map(p => {
-                    const pStr = JSON.stringify(p).replace(/"/g, '"'); 
+                    // --- AQUÍ ESTABA EL ERROR. AHORA USA &quot; ---
+                    const pStr = JSON.stringify(p).replace(/"/g, '&quot;'); 
                     return `
                     <div class="card">
                         <img src="${p.imagen_url || 'https://via.placeholder.com/300'}" class="card-img">
