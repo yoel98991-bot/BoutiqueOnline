@@ -368,11 +368,53 @@
             }).subscribe();
         }
 
-        async function loadChatsList() {
-            const { data } = await supabase.from('mensajes').select('*, clientes(id, nombre)').eq('tienda_id', currentUser.id).order('created_at', { ascending: false }).limit(200);
+       async function loadChatsList() {
+            const { data } = await supabase
+                .from('mensajes')
+                .select('*, clientes(id, nombre)')
+                .eq('tienda_id', currentUser.id)
+                .order('created_at', { ascending: false })
+                .limit(200);
+
             const grouped = {};
-            data.forEach(msg => { if (!grouped[msg.cliente_id]) grouped[msg.cliente_id] = { client: msg.clientes, lastMsg: msg }; });
-            document.getElementById('chats-list').innerHTML = Object.values(grouped).map(item => `<div class="chat-list-item ${!item.lastMsg.leido && item.lastMsg.enviado_por_rol === 'cliente' ? 'unread' : ''}" onclick="openChat('${item.client.id}', '${item.client.nombre}')"><div class="avatar">${item.client.nombre.substring(0,2).toUpperCase()}</div><div style="flex:1;"><div style="display:flex; justify-content:space-between;"><div style="font-weight:600;">${item.client.nombre}</div><small style="color:#94a3b8;">${new Date(item.lastMsg.created_at).toLocaleDateString()}</small></div><div style="font-size:0.85rem; color:#64748b;">${item.lastMsg.enviado_por_rol==='dueño'?'Tú: ':''}${item.lastMsg.contenido.substring(0, 40)}...</div></div></div>`).join('') || '<div style="padding:20px; text-align:center;">No hay chats</div>';
+            data.forEach(msg => { 
+                if (!grouped[msg.cliente_id]) {
+                    grouped[msg.cliente_id] = { client: msg.clientes, lastMsg: msg }; 
+                }
+            });
+
+            const listHTML = Object.values(grouped).map(item => {
+                // --- CORRECCIÓN AQUÍ ---
+                // Detectamos si es imagen para no cortar el HTML
+                let previewText = item.lastMsg.contenido;
+                
+                if (previewText.includes('<img')) {
+                    previewText = '📷 [Imagen]';
+                } else {
+                    // Si es texto normal, lo cortamos si es muy largo
+                    if(previewText.length > 30) previewText = previewText.substring(0, 30) + '...';
+                }
+                // -----------------------
+
+                const isUnread = !item.lastMsg.leido && item.lastMsg.enviado_por_rol === 'cliente';
+                const senderPrefix = item.lastMsg.enviado_por_rol === 'dueño' ? 'Tú: ' : '';
+
+                return `
+                <div class="chat-list-item ${isUnread ? 'unread' : ''}" onclick="openChat('${item.client.id}', '${item.client.nombre}')">
+                    <div class="avatar">${item.client.nombre.substring(0,2).toUpperCase()}</div>
+                    <div style="flex:1;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <div style="font-weight:600;">${item.client.nombre}</div>
+                            <small style="color:#94a3b8;">${new Date(item.lastMsg.created_at).toLocaleDateString()}</small>
+                        </div>
+                        <div style="font-size:0.85rem; color:#64748b;">
+                            ${senderPrefix}${previewText}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            document.getElementById('chats-list').innerHTML = listHTML || '<div style="padding:20px; text-align:center;">No hay chats</div>';
         }
 
         async function openChat(clientId, clientName) {
