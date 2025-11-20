@@ -194,6 +194,10 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnJhcHl0bWJuamxoeHVua2FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NzAyMDAsImV4cCI6MjA3ODU0NjIwMH0.OtJiLGj1EvhPICFaA9ruL02Z9kSQ2jT0t3Smqph81C4';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // --- CONFIGURACIÓN DE PUSH NOTIFICATIONS (ACTUALIZADA) ---
+        const ONESIGNAL_APP_ID = "af032e9f-716c-4d7f-8fd1-32894c2a4cd8"; 
+        const ONESIGNAL_API_KEY = "os_v2_app_v4bs5h3rnrgx7d6rgkeuyksm3btr7jjnnhie6hnmxwfda2phu4ueftilt4qqaezxflffovm66bybtzygef7jjk43akzh3mwmxk2hebi"; 
+
         let session = {
             storeId: localStorage.getItem('storeId'),
             clientId: localStorage.getItem('clientId'),
@@ -358,6 +362,34 @@
             }, { enableHighAccuracy: true, timeout: 10000 });
         }
 
+        // --- FUNCIÓN PARA ENVIAR PUSH (API KEY INTEGRADA) ---
+        async function sendPushToAdmin(titulo, mensaje) {
+            const options = {
+                method: 'POST',
+                headers: {
+                    accept: 'application/json',
+                    'content-type': 'application/json',
+                    Authorization: 'Basic ' + ONESIGNAL_API_KEY
+                },
+                body: JSON.stringify({
+                    app_id: ONESIGNAL_APP_ID,
+                    headings: { en: titulo, es: titulo },
+                    contents: { en: mensaje, es: mensaje },
+                    // Enviamos solo a los usuarios marcados como "admin"
+                    filters: [
+                        { field: "tag", key: "rol", relation: "=", value: "admin" }
+                    ]
+                })
+            };
+
+            try {
+                await fetch('https://onesignal.com/api/v1/notifications', options);
+                console.log("Push enviado al admin");
+            } catch (err) {
+                console.error("Error enviando push:", err);
+            }
+        }
+
         async function checkout() {
             if (cart.length === 0) return alert("Agrega productos primero.");
             const method = document.getElementById('delivery-method').value;
@@ -373,6 +405,10 @@
 
             try {
                 await supabase.from('pedidos').insert({ cliente_id: session.clientId, total: total, productos: orderMetadata, estado: 'pendiente' });
+                
+                // NOTIFICACIÓN DE PEDIDO
+                sendPushToAdmin("¡Nuevo Pedido! 🛍️", `Total: $${total.toFixed(2)} - Cliente: ${session.clientName}`);
+                
                 let autoMsg = `✅ ¡Nuevo pedido! Total: $${total.toFixed(2)} (${cart.length} items).\n${method === 'delivery' ? '🛵 Delivery: ' + address : '📍 Retiro en Tienda.'}`;
                 if(storePaymentInfo && storePaymentInfo.banco_numero) autoMsg += `\n\n💳 He visto los datos. Enviaré comprobante por aquí.`;
 
@@ -446,6 +482,9 @@
 
                 renderMsg({ contenido: imgContent, enviado_por_rol: 'cliente' });
 
+                // NOTIFICACIÓN DE COMPROBANTE
+                sendPushToAdmin("Comprobante Recibido 📎", `${session.clientName} ha enviado una foto.`);
+
             } catch (error) {
                 alert("Error al subir imagen: " + error.message);
             } finally {
@@ -462,7 +501,11 @@
 
             input.value = '';
             renderMsg({ contenido: text, enviado_por_rol: 'cliente' });
+            
             await supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: text });
+            
+            // NOTIFICACIÓN DE MENSAJE
+            sendPushToAdmin("Nuevo Mensaje 💬", `${session.clientName}: ${text}`);
         }
 
         function notifyTyping() { if(chatChannel) chatChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); }
