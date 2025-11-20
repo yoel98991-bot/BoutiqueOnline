@@ -187,6 +187,7 @@
         let chatChannel = null;
         let cart = [];
         let storePaymentInfo = null;
+        let productsCache = []; // --- NUEVO: Guardamos productos aquí para no romper el HTML ---
 
         // --- INIT ---
         if (session.storeId && session.clientId) {
@@ -243,27 +244,29 @@
                 .eq('creado_por', session.storeId)
                 .order('id', { ascending: false });
 
+            // GUARDAMOS EN CACHE GLOBAL
+            productsCache = data || [];
+
             const grid = document.getElementById('products-grid');
             
             if(!data || data.length === 0) { 
                 grid.innerHTML = '<p style="grid-column:1/-1; text-align:center;">Esta tienda aún no tiene productos.</p>'; 
             } else {
-                grid.innerHTML = data.map(p => {
-                    const pStr = JSON.stringify(p).replace(/"/g, '"'); 
-                    return `
+                // --- CORRECCIÓN CRÍTICA: Pasamos solo el ID al onclick ---
+                grid.innerHTML = data.map(p => `
                     <div class="card">
                         <img src="${p.imagen_url || 'https://via.placeholder.com/300'}" class="card-img">
                         <div class="card-body">
                             <div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div>
                             <div style="color:var(--accent); font-weight:bold; margin-bottom:5px;">$${p.precio}</div>
                             <div style="font-size:0.75rem; color:#64748b; margin-bottom:10px;">${p.descripcion || ''}</div>
-                            <button class="btn-add" onclick="addToCart(${pStr})">Agregar +</button>
+                            <button class="btn-add" onclick="addToCart(${p.id})">Agregar +</button>
                         </div>
-                    </div>`;
-                }).join('');
+                    </div>`
+                ).join('');
             }
 
-            // 2. Cargar Datos de Pago de la Tienda (usuarios)
+            // 2. Cargar Datos de Pago
             const { data: storeData } = await supabase
                 .from('usuarios')
                 .select('banco_nombre, banco_titular, banco_ci, banco_numero, banco_tipo, qr_imagen_url')
@@ -276,7 +279,12 @@
         }
 
         // --- LOGICA CARRITO ---
-        function addToCart(product) {
+        
+        // Nueva función addToCart que busca por ID (sin comillas conflictivas)
+        function addToCart(productId) {
+            const product = productsCache.find(p => p.id === productId);
+            if (!product) return;
+
             cart.push(product);
             updateCartUI();
             if(navigator.vibrate) navigator.vibrate(50);
@@ -353,11 +361,10 @@
                 if (storePaymentInfo && storePaymentInfo.banco_numero) {
                     openPaymentModal();
                 } else {
-                    // Si la tienda no configuró pagos, enviamos directo (pago en efectivo/destino)
                     finalSubmitOrder(); 
                 }
             } else {
-                // Retiro en tienda, enviar directo
+                // Retiro en tienda
                 finalSubmitOrder();
             }
         }
@@ -404,7 +411,6 @@
                 delivery: { method: method, address: method === 'delivery' ? address : 'N/A' }
             };
 
-            // Deshabilitar botones para evitar doble click
             const checkoutBtn = document.querySelector('.btn-checkout');
             if(checkoutBtn) { checkoutBtn.disabled = true; checkoutBtn.textContent = "Enviando..."; }
 
@@ -441,14 +447,13 @@
                 cart = [];
                 updateCartUI();
                 toggleCart();
-                closePaymentModal(); // Cerrar modal si estaba abierto
+                closePaymentModal(); 
                 alert("¡Pedido enviado con éxito!");
                 document.getElementById('chat-box').classList.add('open');
 
             } catch (err) {
                 alert("Error al enviar pedido: " + err.message);
             } finally {
-                // Restaurar botones
                 document.querySelectorAll('.btn-checkout').forEach(b => {
                     b.disabled = false; 
                     if(b.innerText.includes("Pagué")) b.innerHTML = '<i class="fas fa-check-circle"></i> Ya pagué, Enviar Pedido';
