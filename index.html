@@ -38,12 +38,15 @@
         .chat-widget.open { display: flex; }
         .chat-header { background: var(--accent); color: white; padding: 15px; font-weight: 600; display: flex; justify-content: space-between; }
         .chat-body { flex: 1; padding: 15px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 10px; }
-        .chat-footer { padding: 10px; border-top: 1px solid #eee; display: flex; gap: 10px; background: white; }
+        .chat-footer { padding: 10px; border-top: 1px solid #eee; display: flex; gap: 10px; background: white; align-items: center; }
         
         .msg { max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; word-wrap: break-word; }
         .msg.me { background: var(--accent); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
         .msg.store { background: white; color: var(--text-main); align-self: flex-start; border-bottom-left-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .typing { font-size: 0.7rem; color: #94a3b8; margin-left: 10px; height: 15px; }
+        
+        /* ESTILOS PARA IMAGENES EN CHAT */
+        .chat-img { max-width: 100%; border-radius: 8px; margin-top: 5px; border: 2px solid rgba(0,0,0,0.1); cursor: pointer; display: block; }
 
         /* CART STYLES */
         .cart-float { position: fixed; bottom: 30px; left: 30px; background: white; padding: 15px 25px; border-radius: 30px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); font-weight: bold; display: flex; gap: 10px; align-items: center; cursor: pointer; z-index: 90; border: 1px solid #eee; transition: transform 0.2s;}
@@ -61,7 +64,7 @@
         .btn-checkout { width: 100%; padding: 15px; background: var(--text-main); color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; margin-top: 15px; }
         .btn-geo { background: #eff6ff; color: var(--accent); border: 1px dashed var(--accent); padding: 10px; width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px; }
 
-        /* ESTILOS NUEVOS PARA PAGO */
+        /* ESTILOS PAGO */
         .payment-info-card { background: #f0f9ff; border: 1px dashed #2563eb; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px; font-size: 0.9rem; display: none; }
         .payment-row { display: flex; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 5px; }
         .payment-label { font-weight: 600; color: #475569; }
@@ -69,36 +72,14 @@
 
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-        /* --- ESTILOS MODAL QR --- */
-#qr-modal { 
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-    background: rgba(0,0,0,0.85); z-index: 3000; 
-    display: none; justify-content: center; align-items: center; 
-    padding: 20px; opacity: 0; transition: opacity 0.3s; 
-}
-#qr-modal.open { display: flex; opacity: 1; }
-
-.qr-card { 
-    background: white; padding: 25px; border-radius: 20px; 
-    max-width: 350px; width: 100%; text-align: center; 
-    position: relative; transform: scale(0.8); transition: transform 0.3s; 
-}
-#qr-modal.open .qr-card { transform: scale(1); }
-
-.qr-full-img { 
-    width: 100%; border-radius: 12px; 
-    border: 2px solid #eee; margin-top: 15px; 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-
-.btn-open-qr { 
-    width: 100%; background: var(--accent); color: white; 
-    padding: 12px; border: none; border-radius: 8px; 
-    font-weight: bold; margin-top: 15px; cursor: pointer; 
-    display: flex; align-items: center; justify-content: center; gap: 8px; 
-    font-size: 1rem; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
-}
-.btn-open-qr:active { transform: scale(0.98); }
+        /* MODAL QR */
+        #qr-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: none; justify-content: center; align-items: center; padding: 20px; opacity: 0; transition: opacity 0.3s; }
+        #qr-modal.open { display: flex; opacity: 1; }
+        .qr-card { background: white; padding: 25px; border-radius: 20px; max-width: 350px; width: 100%; text-align: center; position: relative; transform: scale(0.8); transition: transform 0.3s; }
+        #qr-modal.open .qr-card { transform: scale(1); }
+        .qr-full-img { width: 100%; border-radius: 12px; border: 2px solid #eee; margin-top: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .btn-open-qr { width: 100%; background: var(--accent); color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; margin-top: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1rem; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); }
+        .btn-open-qr:active { transform: scale(0.98); }
     </style>
 </head>
 <body>
@@ -138,7 +119,13 @@
         </div>
         <div class="chat-body" id="chat-msgs"></div>
         <div class="typing" id="typing-ind"></div>
+        
         <form class="chat-footer" onsubmit="sendChatMsg(event)">
+            <label for="chat-file" style="cursor: pointer; color: #64748b; padding: 0 10px; font-size: 1.2rem;" title="Adjuntar Comprobante">
+                <i class="fas fa-paperclip"></i>
+            </label>
+            <input type="file" id="chat-file" accept="image/*" style="display: none;" onchange="uploadChatImage(this)">
+            
             <input type="text" id="chat-input" placeholder="Escribe aquí..." class="login-input" style="margin:0; padding:10px;" oninput="notifyTyping()">
             <button type="submit" style="border:none; background:none; color:var(--accent); font-size:1.2rem; cursor:pointer;"><i class="fas fa-paper-plane"></i></button>
         </form>
@@ -181,10 +168,7 @@
                 
                 <div id="pay-data-content"></div>
                 
-                <div id="pay-qr-container" style="text-align:center; margin-top:10px; display:none;">
-                    <p style="font-size:0.8rem; margin-bottom:5px;">Escanea para pagar:</p>
-                    <img id="pay-qr-img" src="" style="max-width:120px; border-radius:8px; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-                </div>
+                <div id="pay-qr-container" style="text-align:center; margin-top:10px; display:none;"></div>
             </div>
 
             <div style="margin-bottom:15px; display:flex; justify-content:space-between; font-weight:bold; font-size:1.1rem;">
@@ -193,20 +177,17 @@
             </div>
             <button class="btn-checkout" onclick="checkout()">Confirmar Pedido</button>
         </div>
-        
     </div>
 
-      <div id="qr-modal" onclick="if(event.target === this) closeQRModal()">
-    <div class="qr-card">
-        <i class="fas fa-times" onclick="closeQRModal()" style="position: absolute; top: 15px; right: 20px; font-size: 1.5rem; color: #94a3b8; cursor: pointer;"></i>
-        <h3 style="margin: 0; color: var(--accent);">Escanea para Pagar</h3>
-        <p style="color:#64748b; font-size:0.9rem; margin-top:5px;">Pago Móvil / Transferencia</p>
-        
-        <img id="modal-qr-img" src="" class="qr-full-img">
-        
-        <button onclick="closeQRModal()" class="btn-add" style="margin-top:20px;">Cerrar</button>
+    <div id="qr-modal" onclick="if(event.target === this) closeQRModal()">
+        <div class="qr-card">
+            <i class="fas fa-times" onclick="closeQRModal()" style="position: absolute; top: 15px; right: 20px; font-size: 1.5rem; color: #94a3b8; cursor: pointer;"></i>
+            <h3 style="margin: 0; color: var(--accent);">Escanea para Pagar</h3>
+            <p style="color:#64748b; font-size:0.9rem; margin-top:5px;">Pago Móvil / Transferencia</p>
+            <img id="modal-qr-img" src="" class="qr-full-img">
+            <button onclick="closeQRModal()" class="btn-add" style="margin-top:20px;">Cerrar</button>
+        </div>
     </div>
-</div>
 
     <script>
         const SUPABASE_URL = 'https://cirrapytmbnjlhxunkaq.supabase.co';
@@ -220,11 +201,9 @@
         };
         let chatChannel = null;
         let cart = [];
-        // --- NUEVO: Cache de productos para evitar errores de sintaxis en el botón ---
         let productsCache = []; 
         let storePaymentInfo = null;
 
-        // --- INIT ---
         if (session.storeId && session.clientId) {
             initApp();
         }
@@ -272,23 +251,14 @@
         }
 
         async function loadCatalog() {
-            // 1. Cargar Productos
-            const { data } = await supabase
-                .from('productos')
-                .select('*')
-                .eq('creado_por', session.storeId)
-                .order('id', { ascending: false });
-
-            // --- FIX: Guardar en memoria ---
+            const { data } = await supabase.from('productos').select('*').eq('creado_por', session.storeId).order('id', { ascending: false });
             productsCache = data || [];
             const grid = document.getElementById('products-grid');
             
             if(!data || data.length === 0) { 
                 grid.innerHTML = '<p style="grid-column:1/-1; text-align:center;">Esta tienda aún no tiene productos.</p>'; 
             } else {
-                grid.innerHTML = data.map(p => {
-                    // --- FIX: Usar solo el ID en el onclick ---
-                    return `
+                grid.innerHTML = data.map(p => `
                     <div class="card">
                         <img src="${p.imagen_url || 'https://via.placeholder.com/300'}" class="card-img">
                         <div class="card-body">
@@ -297,17 +267,10 @@
                             <div style="font-size:0.75rem; color:#64748b; margin-bottom:10px;">${p.descripcion || ''}</div>
                             <button class="btn-add" onclick="addToCart(${p.id})">Agregar +</button>
                         </div>
-                    </div>`;
-                }).join('');
+                    </div>`).join('');
             }
 
-            // 2. Cargar Info de Pagos
-            const { data: storeData } = await supabase
-                .from('usuarios')
-                .select('banco_nombre, banco_titular, banco_ci, banco_numero, banco_tipo, qr_imagen_url')
-                .eq('id', session.storeId)
-                .single();
-                
+            const { data: storeData } = await supabase.from('usuarios').select('*').eq('id', session.storeId).single();
             if(storeData) {
                 storePaymentInfo = storeData;
                 renderPaymentInfo();
@@ -315,66 +278,40 @@
         }
 
         function renderPaymentInfo() {
-    if(!storePaymentInfo || !storePaymentInfo.banco_numero) return; 
+            if(!storePaymentInfo || !storePaymentInfo.banco_numero) return; 
+            document.getElementById('payment-details').style.display = 'block'; 
+            document.getElementById('pay-data-content').innerHTML = `
+                <div class="payment-row"><span class="payment-label">Banco:</span> <span>${storePaymentInfo.banco_nombre || ''}</span></div>
+                <div class="payment-row"><span class="payment-label">Titular:</span> <span>${storePaymentInfo.banco_titular || ''}</span></div>
+                <div class="payment-row"><span class="payment-label">C.I./RIF:</span> <span>${storePaymentInfo.banco_ci || ''}</span></div>
+                <div class="payment-row"><span class="payment-label">Tipo:</span> <span>${storePaymentInfo.banco_tipo || ''}</span></div>
+                <div style="margin-top:5px;">
+                    <span class="payment-label">Cuenta / Teléfono:</span><br>
+                    <span class="payment-val">${storePaymentInfo.banco_numero}</span>
+                    <i class="fas fa-copy" onclick="navigator.clipboard.writeText('${storePaymentInfo.banco_numero}'); alert('Copiado!')" style="cursor:pointer; color:var(--accent); margin-left:5px;"></i>
+                </div>
+            `;
+            const qrContainer = document.getElementById('pay-qr-container');
+            if(storePaymentInfo.qr_imagen_url) {
+                qrContainer.style.display = 'block';
+                qrContainer.innerHTML = `<button type="button" class="btn-open-qr" onclick="openQRModal('${storePaymentInfo.qr_imagen_url}')"><i class="fas fa-qrcode"></i> Pagar por QR</button>`;
+            } else {
+                qrContainer.style.display = 'none';
+            }
+        }
 
-    const container = document.getElementById('payment-details');
-    const content = document.getElementById('pay-data-content');
-    const qrContainer = document.getElementById('pay-qr-container');
-    
-    container.style.display = 'block'; 
-    
-    // Renderizamos los datos de texto
-    content.innerHTML = `
-        <div class="payment-row"><span class="payment-label">Banco:</span> <span>${storePaymentInfo.banco_nombre || ''}</span></div>
-        <div class="payment-row"><span class="payment-label">Titular:</span> <span>${storePaymentInfo.banco_titular || ''}</span></div>
-        <div class="payment-row"><span class="payment-label">C.I./RIF:</span> <span>${storePaymentInfo.banco_ci || ''}</span></div>
-        <div class="payment-row"><span class="payment-label">Tipo:</span> <span>${storePaymentInfo.banco_tipo || ''}</span></div>
-        <div style="margin-top:5px;">
-            <span class="payment-label">Cuenta / Teléfono:</span><br>
-            <span class="payment-val">${storePaymentInfo.banco_numero}</span>
-            <i class="fas fa-copy" onclick="navigator.clipboard.writeText('${storePaymentInfo.banco_numero}'); alert('Copiado!')" style="cursor:pointer; color:var(--accent); margin-left:5px;"></i>
-        </div>
-    `;
+        function openQRModal(url) { document.getElementById('modal-qr-img').src = url; document.getElementById('qr-modal').classList.add('open'); }
+        function closeQRModal() { document.getElementById('qr-modal').classList.remove('open'); }
 
-    // LOGICA NUEVA: BOTÓN EN LUGAR DE IMAGEN DIRECTA
-    if(storePaymentInfo.qr_imagen_url) {
-        qrContainer.style.display = 'block';
-        qrContainer.innerHTML = `
-            <button type="button" class="btn-open-qr" onclick="openQRModal('${storePaymentInfo.qr_imagen_url}')">
-                <i class="fas fa-qrcode"></i> Pagar por QR
-            </button>
-        `;
-    } else {
-        qrContainer.style.display = 'none';
-    }
-}
-
-// --- FUNCIONES PARA EL MODAL ---
-function openQRModal(url) {
-    document.getElementById('modal-qr-img').src = url;
-    document.getElementById('qr-modal').classList.add('open');
-}
-
-function closeQRModal() {
-    document.getElementById('qr-modal').classList.remove('open');
-}
-
-        // --- LOGICA CARRITO & DELIVERY ---
-        
-        // --- FIX: Función addToCart recibe ID y busca en memoria ---
         function addToCart(id) {
             const product = productsCache.find(p => p.id === id);
             if(!product) return;
-
             cart.push(product);
             updateCartUI();
             if(navigator.vibrate) navigator.vibrate(50);
         }
 
-        function removeFromCart(index) {
-            cart.splice(index, 1);
-            updateCartUI();
-        }
+        function removeFromCart(index) { cart.splice(index, 1); updateCartUI(); }
 
         function updateCartUI() {
             const total = cart.reduce((sum, item) => sum + item.precio, 0);
@@ -392,155 +329,129 @@ function closeQRModal() {
                             <small style="color:#64748b;">$${item.precio}</small>
                         </div>
                         <button class="btn-remove" onclick="removeFromCart(${index})"><i class="fas fa-trash"></i></button>
-                    </div>
-                `).join('');
+                    </div>`).join('');
             }
         }
 
         function toggleCart() { document.getElementById('cart-overlay').classList.toggle('open'); }
-
         function toggleDeliveryFields() {
             const method = document.getElementById('delivery-method').value;
-            const info = document.getElementById('delivery-info');
-
-            // 1. Solo manejamos visibilidad de dirección. El pago se queda visible si renderPaymentInfo lo activó.
-            info.style.display = method === 'delivery' ? 'block' : 'none';
+            document.getElementById('delivery-info').style.display = method === 'delivery' ? 'block' : 'none';
         }
 
         function getGeoLocation() {
             const btn = document.querySelector('.btn-geo');
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando satélites...';
-            
-            if (!navigator.geolocation) {
-                alert("Geolocalización no soportada.");
-                btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Usar mi ubicación actual';
-                return;
-            }
-
-            const options = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+            if (!navigator.geolocation) return alert("Geolocalización no soportada.");
 
             navigator.geolocation.getCurrentPosition((position) => {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
                 const link = `https://www.google.com/maps?q=${lat},${lng}`;
-                
                 const textArea = document.getElementById('delivery-address');
                 textArea.value = `📍 Ubicación GPS Exacta: ${link}\n\n` + textArea.value;
-                
                 btn.innerHTML = '<i class="fas fa-check"></i> ¡Ubicación Precisa Agregada!';
-                if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
                 setTimeout(() => btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Actualizar ubicación', 3000);
-            }, (error) => {
-                console.error(error);
-                let msg = "No se pudo obtener la ubicación.";
-                if(error.code === 1) msg = "Permiso de ubicación denegado.";
-                alert(msg);
+            }, () => {
+                alert("No se pudo obtener la ubicación.");
                 btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Intentar de nuevo';
-            }, options);
+            }, { enableHighAccuracy: true, timeout: 10000 });
         }
 
         async function checkout() {
             if (cart.length === 0) return alert("Agrega productos primero.");
-            
             const method = document.getElementById('delivery-method').value;
             const address = document.getElementById('delivery-address').value.trim();
-
-            if (method === 'delivery' && !address) {
-                return alert("Por favor ingresa tu dirección o usa el botón de ubicación para el Delivery.");
-            }
+            if (method === 'delivery' && !address) return alert("Ingresa dirección para Delivery.");
 
             const btn = document.querySelector('.btn-checkout');
             const originalText = btn.textContent;
             btn.disabled = true; btn.textContent = "Enviando...";
 
             const total = cart.reduce((sum, item) => sum + item.precio, 0);
-            
-            const productsSummary = cart.map(p => ({ id: p.id, name: p.nombre, price: p.precio }));
-            const orderMetadata = { 
-                items: productsSummary,
-                delivery: {
-                    method: method,
-                    address: method === 'delivery' ? address : 'N/A'
-                }
-            };
+            const orderMetadata = { items: cart.map(p => ({ id: p.id, name: p.nombre, price: p.precio })), delivery: { method, address: method === 'delivery' ? address : 'N/A' } };
 
             try {
-                const { error } = await supabase.from('pedidos').insert({
-                    cliente_id: session.clientId,
-                    total: total,
-                    productos: orderMetadata,
-                    estado: 'pendiente'
-                });
+                await supabase.from('pedidos').insert({ cliente_id: session.clientId, total: total, productos: orderMetadata, estado: 'pendiente' });
+                let autoMsg = `✅ ¡Nuevo pedido! Total: $${total.toFixed(2)} (${cart.length} items).\n${method === 'delivery' ? '🛵 Delivery: ' + address : '📍 Retiro en Tienda.'}`;
+                if(storePaymentInfo && storePaymentInfo.banco_numero) autoMsg += `\n\n💳 He visto los datos. Enviaré comprobante por aquí.`;
 
-                if (error) throw error;
-
-                let autoMsg = `✅ ¡Nuevo pedido! Total: $${total.toFixed(2)} (${cart.length} items).`;
-                
-                if (method === 'delivery') {
-                    autoMsg += `\n🛵 **Entrega:** Delivery.\n📍 **Dirección:** ${address}`;
-                } else {
-                    autoMsg += `\n📍 **Entrega:** Retiro en Tienda.`;
-                }
-
-                if(storePaymentInfo && storePaymentInfo.banco_numero) {
-                    autoMsg += `\n\n💳 He visto los datos de pago. Enviaré el comprobante por aquí.`;
-                }
-
-                await supabase.from('mensajes').insert({
-                    tienda_id: session.storeId,
-                    cliente_id: session.clientId,
-                    enviado_por_rol: 'cliente',
-                    contenido: autoMsg
-                });
-                
+                await supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: autoMsg });
                 renderMsg({ contenido: autoMsg, enviado_por_rol: 'cliente' });
-
-                cart = [];
-                updateCartUI();
-                toggleCart();
-                alert("¡Pedido enviado con éxito!");
+                
+                cart = []; updateCartUI(); toggleCart();
+                alert("¡Pedido enviado!");
                 document.getElementById('chat-box').classList.add('open');
-
             } catch (err) {
-                alert("Error al enviar pedido: " + err.message);
+                alert("Error: " + err.message);
             } finally {
                 btn.disabled = false; btn.textContent = originalText;
             }
         }
 
-        // --- CHAT LOGIC ---
+        // --- LOGICA DE CHAT + IMAGENES ---
         async function initChat() {
             const { data } = await supabase.from('mensajes').select('*').eq('tienda_id', session.storeId).eq('cliente_id', session.clientId).order('created_at', { ascending: true });
             if(data) data.forEach(renderMsg);
             scrollToBottom();
 
-            const room = `chat_room_${session.storeId}_${session.clientId}`;
-            chatChannel = supabase.channel(room)
+            chatChannel = supabase.channel(`chat_room_${session.storeId}_${session.clientId}`)
                 .on('broadcast', { event: 'typing' }, () => {
-                    const el = document.getElementById('typing-ind');
-                    el.textContent = "La tienda está escribiendo...";
-                    setTimeout(() => el.textContent = '', 3000);
-                })
-                .subscribe();
+                    document.getElementById('typing-ind').textContent = "La tienda está escribiendo...";
+                    setTimeout(() => document.getElementById('typing-ind').textContent = '', 3000);
+                }).subscribe();
 
-            supabase.channel('client-inbox-' + session.clientId)
-                .on('postgres_changes', 
-                    { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `cliente_id=eq.${session.clientId}` }, 
-                    payload => {
-                        if (payload.new.enviado_por_rol !== 'cliente') {
-                            renderMsg(payload.new);
-                        }
-                    }
-                )
-                .subscribe();
+            supabase.channel('client-inbox-' + session.clientId).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `cliente_id=eq.${session.clientId}` }, payload => {
+                if (payload.new.enviado_por_rol !== 'cliente') renderMsg(payload.new);
+            }).subscribe();
         }
 
         function renderMsg(msg) {
             const div = document.createElement('div');
             div.className = `msg ${msg.enviado_por_rol === 'cliente' ? 'me' : 'store'}`;
+            // Si el contenido parece tener una imagen HTML, no escapamos saltos de linea normal
             div.innerHTML = msg.contenido.replace(/\n/g, '<br>');
             document.getElementById('chat-msgs').appendChild(div);
             scrollToBottom();
+        }
+
+        // FUNCION PARA SUBIR IMAGEN AL CHAT
+        async function uploadChatImage(inputElement) {
+            const file = inputElement.files[0];
+            if (!file) return;
+
+            const btnIcon = document.querySelector('label[for="chat-file"] i');
+            const originalClass = btnIcon.className;
+            btnIcon.className = "fas fa-spinner fa-spin"; 
+
+            try {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${session.storeId}/${session.clientId}_${Date.now()}.${fileExt}`;
+
+                // Subida al bucket
+                const { error: uploadErr } = await supabase.storage.from('chat-adjuntos').upload(fileName, file);
+                if (uploadErr) throw uploadErr;
+
+                const { data } = supabase.storage.from('chat-adjuntos').getPublicUrl(fileName);
+                
+                // Crear mensaje HTML con la imagen
+                const imgContent = `Comprobante de pago:<br><img src="${data.publicUrl}" class="chat-img" onclick="window.open(this.src, '_blank')">`;
+
+                await supabase.from('mensajes').insert({
+                    tienda_id: session.storeId,
+                    cliente_id: session.clientId,
+                    enviado_por_rol: 'cliente',
+                    contenido: imgContent
+                });
+
+                renderMsg({ contenido: imgContent, enviado_por_rol: 'cliente' });
+
+            } catch (error) {
+                alert("Error al subir imagen: " + error.message);
+            } finally {
+                btnIcon.className = originalClass;
+                inputElement.value = ''; 
+            }
         }
 
         async function sendChatMsg(e) {
@@ -551,19 +462,12 @@ function closeQRModal() {
 
             input.value = '';
             renderMsg({ contenido: text, enviado_por_rol: 'cliente' });
-
-            await supabase.from('mensajes').insert({
-                tienda_id: session.storeId,
-                cliente_id: session.clientId,
-                enviado_por_rol: 'cliente',
-                contenido: text
-            });
+            await supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: text });
         }
 
         function notifyTyping() { if(chatChannel) chatChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); }
         function toggleChat() { document.getElementById('chat-box').classList.toggle('open'); scrollToBottom(); }
         function scrollToBottom() { const d = document.getElementById('chat-msgs'); d.scrollTop = d.scrollHeight; }
     </script>
-  
 </body>
 </html>
