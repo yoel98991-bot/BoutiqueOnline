@@ -14,22 +14,37 @@
       OneSignalDeferred.push(async function(OneSignal) {
         await OneSignal.init({
           appId: "af032e9f-716c-4d7f-8fd1-32894c2a4cd8",
-          // safari_web_id: "web.onesignal.auto.xxxxx", // Opcional para macOS
           notifyButton: {
             enable: true,
           },
+          allowLocalhostAsSecureOrigin: true,
         });
         
-        // ETIQUETA CLAVE: Identificar al usuario como ADMIN
-        OneSignal.User.addTag("rol", "admin");
-        console.log("Admin Tagged for Notifications");
+        // --- ETIQUETADO AUTOMÁTICO DE ADMIN ---
+        const tagUserAsAdmin = () => {
+            console.log("Aplicando etiqueta 'admin'...");
+            OneSignal.User.addTag("rol", "admin");
+        };
+
+        // Si ya está suscrito al entrar
+        if (OneSignal.User.PushSubscription.optedIn) {
+            tagUserAsAdmin();
+        }
+
+        // Si se suscribe por primera vez
+        OneSignal.User.PushSubscription.addEventListener("change", function(event) {
+            if (event.current.optedIn) {
+                tagUserAsAdmin();
+                alert("¡Dispositivo registrado como ADMIN! Ve a la pestaña 'Pagos' para probar.");
+            }
+        });
       });
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* --- ESTILOS BASE --- */
+        /* --- ESTILOS --- */
         :root { --primary: #1e293b; --accent: #6366f1; --bg: #f8fafc; --surface: #ffffff; --text: #334155; --border: #e2e8f0; --radius: 16px; --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; min-height: 100vh; padding-bottom: 80px; }
@@ -48,49 +63,23 @@
         .tab { padding: 10px 20px; border: none; background: white; color: #64748b; font-weight: 600; border-radius: 30px; font-size: 0.9rem; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.02); position: relative; }
         .tab.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(30, 41, 59, 0.3); }
 
-        /* --- BADGES DE CONTADOR --- */
-        .badge-count {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background-color: #ef4444;
-            color: white;
-            font-size: 0.7rem;
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            display: none; /* Se oculta si es 0 */
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+        /* Badges */
+        .badge-count { position: absolute; top: -5px; right: -5px; background-color: #ef4444; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; display: none; }
 
-        /* --- TOAST NOTIFICATIONS --- */
+        /* Toasts */
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
-        .toast-notification {
-            background: white;
-            border-left: 4px solid var(--accent);
-            padding: 15px 20px;
-            border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            display: flex; align-items: center; gap: 15px;
-            animation: slideInRight 0.3s ease-out forwards;
-            min-width: 250px;
-        }
-        .toast-notification i { font-size: 1.2rem; color: var(--accent); }
-        .toast-content div { font-weight: 600; font-size: 0.9rem; }
-        .toast-content small { color: #64748b; }
+        .toast-notification { background: white; border-left: 4px solid var(--accent); padding: 15px 20px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 15px; animation: slideInRight 0.3s ease-out forwards; min-width: 250px; }
         @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }
 
-        /* General UI */
+        /* UI Components */
         .card { background: var(--surface); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 20px; }
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         label { display: block; margin-bottom: 6px; font-size: 0.8rem; font-weight: 600; color: #64748b; text-transform: uppercase; }
         input, textarea, select { width: 100%; padding: 14px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 12px; background: #f8fafc; font-family: 'Inter', sans-serif; font-size: 16px; appearance: none; }
-        .btn { padding: 14px 20px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
-        .btn-primary { background: var(--primary); color: white; width: 100%; }
-        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 8px 16px; font-size: 0.9rem; }
+        .btn { padding: 14px 20px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; width: 100%; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 8px 16px; font-size: 0.9rem; width: auto; }
         .btn-icon { width: 36px; height: 36px; padding: 0; border-radius: 8px; display: inline-flex; margin-left: 5px; align-items: center; justify-content: center;}
         .btn-danger { background: #fee2e2; color: #dc2626; }
         .btn-edit { background: #e0e7ff; color: var(--accent); }
@@ -98,42 +87,29 @@
         .panel-section { display: none; animation: fadeIn 0.3s ease; }
         .panel-section.active { display: block; }
 
-        /* Table Styles */
-        .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -20px; padding: 0 20px; }
+        /* Table */
+        .table-container { overflow-x: auto; margin: 0 -20px; padding: 0 20px; }
         table { width: 100%; border-collapse: collapse; white-space: nowrap; }
-        th { text-align: left; padding: 12px; color: #64748b; font-size: 0.8rem; border-bottom: 1px solid var(--border); }
         td { padding: 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
         .product-img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: #eee; }
 
-        /* Order Cards */
+        /* Orders */
         .order-item { padding: 15px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; background: white; }
-        .badge { font-size: 0.7rem; padding: 4px 8px; border-radius: 10px; font-weight: bold; }
-        .badge-pending { background: #fff7ed; color: #c2410c; }
+        .badge-pending { background: #fff7ed; color: #c2410c; font-size: 0.7rem; padding: 4px 8px; border-radius: 10px; font-weight: bold;}
         
-        /* CHAT STYLES */
-        .chat-list-item { display: flex; gap: 15px; padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.2s; }
-        .chat-list-item:hover { background: #f8fafc; }
+        /* Chat */
+        .chat-list-item { display: flex; gap: 15px; padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; }
         .chat-list-item.unread { background: #eff6ff; }
         .avatar { width: 45px; height: 45px; background: #cbd5e1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; position: relative; }
-        
         .chat-window { display: none; height: 70vh; flex-direction: column; background: #f1f5f9; border-radius: var(--radius); overflow: hidden; }
         .chat-window.active { display: flex; }
-        .chat-header { padding: 15px; background: white; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
         .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .msg { max-width: 75%; padding: 10px 15px; border-radius: 15px; font-size: 0.95rem; position: relative; }
+        .msg { max-width: 75%; padding: 10px 15px; border-radius: 15px; font-size: 0.95rem; }
         .msg.me { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .msg.them { background: white; color: var(--text); align-self: flex-start; border-bottom-left-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        
-        /* FIX: ESTILOS PARA IMAGENES EN CHAT */
-        .msg img { max-width: 100% !important; max-height: 300px; border-radius: 8px; margin-top: 5px; display: block; cursor: pointer; }
-
-        /* Map Button Style */
-        .map-btn { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; padding: 8px 12px; background: #e0e7ff; color: var(--accent); text-decoration: none; font-weight: 600; border-radius: 8px; font-size: 0.85rem; border: 1px solid #c7d2fe; transition: background 0.2s; }
-        .map-btn:hover { background: #c7d2fe; }
-        
+        .msg.them { background: white; color: var(--text); align-self: flex-start; border-bottom-left-radius: 2px; }
+        .msg img { max-width: 100%; border-radius: 8px; margin-top: 5px; }
         .chat-input-area { padding: 15px; background: white; display: flex; gap: 10px; border-top: 1px solid var(--border); }
-        .typing-indicator { font-size: 0.75rem; color: #64748b; margin-left: 55px; margin-top: -15px; margin-bottom: 10px; height: 15px; }
-
+        
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
@@ -164,17 +140,8 @@
 
         <div class="nav-tabs">
             <button class="tab active" onclick="switchTab('productos')"><i class="fas fa-box"></i> Productos</button>
-            
-            <button class="tab" onclick="switchTab('chats')">
-                <i class="fas fa-comments"></i> Chats 
-                <span id="badge-chats" class="badge-count">0</span>
-            </button>
-            
-            <button class="tab" onclick="switchTab('pedidos')">
-                <i class="fas fa-bell"></i> Pedidos
-                <span id="badge-orders" class="badge-count">0</span>
-            </button>
-            
+            <button class="tab" onclick="switchTab('chats')"><i class="fas fa-comments"></i> Chats <span id="badge-chats" class="badge-count">0</span></button>
+            <button class="tab" onclick="switchTab('pedidos')"><i class="fas fa-bell"></i> Pedidos <span id="badge-orders" class="badge-count">0</span></button>
             <button class="tab" onclick="switchTab('config')"><i class="fas fa-cog"></i> Pagos</button>
         </div>
 
@@ -200,12 +167,9 @@
                     <button type="button" id="btn-cancel" class="btn btn-cancel" style="display:none;" onclick="resetForm()">Cancelar</button>
                 </form>
             </div>
-
             <div class="card">
                 <h3><i class="fas fa-layer-group"></i> Inventario</h3>
-                <div class="table-container">
-                    <table id="products-table"></table>
-                </div>
+                <div class="table-container"><table id="products-table"></table></div>
             </div>
         </div>
 
@@ -214,15 +178,11 @@
                 <h3>Bandeja de Entrada</h3>
                 <div id="chats-list">Cargando...</div>
             </div>
-            
             <div id="chat-interface" class="chat-window">
                 <div class="chat-header">
                     <button class="btn btn-outline" style="padding: 5px 10px;" onclick="closeChat()"><i class="fas fa-arrow-left"></i></button>
                     <div class="avatar" id="current-chat-avatar">User</div>
-                    <div>
-                        <div style="font-weight:600;" id="current-chat-name">Cliente</div>
-                        <div style="font-size:0.75rem; color:#64748b;" id="current-chat-status">Offline</div>
-                    </div>
+                    <div style="font-weight:600;" id="current-chat-name">Cliente</div>
                 </div>
                 <div class="chat-messages" id="messages-container"></div>
                 <div class="typing-indicator" id="typing-indicator"></div>
@@ -244,28 +204,26 @@
         </div>
 
         <div id="tab-config" class="panel-section">
+            
+            <div class="card" style="border: 2px solid #fca5a5; background: #fff5f5;">
+                <h3 style="color: #dc2626;"><i class="fas fa-bell"></i> Prueba de Notificaciones</h3>
+                <p style="font-size: 0.85rem; color: #7f1d1d; margin-bottom: 10px;">Presiona para probar si llegan las alertas a tu celular.</p>
+                <button onclick="testNotification()" class="btn" style="background: #dc2626; color: white;">
+                    🔔 ENVIAR PRUEBA (CORS PROXY)
+                </button>
+            </div>
+
             <div class="card">
-                <h3><i class="fas fa-university"></i> Datos Bancarios / Pago Móvil</h3>
+                <h3><i class="fas fa-university"></i> Datos Bancarios</h3>
                 <form id="config-form">
                     <label>Banco</label>
-                    <input type="text" id="conf-banco" placeholder="Ej: Banco Venezuela / Banesco">
-                    
+                    <input type="text" id="conf-banco" placeholder="Ej: Banco Venezuela">
                     <div class="form-grid">
-                        <div>
-                            <label>Titular</label>
-                            <input type="text" id="conf-titular" placeholder="Nombre Completo">
-                        </div>
-                        <div>
-                            <label>C.I. / RIF</label>
-                            <input type="text" id="conf-ci" placeholder="V-12345678">
-                        </div>
+                        <div><label>Titular</label><input type="text" id="conf-titular"></div>
+                        <div><label>C.I. / RIF</label><input type="text" id="conf-ci"></div>
                     </div>
-
                     <div class="form-grid">
-                        <div>
-                            <label>Número de Cuenta / Teléfono</label>
-                            <input type="text" id="conf-numero" placeholder="0102... o 0412...">
-                        </div>
+                        <div><label>Teléfono / Cuenta</label><input type="text" id="conf-numero"></div>
                         <div>
                             <label>Tipo</label>
                             <select id="conf-tipo" style="width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: #f8fafc;">
@@ -275,14 +233,12 @@
                             </select>
                         </div>
                     </div>
-
-                    <label>Código QR (Opcional)</label>
+                    <label>Código QR</label>
                     <div class="upload-zone" onclick="document.getElementById('qr-input').click()">
-                        <p id="qr-text" style="margin:0; color:#64748b;">Toca para subir imagen del QR</p>
+                        <p id="qr-text" style="margin:0; color:#64748b;">Subir imagen QR</p>
                         <img id="qr-preview" style="display:none; max-width:150px; margin-top:10px; border-radius:8px;">
                         <input type="file" id="qr-input" accept="image/*" style="display:none;">
                     </div>
-
                     <button type="submit" id="btn-save-config" class="btn btn-primary">Guardar Configuración</button>
                 </form>
             </div>
@@ -300,10 +256,58 @@
         let activeChannel = null;
         let productsCache = []; 
         let editingId = null;
-        
-        // Sonido de notificación (un beep sutil)
         const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
+        // --- FUNCIÓN DE TESTEO (CORREGIDA CON PROXY) ---
+        async function testNotification() {
+          const ONESIGNAL_API_KEY = "os_v2_app_v4bs5h3rnrgx7d6rgkeuyksm3btr7jjnnhie6hnmxwfda2phu4ueftilt4qqaezxflffovm66bybtzygef7jjk43akzh3mwmxk2hebi";
+          const ONESIGNAL_APP_ID = "af032e9f-716c-4d7f-8fd1-32894c2a4cd8";
+          
+          const btn = event.target;
+          const originalText = btn.innerText;
+          btn.disabled = true; btn.innerText = "⏳ Enviando...";
+
+          console.log("Iniciando prueba con Proxy...");
+          
+          try {
+              // USAMOS CORSPROXY.IO PARA SALTAR EL BLOQUEO DE VERCEL/CHROME
+              const targetUrl = 'https://onesignal.com/api/v1/notifications';
+              const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
+
+              const response = await fetch(proxyUrl, {
+                method: 'POST',
+                headers: {
+                    'accept': 'application/json',
+                    'content-type': 'application/json',
+                    'Authorization': 'Basic ' + ONESIGNAL_API_KEY
+                },
+                body: JSON.stringify({
+                    app_id: ONESIGNAL_APP_ID,
+                    headings: { en: "🔔 PRUEBA EXITOSA", es: "🔔 PRUEBA EXITOSA" },
+                    contents: { en: "Sistema de alertas funcionando OK.", es: "Sistema de alertas funcionando OK." },
+                    filters: [ { field: "tag", key: "rol", relation: "=", value: "admin" } ]
+                })
+            });
+            
+            const data = await response.json();
+            console.log("Respuesta:", data);
+
+            if(data.id) {
+                alert("✅ ¡ENVIADO! Revisa tu barra de notificaciones.");
+                if(data.recipients === 0) alert("⚠️ Se envió, pero nadie tiene el tag 'admin'. Recarga la página para que se te asigne.");
+            } else {
+                alert("Error OneSignal: " + JSON.stringify(data));
+            }
+            
+          } catch (e) {
+              console.error(e);
+              alert("❌ Error de conexión: " + e.message);
+          } finally {
+              btn.disabled = false; btn.innerText = originalText;
+          }
+        }
+
+        // --- AUTENTICACIÓN Y LÓGICA ---
         supabase.auth.onAuthStateChange((event, session) => {
             if (session) {
                 currentUser = session.user;
@@ -328,7 +332,7 @@
             document.getElementById('dashboard').style.display = 'block';
             
             loadProducts();
-            updateDashboardCounters(); // Cargar contadores al inicio
+            updateDashboardCounters();
             setupGlobalRealtime();
         }
 
@@ -342,12 +346,11 @@
             if (error) document.getElementById('auth-msg').textContent = "Error: " + error.message;
         });
 
-        // --- PRODUCTOS ---
+        // PRODUCTOS
         document.getElementById('product-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-save');
             btn.textContent = "Guardando..."; btn.disabled = true;
-
             try {
                 const file = document.getElementById('imagen-input').files[0];
                 let imageUrl = null;
@@ -359,7 +362,6 @@
                 } else if (editingId) {
                     imageUrl = productsCache.find(p => p.id === editingId).imagen_url;
                 }
-
                 const productData = {
                     nombre: document.getElementById('nombre').value,
                     precio: parseFloat(document.getElementById('precio').value),
@@ -370,13 +372,10 @@
                     creado_por: currentUser.id,
                     ...(imageUrl && { imagen_url: imageUrl }) 
                 };
-
                 if (editingId) await supabase.from('productos').update(productData).eq('id', editingId);
                 else { productData.imagen_url = imageUrl; await supabase.from('productos').insert([productData]); }
-                
                 alert(editingId ? "Actualizado" : "Publicado");
-                resetForm();
-                loadProducts();
+                resetForm(); loadProducts();
             } catch (error) { alert("Error: " + error.message); } 
             finally { btn.disabled = false; btn.textContent = "Publicar"; }
         });
@@ -396,7 +395,6 @@
             if(!data || data.length === 0) { table.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Sin productos.</td></tr>'; return; }
             table.innerHTML = `<thead><tr><th>FOTO</th><th>DETALLE</th><th>$</th><th>ACCIONES</th></tr></thead><tbody>${data.map(p => `<tr><td><img src="${p.imagen_url || 'https://via.placeholder.com/50'}" class="product-img"></td><td><div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div><div style="font-size:0.75rem; color:#94a3b8;">Stock: ${p.stock}</div></td><td style="font-weight:bold;">${p.precio}</td><td><button class="btn-icon btn-edit" onclick="startEdit(${p.id})"><i class="fas fa-pen"></i></button><button class="btn-icon btn-danger" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>`;
         }
-
         function startEdit(id) {
             const p = productsCache.find(x => x.id === id);
             if(!p) return;
@@ -412,169 +410,67 @@
             document.getElementById('btn-cancel').style.display = 'inline-block';
             document.getElementById('form-card').scrollIntoView({ behavior: 'smooth' });
         }
-
         async function deleteProduct(id) { if(confirm('¿Eliminar?')) { await supabase.from('productos').delete().eq('id', id); loadProducts(); } }
 
+        // PEDIDOS
         async function loadOrders() {
             const { data } = await supabase.from('pedidos').select('*, clientes(nombre, telefono)').order('fecha', {ascending:false});
             const list = document.getElementById('orders-list');
-            
-            // Actualizar contador al abrir pedidos (o limpiar si se considera visto)
-            // Por ahora lo mantenemos simple y actualizamos el contador global
             updateDashboardCounters();
-
             if(!data || data.length === 0) { list.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">Sin pedidos</div>'; return; }
-            
             list.innerHTML = data.map(o => {
-                let productsHTML = 'Sin productos';
-                if (o.productos && o.productos.items) productsHTML = o.productos.items.map(i => i.name).join(', ');
-                else if (Array.isArray(o.productos)) productsHTML = o.productos.map(i => i.name).join(', ');
-                
-                return `<div class="order-item"><div class="order-header" style="display:flex; justify-content:space-between; margin-bottom:8px;"><div style="font-weight:600; font-size:0.9rem;"><i class="fas fa-user"></i> ${o.clientes?.nombre || 'Anónimo'}</div><span class="badge badge-pending">${o.estado}</span></div><div style="font-size:0.85rem; color:#64748b; margin-bottom:10px;"><div><i class="fab fa-whatsapp"></i> ${o.clientes?.telefono || 'Sin tel'}</div><div style="margin-top:4px; color:#334155;">🛒 ${productsHTML}</div></div><div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #e2e8f0; padding-top:8px;"><small style="color:#94a3b8;">${new Date(o.fecha).toLocaleDateString()}</small><div style="font-weight:700; color:var(--primary);">$${o.total}</div></div></div>`;
+                let productsHTML = o.productos && o.productos.items ? o.productos.items.map(i => i.name).join(', ') : (Array.isArray(o.productos) ? o.productos.map(i => i.name).join(', ') : 'Sin detalle');
+                return `<div class="order-item"><div style="display:flex; justify-content:space-between; margin-bottom:8px;"><div style="font-weight:600; font-size:0.9rem;"><i class="fas fa-user"></i> ${o.clientes?.nombre || 'Anónimo'}</div><span class="badge-pending">${o.estado}</span></div><div style="font-size:0.85rem; color:#64748b; margin-bottom:10px;"><div><i class="fab fa-whatsapp"></i> ${o.clientes?.telefono || 'Sin tel'}</div><div style="margin-top:4px; color:#334155;">🛒 ${productsHTML}</div></div><div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #e2e8f0; padding-top:8px;"><small style="color:#94a3b8;">${new Date(o.fecha).toLocaleDateString()}</small><div style="font-weight:700; color:var(--primary);">$${o.total}</div></div></div>`;
             }).join('');
         }
 
-        // --- LOGICA DE NOTIFICACIONES Y CONTADORES ---
-        
+        // NOTIFICACIONES Y CONTADORES
         function showNotification(title, message) {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             toast.className = 'toast-notification';
-            toast.innerHTML = `
-                <i class="fas fa-bell"></i>
-                <div class="toast-content">
-                    <div>${title}</div>
-                    <small>${message}</small>
-                </div>
-            `;
+            toast.innerHTML = `<i class="fas fa-bell"></i><div class="toast-content"><div>${title}</div><small>${message}</small></div>`;
             container.appendChild(toast);
-            
-            // Sonido
-            try { notificationSound.play().catch(e => console.log("Audio bloqueado por navegador")); } catch(e){}
-
-            // Eliminar despues de 4 segundos
-            setTimeout(() => {
-                toast.style.animation = 'fadeOut 0.5s forwards';
-                setTimeout(() => toast.remove(), 500);
-            }, 4000);
+            try { notificationSound.play().catch(e => console.log("Audio bloqueado")); } catch(e){}
+            setTimeout(() => { toast.style.animation = 'fadeOut 0.5s forwards'; setTimeout(() => toast.remove(), 500); }, 4000);
         }
 
         async function updateDashboardCounters() {
-            // Contar mensajes no leidos
-            const { count: unreadMsgs } = await supabase
-                .from('mensajes')
-                .select('*', { count: 'exact', head: true })
-                .eq('tienda_id', currentUser.id)
-                .eq('leido', false)
-                .eq('enviado_por_rol', 'cliente');
-            
-            // Contar pedidos pendientes (asumimos que estado 'pendiente' es lo que cuenta)
-            const { count: pendingOrders } = await supabase
-                .from('pedidos')
-                .select('*', { count: 'exact', head: true })
-                // Nota: Si tu tabla de pedidos tiene relation con tienda, filtra por tienda_id. 
-                // Asumimos que los pedidos llegan asociados a los clientes de la tienda.
-                // Si tu tabla pedidos no tiene tienda_id directo, habria que filtrar por los clientes de esta tienda.
-                // Para simplificar y dado que el cliente probablemente filtra por su RLS, usamos count directo.
-                .eq('estado', 'pendiente'); 
-
-            const badgeChat = document.getElementById('badge-chats');
-            const badgeOrder = document.getElementById('badge-orders');
-
-            if(unreadMsgs > 0) {
-                badgeChat.textContent = unreadMsgs;
-                badgeChat.style.display = 'block';
-            } else {
-                badgeChat.style.display = 'none';
-            }
-
-            if(pendingOrders > 0) {
-                badgeOrder.textContent = pendingOrders;
-                badgeOrder.style.display = 'block';
-            } else {
-                badgeOrder.style.display = 'none';
-            }
+            const { count: unreadMsgs } = await supabase.from('mensajes').select('*', { count: 'exact', head: true }).eq('tienda_id', currentUser.id).eq('leido', false).eq('enviado_por_rol', 'cliente');
+            const { count: pendingOrders } = await supabase.from('pedidos').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente'); 
+            document.getElementById('badge-chats').textContent = unreadMsgs;
+            document.getElementById('badge-chats').style.display = unreadMsgs > 0 ? 'block' : 'none';
+            document.getElementById('badge-orders').textContent = pendingOrders;
+            document.getElementById('badge-orders').style.display = pendingOrders > 0 ? 'block' : 'none';
         }
 
-        // --- CHAT LOGIC ---
+        // CHAT
         function setupGlobalRealtime() {
-            // Escuchar nuevos Mensajes
-            supabase.channel('admin-global-msgs')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, payload => {
+            supabase.channel('admin-global-msgs').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, payload => {
                 if(payload.new.tienda_id !== currentUser.id) return;
-                
-                // Si es mensaje de un cliente
                 if(payload.new.enviado_por_rol === 'cliente') {
-                    // Si no estamos chateando con ese cliente especifico ahora mismo
-                    if (activeChatClientId !== payload.new.cliente_id) {
-                        showNotification('Nuevo Mensaje', 'Has recibido un mensaje de cliente.');
-                        updateDashboardCounters();
-                    }
+                    if (activeChatClientId !== payload.new.cliente_id) { showNotification('Nuevo Mensaje', 'Cliente envió mensaje'); updateDashboardCounters(); }
                 }
-
                 if(document.getElementById('tab-chats').classList.contains('active')) loadChatsList();
                 if(activeChatClientId && payload.new.cliente_id === activeChatClientId && payload.new.enviado_por_rol !== 'dueño') renderMessage(payload.new);
             }).subscribe();
 
-            // Escuchar nuevos Pedidos
-            supabase.channel('admin-global-orders')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, payload => {
-                 // Aquí deberiamos verificar si el pedido corresponde a un cliente de esta tienda
-                 // Hacemos una notificación general
-                 showNotification('Nuevo Pedido', '¡Acaba de entrar un pedido nuevo!');
+            supabase.channel('admin-global-orders').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, payload => {
+                 showNotification('Nuevo Pedido', '¡Nuevo pedido recibido!');
                  updateDashboardCounters();
                  if(document.getElementById('tab-pedidos').classList.contains('active')) loadOrders();
             }).subscribe();
         }
 
-       async function loadChatsList() {
-            const { data } = await supabase
-                .from('mensajes')
-                .select('*, clientes(id, nombre)')
-                .eq('tienda_id', currentUser.id)
-                .order('created_at', { ascending: false })
-                .limit(200);
-
+        async function loadChatsList() {
+            const { data } = await supabase.from('mensajes').select('*, clientes(id, nombre)').eq('tienda_id', currentUser.id).order('created_at', { ascending: false }).limit(200);
             const grouped = {};
-            data.forEach(msg => { 
-                if (!grouped[msg.cliente_id]) {
-                    grouped[msg.cliente_id] = { client: msg.clientes, lastMsg: msg }; 
-                }
-            });
-
-            // Actualizamos los contadores cada vez que cargamos la lista
+            data.forEach(msg => { if (!grouped[msg.cliente_id]) { grouped[msg.cliente_id] = { client: msg.clientes, lastMsg: msg }; } });
             updateDashboardCounters();
-
             const listHTML = Object.values(grouped).map(item => {
-                // Detectamos si es imagen
-                let previewText = item.lastMsg.contenido;
-                if (previewText.includes('<img')) {
-                    previewText = '📷 [Imagen]';
-                } else {
-                    if(previewText.length > 30) previewText = previewText.substring(0, 30) + '...';
-                }
-
                 const isUnread = !item.lastMsg.leido && item.lastMsg.enviado_por_rol === 'cliente';
-                const senderPrefix = item.lastMsg.enviado_por_rol === 'dueño' ? 'Tú: ' : '';
-
-                return `
-                <div class="chat-list-item ${isUnread ? 'unread' : ''}" onclick="openChat('${item.client.id}', '${item.client.nombre}')">
-                    <div class="avatar">
-                        ${item.client.nombre.substring(0,2).toUpperCase()}
-                        ${isUnread ? '<div style="position:absolute; bottom:0; right:0; width:12px; height:12px; background:#ef4444; border-radius:50%; border:2px solid white;"></div>' : ''}
-                    </div>
-                    <div style="flex:1;">
-                        <div style="display:flex; justify-content:space-between;">
-                            <div style="font-weight:600;">${item.client.nombre}</div>
-                            <small style="color:#94a3b8;">${new Date(item.lastMsg.created_at).toLocaleDateString()}</small>
-                        </div>
-                        <div style="font-size:0.85rem; color:#64748b; font-weight: ${isUnread ? 'bold' : 'normal'}; color: ${isUnread ? '#1e293b' : '#64748b'};">
-                            ${senderPrefix}${previewText}
-                        </div>
-                    </div>
-                </div>`;
+                return `<div class="chat-list-item ${isUnread ? 'unread' : ''}" onclick="openChat('${item.client.id}', '${item.client.nombre}')"><div class="avatar">${item.client.nombre.substring(0,2).toUpperCase()}${isUnread ? '<div style="position:absolute; bottom:0; right:0; width:12px; height:12px; background:#ef4444; border-radius:50%; border:2px solid white;"></div>' : ''}</div><div style="flex:1;"><div style="display:flex; justify-content:space-between;"><div style="font-weight:600;">${item.client.nombre}</div><small style="color:#94a3b8;">${new Date(item.lastMsg.created_at).toLocaleDateString()}</small></div><div style="font-size:0.85rem; color:${isUnread ? '#000' : '#64748b'};">${item.lastMsg.enviado_por_rol === 'dueño' ? 'Tú: ' : ''}${item.lastMsg.contenido.substring(0, 30)}...</div></div></div>`;
             }).join('');
-
             document.getElementById('chats-list').innerHTML = listHTML || '<div style="padding:20px; text-align:center;">No hay chats</div>';
         }
 
@@ -584,78 +480,47 @@
             document.getElementById('chat-interface').classList.add('active');
             document.getElementById('current-chat-name').textContent = clientName;
             document.getElementById('current-chat-avatar').textContent = clientName.substring(0,2).toUpperCase();
-            
             const container = document.getElementById('messages-container');
             container.innerHTML = '<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin"></i></div>';
-            
             const { data } = await supabase.from('mensajes').select('*').eq('tienda_id', currentUser.id).eq('cliente_id', clientId).order('created_at', { ascending: true });
-            container.innerHTML = '';
-            data.forEach(renderMessage);
-            
+            container.innerHTML = ''; data.forEach(renderMessage);
             await supabase.from('mensajes').update({ leido: true }).eq('cliente_id', clientId).eq('enviado_por_rol', 'cliente');
-            updateDashboardCounters(); // Actualizar contador al leer
-
+            updateDashboardCounters();
             if(activeChannel) supabase.removeChannel(activeChannel);
             activeChannel = supabase.channel(`chat_room_${currentUser.id}_${clientId}`).on('broadcast', { event: 'typing' }, () => {
-                const ind = document.getElementById('typing-indicator');
-                ind.textContent = `${clientName} está escribiendo...`;
-                setTimeout(() => ind.textContent = '', 3000);
+                const ind = document.getElementById('typing-indicator'); ind.textContent = `${clientName} escribe...`; setTimeout(() => ind.textContent = '', 3000);
             }).subscribe();
         }
-
         function renderMessage(msg) {
-            const div = document.createElement('div');
-            div.className = `msg ${msg.enviado_por_rol === 'dueño' ? 'me' : 'them'}`;
-            
-            let htmlContent = msg.contenido.replace(/\n/g, '<br>');
-            
-            // FIX: NO romper HTML de imagenes
-            if (!htmlContent.includes('<img')) {
-                const urlPattern = /(https?:\/\/[^\s]+)/g;
-                htmlContent = htmlContent.replace(urlPattern, (url) => `<a href="${url}" target="_blank" class="map-btn"><i class="fas fa-map-marked-alt"></i> Ver Link</a>`);
-            }
-            
-            div.innerHTML = htmlContent;
-            const c = document.getElementById('messages-container');
-            c.appendChild(div);
-            c.scrollTop = c.scrollHeight;
+            const div = document.createElement('div'); div.className = `msg ${msg.enviado_por_rol === 'dueño' ? 'me' : 'them'}`;
+            let html = msg.contenido.replace(/\n/g, '<br>');
+            if (!html.includes('<img')) html = html.replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank" class="map-btn">Ver Enlace</a>`);
+            div.innerHTML = html;
+            document.getElementById('messages-container').appendChild(div).scrollIntoView();
         }
-
         async function sendMessage(e) {
-            e.preventDefault();
-            const input = document.getElementById('msg-input');
-            const text = input.value.trim();
-            if(!text || !activeChatClientId) return;
-            input.value = '';
+            e.preventDefault(); const input = document.getElementById('msg-input'); const text = input.value.trim();
+            if(!text || !activeChatClientId) return; input.value = '';
             renderMessage({ contenido: text, enviado_por_rol: 'dueño' });
             await supabase.from('mensajes').insert({ tienda_id: currentUser.id, cliente_id: activeChatClientId, enviado_por_rol: 'dueño', contenido: text });
         }
-
         function notifyTyping() { if(activeChannel) activeChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); }
-
         function closeChat() {
-            activeChatClientId = null;
-            document.getElementById('chat-interface').classList.remove('active');
-            document.getElementById('chats-inbox').style.display = 'block';
-            loadChatsList();
-            updateDashboardCounters();
+            activeChatClientId = null; document.getElementById('chat-interface').classList.remove('active');
+            document.getElementById('chats-inbox').style.display = 'block'; loadChatsList();
         }
 
+        // CONFIGURACIÓN
         document.getElementById('config-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('btn-save-config');
-            btn.textContent = "Guardando..."; btn.disabled = true;
+            e.preventDefault(); const btn = document.getElementById('btn-save-config'); btn.textContent = "Guardando..."; btn.disabled = true;
             try {
                 const file = document.getElementById('qr-input').files[0];
                 let qrUrl = document.getElementById('qr-preview').src; 
-                
                 if (file) {
                     const fileName = `qr_${currentUser.id}_${Date.now()}.${file.name.split('.').pop()}`;
                     await supabase.storage.from('imagenes-pagos').upload(fileName, file, { upsert: true });
-                    const { data } = supabase.storage.from('imagenes-pagos').getPublicUrl(fileName);
-                    qrUrl = data.publicUrl;
+                    const { data } = supabase.storage.from('imagenes-pagos').getPublicUrl(fileName); qrUrl = data.publicUrl;
                 }
-
                 const updates = {
                     banco_nombre: document.getElementById('conf-banco').value,
                     banco_titular: document.getElementById('conf-titular').value,
@@ -664,17 +529,14 @@
                     banco_tipo: document.getElementById('conf-tipo').value,
                     qr_imagen_url: qrUrl && qrUrl.startsWith('http') ? qrUrl : null
                 };
-
                 await supabase.from('usuarios').update(updates).eq('id', currentUser.id);
-                alert("¡Datos de pago actualizados!");
+                alert("¡Configuración guardada!");
                 if(qrUrl.startsWith('http')) { document.getElementById('qr-preview').src = qrUrl; document.getElementById('qr-preview').style.display = 'block'; }
-            } catch (err) { alert("Error: " + err.message); } 
-            finally { btn.disabled = false; btn.textContent = "Guardar Configuración"; }
+            } catch (err) { alert("Error: " + err.message); } finally { btn.disabled = false; btn.textContent = "Guardar Configuración"; }
         });
-
         async function loadConfig() {
-            const { data, error } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
-            if (error || !data) return;
+            const { data } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
+            if (!data) return;
             document.getElementById('conf-banco').value = data.banco_nombre || '';
             document.getElementById('conf-titular').value = data.banco_titular || '';
             document.getElementById('conf-ci').value = data.banco_ci || '';
@@ -687,16 +549,9 @@
             document.querySelectorAll('.panel-section').forEach(s => s.classList.remove('active'));
             document.getElementById('tab-'+t).classList.add('active');
             document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-            // event.target.classList.add('active'); // Fix: target puede ser el icono o el span
-            // Buscamos el boton mas cercano
-            const btn = event.target.closest('.tab');
-            if(btn) btn.classList.add('active');
-
-            if(t === 'chats') loadChatsList();
-            if(t === 'pedidos') loadOrders();
-            if(t === 'config') loadConfig();
+            const btn = event.target.closest('.tab'); if(btn) btn.classList.add('active');
+            if(t === 'chats') loadChatsList(); if(t === 'pedidos') loadOrders(); if(t === 'config') loadConfig();
         }
-
         async function logout() { await supabase.auth.signOut(); window.location.reload(); }
     </script>
 </body>
