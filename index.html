@@ -62,7 +62,7 @@
         .btn-geo { background: #eff6ff; color: var(--accent); border: 1px dashed var(--accent); padding: 10px; width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px; }
 
         /* ESTILOS NUEVOS PARA PAGO */
-        .payment-info-card { background: #f0f9ff; border: 1px dashed #2563eb; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px; font-size: 0.9rem; display: none; }
+        .payment-info-card { background: #f0f9ff; border: 1px dashed #2563eb; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px; font-size: 0.9rem; display: none; /* Oculto por defecto */ }
         .payment-row { display: flex; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 5px; }
         .payment-label { font-weight: 600; color: #475569; }
         .payment-val { font-family: monospace; font-size: 1rem; color: #1e293b; font-weight: bold; }
@@ -239,8 +239,7 @@
                 grid.innerHTML = '<p style="grid-column:1/-1; text-align:center;">Esta tienda aún no tiene productos.</p>'; 
             } else {
                 grid.innerHTML = data.map(p => {
-                    // --- CORRECCIÓN AQUÍ: Usamos &quot; para no romper el HTML ---
-                    const pStr = JSON.stringify(p).replace(/"/g, "&quot;"); 
+                    const pStr = JSON.stringify(p).replace(/"/g, '"'); 
                     return `
                     <div class="card">
                         <img src="${p.imagen_url || 'https://via.placeholder.com/300'}" class="card-img">
@@ -254,7 +253,7 @@
                 }).join('');
             }
 
-            // 2. Cargar Info de Pagos
+            // 2. Cargar Info de Pagos (Pero no mostrarla aún)
             const { data: storeData } = await supabase
                 .from('usuarios')
                 .select('banco_nombre, banco_titular, banco_ci, banco_numero, banco_tipo, qr_imagen_url')
@@ -273,7 +272,7 @@
             const container = document.getElementById('payment-details');
             const content = document.getElementById('pay-data-content');
             
-            container.style.display = 'block';
+            // NOTA: Aquí ya NO hacemos display: block. Se hará en toggleDeliveryFields.
             
             content.innerHTML = `
                 <div class="payment-row"><span class="payment-label">Banco:</span> <span>${storePaymentInfo.banco_nombre || ''}</span></div>
@@ -293,7 +292,7 @@
             }
         }
 
-        // --- LOGICA CARRITO & DELIVERY ---
+        // --- LOGICA CARRITO & DELIVERY & PAGOS ---
         function addToCart(product) {
             cart.push(product);
             updateCartUI();
@@ -331,7 +330,22 @@
         function toggleDeliveryFields() {
             const method = document.getElementById('delivery-method').value;
             const info = document.getElementById('delivery-info');
+            const payInfo = document.getElementById('payment-details');
+
+            // 1. Manejo de Dirección
             info.style.display = method === 'delivery' ? 'block' : 'none';
+
+            // 2. Manejo de Pagos (Solo aparece si es Delivery y tenemos datos)
+            if (method === 'delivery') {
+                if (storePaymentInfo && storePaymentInfo.banco_numero) {
+                    payInfo.style.display = 'block';
+                    // Pequeño scroll automático para que el usuario note que aparecieron los pagos
+                    setTimeout(() => payInfo.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+                }
+            } else {
+                // Si vuelve a "Retiro", ocultamos el pago (o lo puedes dejar visible si prefieres)
+                payInfo.style.display = 'none';
+            }
         }
 
         function getGeoLocation() {
@@ -409,9 +423,9 @@
                     autoMsg += `\n📍 **Entrega:** Retiro en Tienda.`;
                 }
 
-                // Verificar si hay datos de pago para recordar al cliente
-                if(storePaymentInfo && storePaymentInfo.banco_numero) {
-                    autoMsg += `\n\n💳 He visto los datos de pago. Enviaré el comprobante pronto.`;
+                // Si es Delivery y tenemos datos de pago, asumimos que quizás pagó o le recordamos
+                if(method === 'delivery' && storePaymentInfo && storePaymentInfo.banco_numero) {
+                    autoMsg += `\n\n💳 He visto los datos de pago. Enviaré el comprobante por aquí.`;
                 }
 
                 await supabase.from('mensajes').insert({
