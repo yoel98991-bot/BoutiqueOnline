@@ -61,6 +61,12 @@
         .btn-checkout { width: 100%; padding: 15px; background: var(--text-main); color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; margin-top: 15px; }
         .btn-geo { background: #eff6ff; color: var(--accent); border: 1px dashed var(--accent); padding: 10px; width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px; }
 
+        /* ESTILOS NUEVOS PARA PAGO */
+        .payment-info-card { background: #f0f9ff; border: 1px dashed #2563eb; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px; font-size: 0.9rem; display: none; }
+        .payment-row { display: flex; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 5px; }
+        .payment-label { font-weight: 600; color: #475569; }
+        .payment-val { font-family: monospace; font-size: 1rem; color: #1e293b; font-weight: bold; }
+
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     </style>
 </head>
@@ -137,6 +143,19 @@
                 </div>
             </div>
 
+            <div id="payment-details" class="payment-info-card">
+                <h3 style="margin-top:0; font-size:1rem; color:#2563eb; margin-bottom:10px;">
+                    <i class="fas fa-wallet"></i> Datos para el Pago
+                </h3>
+                
+                <div id="pay-data-content"></div>
+                
+                <div id="pay-qr-container" style="text-align:center; margin-top:10px; display:none;">
+                    <p style="font-size:0.8rem; margin-bottom:5px;">Escanea para pagar:</p>
+                    <img id="pay-qr-img" src="" style="max-width:120px; border-radius:8px; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                </div>
+            </div>
+
             <div style="margin-bottom:15px; display:flex; justify-content:space-between; font-weight:bold; font-size:1.1rem;">
                 <span>Total:</span>
                 <span id="cart-final-total">$0.00</span>
@@ -157,6 +176,7 @@
         };
         let chatChannel = null;
         let cart = [];
+        let storePaymentInfo = null;
 
         // --- INIT ---
         if (session.storeId && session.clientId) {
@@ -206,6 +226,7 @@
         }
 
         async function loadCatalog() {
+            // 1. Cargar Productos
             const { data } = await supabase
                 .from('productos')
                 .select('*')
@@ -216,26 +237,60 @@
             
             if(!data || data.length === 0) { 
                 grid.innerHTML = '<p style="grid-column:1/-1; text-align:center;">Esta tienda aún no tiene productos.</p>'; 
-                return; 
+            } else {
+                grid.innerHTML = data.map(p => {
+                    const pStr = JSON.stringify(p).replace(/"/g, '"'); 
+                    return `
+                    <div class="card">
+                        <img src="${p.imagen_url || 'https://via.placeholder.com/300'}" class="card-img">
+                        <div class="card-body">
+                            <div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div>
+                            <div style="color:var(--accent); font-weight:bold; margin-bottom:5px;">$${p.precio}</div>
+                            <div style="font-size:0.75rem; color:#64748b; margin-bottom:10px;">${p.descripcion || ''}</div>
+                            <button class="btn-add" onclick="addToCart(${pStr})">Agregar +</button>
+                        </div>
+                    </div>`;
+                }).join('');
             }
-            
-            grid.innerHTML = data.map(p => {
-                // CORRECCIÓN AQUÍ: Reemplazamos las comillas por &quot; para que no rompan el HTML
-                const pStr = JSON.stringify(p).replace(/"/g, '&quot;'); 
+
+            // 2. Cargar Info de Pagos
+            const { data: storeData } = await supabase
+                .from('usuarios')
+                .select('banco_nombre, banco_titular, banco_ci, banco_numero, banco_tipo, qr_imagen_url')
+                .eq('id', session.storeId)
+                .single();
                 
-                return `
-                <div class="card">
-                    <img src="${p.imagen_url || 'https://via.placeholder.com/300'}" class="card-img">
-                    <div class="card-body">
-                        <div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div>
-                        <div style="color:var(--accent); font-weight:bold; margin-bottom:5px;">$${p.precio}</div>
-                        <div style="font-size:0.75rem; color:#64748b; margin-bottom:10px;">${p.descripcion || ''}</div>
-                        <button class="btn-add" onclick="addToCart(${pStr})">Agregar +</button>
-                    </div>
-                </div>`;
-            }).join('');
+            if(storeData) {
+                storePaymentInfo = storeData;
+                renderPaymentInfo();
+            }
         }
 
+        function renderPaymentInfo() {
+            if(!storePaymentInfo || !storePaymentInfo.banco_numero) return; 
+
+            const container = document.getElementById('payment-details');
+            const content = document.getElementById('pay-data-content');
+            
+            container.style.display = 'block';
+            
+            content.innerHTML = `
+                <div class="payment-row"><span class="payment-label">Banco:</span> <span>${storePaymentInfo.banco_nombre || ''}</span></div>
+                <div class="payment-row"><span class="payment-label">Titular:</span> <span>${storePaymentInfo.banco_titular || ''}</span></div>
+                <div class="payment-row"><span class="payment-label">C.I./RIF:</span> <span>${storePaymentInfo.banco_ci || ''}</span></div>
+                <div class="payment-row"><span class="payment-label">Tipo:</span> <span>${storePaymentInfo.banco_tipo || ''}</span></div>
+                <div style="margin-top:5px;">
+                    <span class="payment-label">Cuenta / Teléfono:</span><br>
+                    <span class="payment-val">${storePaymentInfo.banco_numero}</span>
+                    <i class="fas fa-copy" onclick="navigator.clipboard.writeText('${storePaymentInfo.banco_numero}'); alert('Copiado!')" style="cursor:pointer; color:var(--accent); margin-left:5px;"></i>
+                </div>
+            `;
+
+            if(storePaymentInfo.qr_imagen_url) {
+                document.getElementById('pay-qr-container').style.display = 'block';
+                document.getElementById('pay-qr-img').src = storePaymentInfo.qr_imagen_url;
+            }
+        }
 
         // --- LOGICA CARRITO & DELIVERY ---
         function addToCart(product) {
@@ -288,18 +343,11 @@
                 return;
             }
 
-            // OPCIONES DE ALTA PRECISION PARA GPS
-            const options = {
-                enableHighAccuracy: true, 
-                timeout: 10000,
-                maximumAge: 0
-            };
+            const options = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
 
             navigator.geolocation.getCurrentPosition((position) => {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
-                
-                // Enlace exacto compatible con Google Maps
                 const link = `https://www.google.com/maps?q=${lat},${lng}`;
                 
                 const textArea = document.getElementById('delivery-address');
@@ -312,8 +360,6 @@
                 console.error(error);
                 let msg = "No se pudo obtener la ubicación.";
                 if(error.code === 1) msg = "Permiso de ubicación denegado.";
-                if(error.code === 2) msg = "GPS no disponible (sal al exterior).";
-                if(error.code === 3) msg = "Se agotó el tiempo de espera del GPS.";
                 alert(msg);
                 btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Intentar de nuevo';
             }, options);
@@ -360,6 +406,11 @@
                     autoMsg += `\n🛵 **Entrega:** Delivery.\n📍 **Dirección:** ${address}`;
                 } else {
                     autoMsg += `\n📍 **Entrega:** Retiro en Tienda.`;
+                }
+
+                // Verificar si hay datos de pago para recordar al cliente
+                if(storePaymentInfo && storePaymentInfo.banco_numero) {
+                    autoMsg += `\n\n💳 He visto los datos de pago. Enviaré el comprobante pronto.`;
                 }
 
                 await supabase.from('mensajes').insert({
