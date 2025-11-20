@@ -40,7 +40,7 @@
         .btn-icon { width: 36px; height: 36px; padding: 0; border-radius: 8px; display: inline-flex; margin-left: 5px; align-items: center; justify-content: center;}
         .btn-danger { background: #fee2e2; color: #dc2626; }
         .btn-edit { background: #e0e7ff; color: var(--accent); }
-        .upload-zone { border: 2px dashed #cbd5e1; border-radius: 12px; padding: 30px 20px; text-align: center; background: #f8fafc; margin-bottom: 20px; }
+        .upload-zone { border: 2px dashed #cbd5e1; border-radius: 12px; padding: 30px 20px; text-align: center; background: #f8fafc; margin-bottom: 20px; cursor: pointer; }
         .panel-section { display: none; animation: fadeIn 0.3s ease; }
         .panel-section.active { display: block; }
 
@@ -107,6 +107,7 @@
             <button class="tab active" onclick="switchTab('productos')"><i class="fas fa-box"></i> Productos</button>
             <button class="tab" onclick="switchTab('chats')"><i class="fas fa-comments"></i> Chats</button>
             <button class="tab" onclick="switchTab('pedidos')"><i class="fas fa-bell"></i> Pedidos</button>
+            <button class="tab" onclick="switchTab('config')"><i class="fas fa-cog"></i> Pagos</button>
         </div>
 
         <div id="tab-productos" class="panel-section active">
@@ -171,6 +172,53 @@
                     <button onclick="loadOrders()" class="btn btn-outline"><i class="fas fa-sync"></i></button>
                 </div>
                 <div id="orders-list"></div>
+            </div>
+        </div>
+
+        <div id="tab-config" class="panel-section">
+            <div class="card">
+                <h3><i class="fas fa-university"></i> Datos Bancarios / Pago Móvil</h3>
+                <p style="color:#64748b; font-size:0.9rem; margin-bottom:15px;">Estos datos aparecerán a tus clientes al finalizar la compra.</p>
+                
+                <form id="config-form">
+                    <label>Banco</label>
+                    <input type="text" id="conf-banco" placeholder="Ej: Banco Venezuela / Banesco">
+                    
+                    <div class="form-grid">
+                        <div>
+                            <label>Titular</label>
+                            <input type="text" id="conf-titular" placeholder="Nombre Completo">
+                        </div>
+                        <div>
+                            <label>C.I. / RIF</label>
+                            <input type="text" id="conf-ci" placeholder="V-12345678">
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div>
+                            <label>Número de Cuenta / Teléfono</label>
+                            <input type="text" id="conf-numero" placeholder="0102... o 0412...">
+                        </div>
+                        <div>
+                            <label>Tipo</label>
+                            <select id="conf-tipo" style="width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: #f8fafc;">
+                                <option value="Pago Móvil">Pago Móvil</option>
+                                <option value="Cuenta Corriente">Cuenta Corriente</option>
+                                <option value="Cuenta Ahorro">Cuenta Ahorro</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <label>Código QR (Opcional)</label>
+                    <div class="upload-zone" onclick="document.getElementById('qr-input').click()">
+                        <p id="qr-text" style="margin:0; color:#64748b;">Toca para subir imagen del QR</p>
+                        <img id="qr-preview" style="display:none; max-width:150px; margin-top:10px; border-radius:8px;">
+                        <input type="file" id="qr-input" accept="image/*" style="display:none;">
+                    </div>
+
+                    <button type="submit" id="btn-save-config" class="btn btn-primary">Guardar Configuración</button>
+                </form>
             </div>
         </div>
     </div>
@@ -318,7 +366,6 @@
             const list = document.getElementById('orders-list');
             if(!data || data.length === 0) { list.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">Sin pedidos</div>'; return; }
             
-            // Mapeo mejorado para leer productos guardados en JSON
             list.innerHTML = data.map(o => {
                 let productsHTML = 'Sin productos';
                 if (o.productos && o.productos.items) {
@@ -331,17 +378,13 @@
             }).join('');
         }
 
-        // --- CHAT LOGIC (CON DETECCIÓN DE MAPAS Y FILTRO) ---
+        // --- CHAT LOGIC ---
         function setupGlobalRealtime() {
             supabase.channel('admin-global')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, 
                 payload => {
                     if(payload.new.tienda_id !== currentUser.id) return;
-                    
-                    // Recargar lista si estamos en la pestaña
                     if(document.getElementById('tab-chats').classList.contains('active')) loadChatsList();
-                    
-                    // Evitar duplicados: Solo mostrar si NO lo envió el dueño
                     if(activeChatClientId && payload.new.cliente_id === activeChatClientId && payload.new.enviado_por_rol !== 'dueño') {
                         renderMessage(payload.new);
                     }
@@ -384,13 +427,10 @@
         function renderMessage(msg) {
             const div = document.createElement('div');
             div.className = `msg ${msg.enviado_por_rol === 'dueño' ? 'me' : 'them'}`;
-            
-            // LOGICA PARA BOTÓN DE MAPA
             const urlPattern = /(https?:\/\/[^\s]+)/g;
             let htmlContent = msg.contenido.replace(/\n/g, '<br>').replace(urlPattern, (url) => {
                 return `<a href="${url}" target="_blank" class="map-btn"><i class="fas fa-map-marked-alt"></i> Ver Ubicación</a>`;
             });
-                
             div.innerHTML = htmlContent;
             const c = document.getElementById('messages-container');
             c.appendChild(div);
@@ -416,13 +456,72 @@
             loadChatsList();
         }
 
+        // --- LÓGICA DE CONFIGURACIÓN DE PAGOS (NUEVO) ---
+        document.getElementById('config-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-config');
+            btn.textContent = "Guardando..."; btn.disabled = true;
+
+            try {
+                const file = document.getElementById('qr-input').files[0];
+                let qrUrl = document.getElementById('qr-preview').src;
+                
+                if (file) {
+                    const fileName = `qr_${currentUser.id}_${Date.now()}`;
+                    const { error: uploadErr } = await supabase.storage.from('imagenes-pagos').upload(fileName, file);
+                    if(uploadErr) throw uploadErr;
+                    
+                    const { data } = supabase.storage.from('imagenes-pagos').getPublicUrl(fileName);
+                    qrUrl = data.publicUrl;
+                }
+
+                const updates = {
+                    banco_nombre: document.getElementById('conf-banco').value,
+                    banco_titular: document.getElementById('conf-titular').value,
+                    banco_ci: document.getElementById('conf-ci').value,
+                    banco_numero: document.getElementById('conf-numero').value,
+                    banco_tipo: document.getElementById('conf-tipo').value,
+                    qr_imagen_url: qrUrl.startsWith('http') ? qrUrl : null
+                };
+
+                const { error } = await supabase.from('usuarios').update(updates).eq('id', currentUser.id);
+                if(error) throw error;
+
+                alert("¡Datos de pago actualizados!");
+            } catch (err) {
+                alert("Error al guardar: " + err.message);
+            } finally {
+                btn.disabled = false; btn.textContent = "Guardar Configuración";
+            }
+        });
+
+        async function loadConfig() {
+            const { data, error } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
+            if (error || !data) return;
+
+            document.getElementById('conf-banco').value = data.banco_nombre || '';
+            document.getElementById('conf-titular').value = data.banco_titular || '';
+            document.getElementById('conf-ci').value = data.banco_ci || '';
+            document.getElementById('conf-numero').value = data.banco_numero || '';
+            if(data.banco_tipo) document.getElementById('conf-tipo').value = data.banco_tipo;
+
+            if (data.qr_imagen_url) {
+                const img = document.getElementById('qr-preview');
+                img.src = data.qr_imagen_url;
+                img.style.display = 'block';
+                document.getElementById('qr-text').textContent = "Cambiar imagen";
+            }
+        }
+
         function switchTab(t) {
             document.querySelectorAll('.panel-section').forEach(s => s.classList.remove('active'));
             document.getElementById('tab-'+t).classList.add('active');
             document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
+            
             if(t === 'chats') loadChatsList();
             if(t === 'pedidos') loadOrders();
+            if(t === 'config') loadConfig();
         }
 
         async function logout() { await supabase.auth.signOut(); window.location.reload(); }
