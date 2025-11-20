@@ -62,7 +62,7 @@
         .btn-geo { background: #eff6ff; color: var(--accent); border: 1px dashed var(--accent); padding: 10px; width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px; }
 
         /* ESTILOS NUEVOS PARA PAGO */
-        .payment-info-card { background: #f0f9ff; border: 1px dashed #2563eb; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px; font-size: 0.9rem; display: none; /* Oculto por defecto */ }
+        .payment-info-card { background: #f0f9ff; border: 1px dashed #2563eb; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px; font-size: 0.9rem; display: none; }
         .payment-row { display: flex; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 5px; }
         .payment-label { font-weight: 600; color: #475569; }
         .payment-val { font-family: monospace; font-size: 1rem; color: #1e293b; font-weight: bold; }
@@ -176,6 +176,8 @@
         };
         let chatChannel = null;
         let cart = [];
+        // --- NUEVO: Cache de productos para evitar errores de sintaxis en el botón ---
+        let productsCache = []; 
         let storePaymentInfo = null;
 
         // --- INIT ---
@@ -233,13 +235,15 @@
                 .eq('creado_por', session.storeId)
                 .order('id', { ascending: false });
 
+            // --- FIX: Guardar en memoria ---
+            productsCache = data || [];
             const grid = document.getElementById('products-grid');
             
             if(!data || data.length === 0) { 
                 grid.innerHTML = '<p style="grid-column:1/-1; text-align:center;">Esta tienda aún no tiene productos.</p>'; 
             } else {
                 grid.innerHTML = data.map(p => {
-                    const pStr = JSON.stringify(p).replace(/"/g, '"'); 
+                    // --- FIX: Usar solo el ID en el onclick ---
                     return `
                     <div class="card">
                         <img src="${p.imagen_url || 'https://via.placeholder.com/300'}" class="card-img">
@@ -247,7 +251,7 @@
                             <div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div>
                             <div style="color:var(--accent); font-weight:bold; margin-bottom:5px;">$${p.precio}</div>
                             <div style="font-size:0.75rem; color:#64748b; margin-bottom:10px;">${p.descripcion || ''}</div>
-                            <button class="btn-add" onclick="addToCart(${pStr})">Agregar +</button>
+                            <button class="btn-add" onclick="addToCart(${p.id})">Agregar +</button>
                         </div>
                     </div>`;
                 }).join('');
@@ -272,9 +276,8 @@
             const container = document.getElementById('payment-details');
             const content = document.getElementById('pay-data-content');
             
-            // --- MODIFICACIÓN: Hacemos visible el contenedor de pago ---
+            // --- FIX: Mostrar siempre si hay datos ---
             container.style.display = 'block'; 
-            // --------------------------------------------------------
             
             content.innerHTML = `
                 <div class="payment-row"><span class="payment-label">Banco:</span> <span>${storePaymentInfo.banco_nombre || ''}</span></div>
@@ -294,8 +297,13 @@
             }
         }
 
-        // --- LOGICA CARRITO & DELIVERY & PAGOS ---
-        function addToCart(product) {
+        // --- LOGICA CARRITO & DELIVERY ---
+        
+        // --- FIX: Función addToCart recibe ID y busca en memoria ---
+        function addToCart(id) {
+            const product = productsCache.find(p => p.id === id);
+            if(!product) return;
+
             cart.push(product);
             updateCartUI();
             if(navigator.vibrate) navigator.vibrate(50);
@@ -333,11 +341,8 @@
             const method = document.getElementById('delivery-method').value;
             const info = document.getElementById('delivery-info');
 
-            // 1. Manejo de Dirección
+            // 1. Solo manejamos visibilidad de dirección. El pago se queda visible si renderPaymentInfo lo activó.
             info.style.display = method === 'delivery' ? 'block' : 'none';
-
-            // --- MODIFICACIÓN: Eliminada la lógica que ocultaba el pago aquí ---
-            // Ahora el pago permanece visible si ya fue renderizado por renderPaymentInfo()
         }
 
         function getGeoLocation() {
@@ -415,7 +420,6 @@
                     autoMsg += `\n📍 **Entrega:** Retiro en Tienda.`;
                 }
 
-                // Mensaje de confirmación de pago visto
                 if(storePaymentInfo && storePaymentInfo.banco_numero) {
                     autoMsg += `\n\n💳 He visto los datos de pago. Enviaré el comprobante por aquí.`;
                 }
