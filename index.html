@@ -68,6 +68,37 @@
         .payment-val { font-family: monospace; font-size: 1rem; color: #1e293b; font-weight: bold; }
 
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        /* --- ESTILOS MODAL QR --- */
+#qr-modal { 
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.85); z-index: 3000; 
+    display: none; justify-content: center; align-items: center; 
+    padding: 20px; opacity: 0; transition: opacity 0.3s; 
+}
+#qr-modal.open { display: flex; opacity: 1; }
+
+.qr-card { 
+    background: white; padding: 25px; border-radius: 20px; 
+    max-width: 350px; width: 100%; text-align: center; 
+    position: relative; transform: scale(0.8); transition: transform 0.3s; 
+}
+#qr-modal.open .qr-card { transform: scale(1); }
+
+.qr-full-img { 
+    width: 100%; border-radius: 12px; 
+    border: 2px solid #eee; margin-top: 15px; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.btn-open-qr { 
+    width: 100%; background: var(--accent); color: white; 
+    padding: 12px; border: none; border-radius: 8px; 
+    font-weight: bold; margin-top: 15px; cursor: pointer; 
+    display: flex; align-items: center; justify-content: center; gap: 8px; 
+    font-size: 1rem; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+}
+.btn-open-qr:active { transform: scale(0.98); }
     </style>
 </head>
 <body>
@@ -162,6 +193,7 @@
             </div>
             <button class="btn-checkout" onclick="checkout()">Confirmar Pedido</button>
         </div>
+        
     </div>
 
     <script>
@@ -502,5 +534,16 @@
         function toggleChat() { document.getElementById('chat-box').classList.toggle('open'); scrollToBottom(); }
         function scrollToBottom() { const d = document.getElementById('chat-msgs'); d.scrollTop = d.scrollHeight; }
     </script>
+    <div id="qr-modal" onclick="if(event.target === this) closeQRModal()">
+    <div class="qr-card">
+        <i class="fas fa-times" onclick="closeQRModal()" style="position: absolute; top: 15px; right: 20px; font-size: 1.5rem; color: #94a3b8; cursor: pointer;"></i>
+        <h3 style="margin: 0; color: var(--accent);">Escanea para Pagar</h3>
+        <p style="color:#64748b; font-size:0.9rem; margin-top:5px;">Pago Móvil / Transferencia</p>
+        
+        <img id="modal-qr-img" src="" class="qr-full-img">
+        
+        <button onclick="closeQRModal()" class="btn-add" style="margin-top:20px;">Cerrar</button>
+    </div>
+</div>
 </body>
 </html>
