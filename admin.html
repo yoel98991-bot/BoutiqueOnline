@@ -238,6 +238,7 @@
         let activeChatClientId = null;
         let activeChannel = null;
         let productsCache = []; 
+        let ordersCache = [];
         let editingId = null;
         const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
@@ -437,15 +438,145 @@
 
         // PEDIDOS
         async function loadOrders() {
-            const { data } = await supabase.from('pedidos').select('*, clientes(nombre, telefono)').order('fecha', {ascending:false});
-            const list = document.getElementById('orders-list');
-            updateDashboardCounters();
-            if(!data || data.length === 0) { list.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">Sin pedidos</div>'; return; }
-            list.innerHTML = data.map(o => {
-                let productsHTML = o.productos && o.productos.items ? o.productos.items.map(i => i.name).join(', ') : (Array.isArray(o.productos) ? o.productos.map(i => i.name).join(', ') : 'Sin detalle');
-                return `<div class="order-item"><div style="display:flex; justify-content:space-between; margin-bottom:8px;"><div style="font-weight:600; font-size:0.9rem;"><i class="fas fa-user"></i> ${o.clientes?.nombre || 'Anónimo'}</div><span class="badge-pending">${o.estado}</span></div><div style="font-size:0.85rem; color:#64748b; margin-bottom:10px;"><div><i class="fab fa-whatsapp"></i> ${o.clientes?.telefono || 'Sin tel'}</div><div style="margin-top:4px; color:#334155;">🛒 ${productsHTML}</div></div><div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #e2e8f0; padding-top:8px;"><small style="color:#94a3b8;">${new Date(o.fecha).toLocaleDateString()}</small><div style="font-weight:700; color:var(--primary);">$${o.total}</div></div></div>`;
-            }).join('');
+    const { data } = await supabase
+        .from('pedidos')
+        .select('*, clientes(nombre, telefono)')
+        .order('fecha', {ascending:false});
+    
+    // Guardamos en cache para usarlo al dar clic en completar
+    ordersCache = data || []; 
+    
+    const list = document.getElementById('orders-list');
+    updateDashboardCounters();
+    
+    if(!data || data.length === 0) { 
+        list.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">Sin pedidos</div>'; 
+        return; 
+    }
+
+    list.innerHTML = data.map(o => {
+        // Manejo flexible de la estructura de productos
+        let itemsArray = [];
+        if (o.productos && o.productos.items) {
+            itemsArray = o.productos.items;
+        } else if (Array.isArray(o.productos)) {
+            itemsArray = o.productos;
         }
+
+        const productsHTML = itemsArray.length > 0 
+            ? itemsArray.map(i => i.name).join(', ') 
+            : 'Sin detalle';
+
+        // Lógica de Botón vs Badge
+        let actionHTML = '';
+        if (o.estado === 'pendiente') {
+            actionHTML = `<button onclick="completeOrder(${o.id})" class="btn btn-primary" style="padding: 8px; font-size: 0.8rem; margin-top:10px; background:#22c55e;">
+                            <i class="fas fa-check"></i> Marcar Completado y Restar Stock
+                          </button>`;
+        } else if (o.estado === 'completado') {
+            actionHTML = `<div style="margin-top:10px; color: #15803d; font-weight:bold; font-size:0.85rem;">
+                            <i class="fas fa-check-circle"></i> Despachado
+                          </div>`;
+        }
+
+        // Estilo del badge superior
+        const badgeStyle = o.estado === 'pendiente' 
+            ? 'background: #fff7ed; color: #c2410c;' 
+            : 'background: #dcfce7; color: #15803d;';
+
+        return `
+        <div class="order-item">
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                <div style="font-weight:600; font-size:0.9rem;">
+                    <i class="fas fa-user"></i> ${o.clientes?.nombre || 'Anónimo'}
+                </div>
+                <span class="badge-pending" style="${badgeStyle}">${o.estado}</span>
+            </div>
+            <div style="font-size:0.85rem; color:#64748b; margin-bottom:10px;">
+                <div><i class="fab fa-whatsapp"></i> ${o.clientes?.telefono || 'Sin tel'}</div>
+                <div style="margin-top:4px; color:#334155;">🛒 ${productsHTML}</div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #e2e8f0; padding-top:8px;">
+                <small style="color:#94a3b8;">${new Date(o.fecha).toLocaleDateString()}</small>
+                <div style="font-weight:700; color:var(--primary);">$${o.total}</div>
+            </div>
+            ${actionHTML}
+        </div>`;
+    }).join('');
+}
+
+        async function completeOrder(orderId) {
+    if (!confirm("¿Confirmas que entregaste este pedido? Se descontará del stock.")) return;
+
+    const order = ordersCache.find(o => o.id === orderId);
+    if (!order) return alert("Error: No se encontró el pedido en memoria.");
+
+    // 1. Normalizar lista de items
+    let items = [];
+    if (order.productos && order.productos.items) items = order.productos.items;
+    else if (Array.isArray(order.productos)) items = order.productos;
+
+    if (items.length === 0) return alert("Este pedido no tiene productos.");
+
+    // 2. Agrupar cantidades por ID de producto (Ej: { ID_5: 2, ID_8: 1 })
+    const productQuantities = {};
+    items.forEach(item => {
+        productQuantities[item.id] = (productQuantities[item.id] || 0) + 1;
+    });
+
+    try {
+        // Mostrar estado de carga (opcional, visualmente útil)
+        const btn = event.target; 
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+        btn.disabled = true;
+
+        // 3. Iterar y actualizar stock
+        // NOTA: Hacemos esto en bucle porque Supabase JS no permite actualizaciones masivas con lógica matemática compleja fácilmente sin funciones SQL RPC.
+        for (const [prodId, qty] of Object.entries(productQuantities)) {
+            
+            // A. Obtener stock actual más reciente
+            const { data: currentProd, error: fetchError } = await supabase
+                .from('productos')
+                .select('stock, nombre')
+                .eq('id', prodId)
+                .single();
+
+            if (fetchError) throw new Error(`Error al buscar producto ID ${prodId}`);
+
+            // B. Calcular nuevo stock
+            const newStock = currentProd.stock - qty;
+            
+            // (Opcional) Advertencia si el stock baja de 0, pero permitimos la operación
+            if (newStock < 0) console.warn(`El producto ${currentProd.nombre} quedará con stock negativo.`);
+
+            // C. Actualizar en base de datos
+            const { error: updateError } = await supabase
+                .from('productos')
+                .update({ stock: newStock })
+                .eq('id', prodId);
+
+            if (updateError) throw new Error(`Error al actualizar stock de ${currentProd.nombre}`);
+        }
+
+        // 4. Marcar pedido como completado
+        const { error: orderError } = await supabase
+            .from('pedidos')
+            .update({ estado: 'completado' })
+            .eq('id', orderId);
+
+        if (orderError) throw orderError;
+
+        alert("✅ Pedido completado e inventario actualizado.");
+        loadOrders(); // Recargar la lista visual
+        loadProducts(); // Recargar la lista de productos para ver el nuevo stock
+
+    } catch (err) {
+        alert("Ocurrió un error: " + err.message);
+        console.error(err);
+        loadOrders(); // Restaurar estado del botón
+    }
+}
 
         // UI HELPERS
         function showToast(title, message) {
