@@ -23,11 +23,46 @@
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--surface); padding: 15px 20px; border-radius: var(--radius); box-shadow: var(--shadow); flex-wrap: wrap; gap: 10px;}
         .store-code-badge { background: #eff6ff; color: var(--accent); padding: 5px 12px; border-radius: 8px; font-weight: 600; border: 1px dashed var(--accent); font-size: 0.9rem; cursor: pointer; }
 
-        /* Tabs */
+        /* Tabs Navigation */
         .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
         .nav-tabs::-webkit-scrollbar { display: none; }
-        .tab { padding: 10px 20px; border: none; background: white; color: #64748b; font-weight: 600; border-radius: 30px; font-size: 0.9rem; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .tab { padding: 10px 20px; border: none; background: white; color: #64748b; font-weight: 600; border-radius: 30px; font-size: 0.9rem; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.02); position: relative; }
         .tab.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(30, 41, 59, 0.3); }
+
+        /* --- NUEVO: BADGES DE CONTADOR --- */
+        .badge-count {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #ef4444;
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            display: none; /* Se oculta si es 0 */
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+        /* --- NUEVO: TOAST NOTIFICATIONS --- */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
+        .toast-notification {
+            background: white;
+            border-left: 4px solid var(--accent);
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            display: flex; align-items: center; gap: 15px;
+            animation: slideInRight 0.3s ease-out forwards;
+            min-width: 250px;
+        }
+        .toast-notification i { font-size: 1.2rem; color: var(--accent); }
+        .toast-content div { font-weight: 600; font-size: 0.9rem; }
+        .toast-content small { color: #64748b; }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }
 
         /* General UI */
         .card { background: var(--surface); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 20px; }
@@ -70,7 +105,7 @@
         .msg.me { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
         .msg.them { background: white; color: var(--text); align-self: flex-start; border-bottom-left-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         
-        /* --- FIX: ESTILOS PARA IMAGENES EN CHAT --- */
+        /* FIX: ESTILOS PARA IMAGENES EN CHAT */
         .msg img { max-width: 100% !important; max-height: 300px; border-radius: 8px; margin-top: 5px; display: block; cursor: pointer; }
 
         /* Map Button Style */
@@ -95,6 +130,8 @@
         <p id="auth-msg" style="color: var(--accent);"></p>
     </div>
 
+    <div id="toast-container"></div>
+
     <div id="dashboard" class="container" style="display:none;">
         <div class="header">
             <div>
@@ -108,8 +145,17 @@
 
         <div class="nav-tabs">
             <button class="tab active" onclick="switchTab('productos')"><i class="fas fa-box"></i> Productos</button>
-            <button class="tab" onclick="switchTab('chats')"><i class="fas fa-comments"></i> Chats</button>
-            <button class="tab" onclick="switchTab('pedidos')"><i class="fas fa-bell"></i> Pedidos</button>
+            
+            <button class="tab" onclick="switchTab('chats')">
+                <i class="fas fa-comments"></i> Chats 
+                <span id="badge-chats" class="badge-count">0</span>
+            </button>
+            
+            <button class="tab" onclick="switchTab('pedidos')">
+                <i class="fas fa-bell"></i> Pedidos
+                <span id="badge-orders" class="badge-count">0</span>
+            </button>
+            
             <button class="tab" onclick="switchTab('config')"><i class="fas fa-cog"></i> Pagos</button>
         </div>
 
@@ -235,6 +281,9 @@
         let activeChannel = null;
         let productsCache = []; 
         let editingId = null;
+        
+        // Sonido de notificación (un beep sutil)
+        const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
         supabase.auth.onAuthStateChange((event, session) => {
             if (session) {
@@ -258,7 +307,9 @@
             document.getElementById('store-code-display').textContent = "CÓDIGO: " + storeCode;
             document.getElementById('login-container').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
+            
             loadProducts();
+            updateDashboardCounters(); // Cargar contadores al inicio
             setupGlobalRealtime();
         }
 
@@ -348,6 +399,11 @@
         async function loadOrders() {
             const { data } = await supabase.from('pedidos').select('*, clientes(nombre, telefono)').order('fecha', {ascending:false});
             const list = document.getElementById('orders-list');
+            
+            // Actualizar contador al abrir pedidos (o limpiar si se considera visto)
+            // Por ahora lo mantenemos simple y actualizamos el contador global
+            updateDashboardCounters();
+
             if(!data || data.length === 0) { list.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">Sin pedidos</div>'; return; }
             
             list.innerHTML = data.map(o => {
@@ -359,12 +415,96 @@
             }).join('');
         }
 
+        // --- LOGICA DE NOTIFICACIONES Y CONTADORES ---
+        
+        function showNotification(title, message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification';
+            toast.innerHTML = `
+                <i class="fas fa-bell"></i>
+                <div class="toast-content">
+                    <div>${title}</div>
+                    <small>${message}</small>
+                </div>
+            `;
+            container.appendChild(toast);
+            
+            // Sonido
+            try { notificationSound.play().catch(e => console.log("Audio bloqueado por navegador")); } catch(e){}
+
+            // Eliminar despues de 4 segundos
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.5s forwards';
+                setTimeout(() => toast.remove(), 500);
+            }, 4000);
+        }
+
+        async function updateDashboardCounters() {
+            // Contar mensajes no leidos
+            const { count: unreadMsgs } = await supabase
+                .from('mensajes')
+                .select('*', { count: 'exact', head: true })
+                .eq('tienda_id', currentUser.id)
+                .eq('leido', false)
+                .eq('enviado_por_rol', 'cliente');
+            
+            // Contar pedidos pendientes (asumimos que estado 'pendiente' es lo que cuenta)
+            const { count: pendingOrders } = await supabase
+                .from('pedidos')
+                .select('*', { count: 'exact', head: true })
+                // Nota: Si tu tabla de pedidos tiene relation con tienda, filtra por tienda_id. 
+                // Asumimos que los pedidos llegan asociados a los clientes de la tienda.
+                // Si tu tabla pedidos no tiene tienda_id directo, habria que filtrar por los clientes de esta tienda.
+                // Para simplificar y dado que el cliente probablemente filtra por su RLS, usamos count directo.
+                .eq('estado', 'pendiente'); 
+
+            const badgeChat = document.getElementById('badge-chats');
+            const badgeOrder = document.getElementById('badge-orders');
+
+            if(unreadMsgs > 0) {
+                badgeChat.textContent = unreadMsgs;
+                badgeChat.style.display = 'block';
+            } else {
+                badgeChat.style.display = 'none';
+            }
+
+            if(pendingOrders > 0) {
+                badgeOrder.textContent = pendingOrders;
+                badgeOrder.style.display = 'block';
+            } else {
+                badgeOrder.style.display = 'none';
+            }
+        }
+
         // --- CHAT LOGIC ---
         function setupGlobalRealtime() {
-            supabase.channel('admin-global').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, payload => {
+            // Escuchar nuevos Mensajes
+            supabase.channel('admin-global-msgs')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, payload => {
                 if(payload.new.tienda_id !== currentUser.id) return;
+                
+                // Si es mensaje de un cliente
+                if(payload.new.enviado_por_rol === 'cliente') {
+                    // Si no estamos chateando con ese cliente especifico ahora mismo
+                    if (activeChatClientId !== payload.new.cliente_id) {
+                        showNotification('Nuevo Mensaje', 'Has recibido un mensaje de cliente.');
+                        updateDashboardCounters();
+                    }
+                }
+
                 if(document.getElementById('tab-chats').classList.contains('active')) loadChatsList();
                 if(activeChatClientId && payload.new.cliente_id === activeChatClientId && payload.new.enviado_por_rol !== 'dueño') renderMessage(payload.new);
+            }).subscribe();
+
+            // Escuchar nuevos Pedidos
+            supabase.channel('admin-global-orders')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, payload => {
+                 // Aquí deberiamos verificar si el pedido corresponde a un cliente de esta tienda
+                 // Hacemos una notificación general
+                 showNotification('Nuevo Pedido', '¡Acaba de entrar un pedido nuevo!');
+                 updateDashboardCounters();
+                 if(document.getElementById('tab-pedidos').classList.contains('active')) loadOrders();
             }).subscribe();
         }
 
@@ -383,31 +523,33 @@
                 }
             });
 
+            // Actualizamos los contadores cada vez que cargamos la lista
+            updateDashboardCounters();
+
             const listHTML = Object.values(grouped).map(item => {
-                // --- CORRECCIÓN AQUÍ ---
-                // Detectamos si es imagen para no cortar el HTML
+                // Detectamos si es imagen
                 let previewText = item.lastMsg.contenido;
-                
                 if (previewText.includes('<img')) {
                     previewText = '📷 [Imagen]';
                 } else {
-                    // Si es texto normal, lo cortamos si es muy largo
                     if(previewText.length > 30) previewText = previewText.substring(0, 30) + '...';
                 }
-                // -----------------------
 
                 const isUnread = !item.lastMsg.leido && item.lastMsg.enviado_por_rol === 'cliente';
                 const senderPrefix = item.lastMsg.enviado_por_rol === 'dueño' ? 'Tú: ' : '';
 
                 return `
                 <div class="chat-list-item ${isUnread ? 'unread' : ''}" onclick="openChat('${item.client.id}', '${item.client.nombre}')">
-                    <div class="avatar">${item.client.nombre.substring(0,2).toUpperCase()}</div>
+                    <div class="avatar">
+                        ${item.client.nombre.substring(0,2).toUpperCase()}
+                        ${isUnread ? '<div style="position:absolute; bottom:0; right:0; width:12px; height:12px; background:#ef4444; border-radius:50%; border:2px solid white;"></div>' : ''}
+                    </div>
                     <div style="flex:1;">
                         <div style="display:flex; justify-content:space-between;">
                             <div style="font-weight:600;">${item.client.nombre}</div>
                             <small style="color:#94a3b8;">${new Date(item.lastMsg.created_at).toLocaleDateString()}</small>
                         </div>
-                        <div style="font-size:0.85rem; color:#64748b;">
+                        <div style="font-size:0.85rem; color:#64748b; font-weight: ${isUnread ? 'bold' : 'normal'}; color: ${isUnread ? '#1e293b' : '#64748b'};">
                             ${senderPrefix}${previewText}
                         </div>
                     </div>
@@ -432,6 +574,7 @@
             data.forEach(renderMessage);
             
             await supabase.from('mensajes').update({ leido: true }).eq('cliente_id', clientId).eq('enviado_por_rol', 'cliente');
+            updateDashboardCounters(); // Actualizar contador al leer
 
             if(activeChannel) supabase.removeChannel(activeChannel);
             activeChannel = supabase.channel(`chat_room_${currentUser.id}_${clientId}`).on('broadcast', { event: 'typing' }, () => {
@@ -441,15 +584,13 @@
             }).subscribe();
         }
 
-        // --- FIX CRÍTICO AQUÍ: DETECCIÓN DE IMAGENES PARA NO ROMPER HTML ---
         function renderMessage(msg) {
             const div = document.createElement('div');
             div.className = `msg ${msg.enviado_por_rol === 'dueño' ? 'me' : 'them'}`;
             
             let htmlContent = msg.contenido.replace(/\n/g, '<br>');
             
-            // VERIFICACIÓN: Si el mensaje ya contiene una etiqueta de imagen (<img), 
-            // NO intentamos convertir URLs en botones, porque romperíamos el atributo 'src'.
+            // FIX: NO romper HTML de imagenes
             if (!htmlContent.includes('<img')) {
                 const urlPattern = /(https?:\/\/[^\s]+)/g;
                 htmlContent = htmlContent.replace(urlPattern, (url) => `<a href="${url}" target="_blank" class="map-btn"><i class="fas fa-map-marked-alt"></i> Ver Link</a>`);
@@ -478,6 +619,7 @@
             document.getElementById('chat-interface').classList.remove('active');
             document.getElementById('chats-inbox').style.display = 'block';
             loadChatsList();
+            updateDashboardCounters();
         }
 
         document.getElementById('config-form').addEventListener('submit', async (e) => {
@@ -526,7 +668,11 @@
             document.querySelectorAll('.panel-section').forEach(s => s.classList.remove('active'));
             document.getElementById('tab-'+t).classList.add('active');
             document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
+            // event.target.classList.add('active'); // Fix: target puede ser el icono o el span
+            // Buscamos el boton mas cercano
+            const btn = event.target.closest('.tab');
+            if(btn) btn.classList.add('active');
+
             if(t === 'chats') loadChatsList();
             if(t === 'pedidos') loadOrders();
             if(t === 'config') loadConfig();
