@@ -70,7 +70,7 @@
         .msg.me { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
         .msg.them { background: white; color: var(--text); align-self: flex-start; border-bottom-left-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         
-        /* ESTILOS PARA IMAGENES EN CHAT ADMIN */
+        /* --- FIX: ESTILOS PARA IMAGENES EN CHAT --- */
         .msg img { max-width: 100% !important; max-height: 300px; border-radius: 8px; margin-top: 5px; display: block; cursor: pointer; }
 
         /* Map Button Style */
@@ -399,13 +399,15 @@
             }).subscribe();
         }
 
+        // --- FIX CRÍTICO AQUÍ: DETECCIÓN DE IMAGENES PARA NO ROMPER HTML ---
         function renderMessage(msg) {
             const div = document.createElement('div');
             div.className = `msg ${msg.enviado_por_rol === 'dueño' ? 'me' : 'them'}`;
             
             let htmlContent = msg.contenido.replace(/\n/g, '<br>');
             
-            // Solo convertir links a botones si NO hay una etiqueta de imagen en el mensaje
+            // VERIFICACIÓN: Si el mensaje ya contiene una etiqueta de imagen (<img), 
+            // NO intentamos convertir URLs en botones, porque romperíamos el atributo 'src'.
             if (!htmlContent.includes('<img')) {
                 const urlPattern = /(https?:\/\/[^\s]+)/g;
                 htmlContent = htmlContent.replace(urlPattern, (url) => `<a href="${url}" target="_blank" class="map-btn"><i class="fas fa-map-marked-alt"></i> Ver Link</a>`);
