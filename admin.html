@@ -8,86 +8,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-    <script>
-    const VAPID_PUBLIC_KEY = "BCkvES3UU5IUHo52kr0VegCslrRYrCo7LcgfJTFAfU-x8g7Ioca5Q-WHU8qyMPDhee6Lbls-l_cjqNQxQuUpoJw";
-
-    // Función auxiliar para convertir la llave
-    function urlBase64ToUint8Array(base64String) {
-        const padding = '='.repeat((4 - base64String.length % 4) % 4);
-        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-        const rawData = window.atob(base64);
-        const outputArray = new Uint8Array(rawData.length);
-        for (let i = 0; i < rawData.length; ++i) {
-            outputArray[i] = rawData.charCodeAt(i);
-        }
-        return outputArray;
-    }
-
-    async function registerServiceWorker() {
-        if ('serviceWorker' in navigator && 'PushManager' in window) {
-            try {
-                const registration = await navigator.serviceWorker.register('./sw.js');
-                console.log('Service Worker registrado:', registration);
-                return registration;
-            } catch (error) {
-                console.error('Fallo SW:', error);
-            }
-        } else {
-            alert("Tu navegador no soporta notificaciones push.");
-        }
-    }
-
-    async function subscribeUser() {
-        const registration = await registerServiceWorker();
-        if (!registration) return;
-
-        // Pedimos suscripción al navegador
-        const subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-        });
-
-        console.log("Usuario suscrito:", subscription);
-
-        // Guardar en Supabase
-        if (currentUser) {
-             // Convertimos el objeto subscription a JSON plano
-            const subData = JSON.parse(JSON.stringify(subscription));
-            
-            const { error } = await supabase.from('push_subscriptions').insert({
-                user_id: currentUser.id,
-                endpoint: subData.endpoint,
-                p256dh: subData.keys.p256dh,
-                auth: subData.keys.auth
-            });
-
-            if (error) {
-                // Si es error de duplicado (código 23505), lo ignoramos, significa que ya está registrado
-                if(error.code !== '23505') console.error("Error guardando sub:", error);
-                else console.log("Dispositivo ya registrado en DB.");
-            } else {
-                alert("✅ Notificaciones Activadas Correctamente");
-            }
-        } else {
-            alert("Debes iniciar sesión primero");
-        }
-    }
-
-    // Modificamos tu función de test existente para usar la nueva lógica local
-    async function testNotification() {
-        await subscribeUser();
-    }
-    
-    // Intentar registrar al cargar si hay usuario
-    setTimeout(() => {
-        if(currentUser) registerServiceWorker(); 
-    }, 2000);
-</script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* --- ESTILOS --- */
+        /* --- ESTILOS GENERALES --- */
         :root { --primary: #1e293b; --accent: #6366f1; --bg: #f8fafc; --surface: #ffffff; --text: #334155; --border: #e2e8f0; --radius: 16px; --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; min-height: 100vh; padding-bottom: 80px; }
@@ -107,11 +31,13 @@
         .tab.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(30, 41, 59, 0.3); }
 
         /* Badges */
-        .badge-count { position: absolute; top: -5px; right: -5px; background-color: #ef4444; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; display: none; }
+        .badge-count { position: absolute; top: -5px; right: -5px; background-color: #ef4444; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; display: none; animation: popIn 0.3s ease; }
+        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
 
         /* Toasts */
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
         .toast-notification { background: white; border-left: 4px solid var(--accent); padding: 15px 20px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 15px; animation: slideInRight 0.3s ease-out forwards; min-width: 250px; }
+        .toast-content div { font-weight: 600; font-size: 0.9rem; }
         @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }
 
@@ -151,7 +77,9 @@
         .msg.me { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
         .msg.them { background: white; color: var(--text); align-self: flex-start; border-bottom-left-radius: 2px; }
         .msg img { max-width: 100%; border-radius: 8px; margin-top: 5px; }
+        .map-btn { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; padding: 8px 12px; background: #e0e7ff; color: var(--accent); text-decoration: none; font-weight: 600; border-radius: 8px; font-size: 0.85rem; }
         .chat-input-area { padding: 15px; background: white; display: flex; gap: 10px; border-top: 1px solid var(--border); }
+        .typing-indicator { font-size: 0.75rem; color: #64748b; margin-left: 55px; margin-top: -15px; margin-bottom: 10px; height: 15px; }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -225,7 +153,9 @@
                 <div class="chat-header">
                     <button class="btn btn-outline" style="padding: 5px 10px;" onclick="closeChat()"><i class="fas fa-arrow-left"></i></button>
                     <div class="avatar" id="current-chat-avatar">User</div>
-                    <div style="font-weight:600;" id="current-chat-name">Cliente</div>
+                    <div>
+                        <div style="font-weight:600;" id="current-chat-name">Cliente</div>
+                    </div>
                 </div>
                 <div class="chat-messages" id="messages-container"></div>
                 <div class="typing-indicator" id="typing-indicator"></div>
@@ -249,10 +179,13 @@
         <div id="tab-config" class="panel-section">
             
             <div class="card" style="border: 2px solid #fca5a5; background: #fff5f5;">
-                <h3 style="color: #dc2626;"><i class="fas fa-bell"></i> Prueba de Notificaciones</h3>
-                <p style="font-size: 0.85rem; color: #7f1d1d; margin-bottom: 10px;">Presiona para probar si llegan las alertas a tu celular.</p>
+                <h3 style="color: #dc2626;"><i class="fas fa-bell"></i> Notificaciones Push</h3>
+                <p style="font-size: 0.85rem; color: #7f1d1d; margin-bottom: 10px;">
+                    1. Asegúrate de haber aceptado los permisos.<br>
+                    2. Presiona el botón para verificar que la conexión con Supabase Funciona.
+                </p>
                 <button onclick="testNotification()" class="btn" style="background: #dc2626; color: white;">
-                    🔔 ENVIAR PRUEBA (CORS PROXY)
+                    🔔 PROBAR CONEXIÓN
                 </button>
             </div>
 
@@ -289,10 +222,12 @@
     </div>
 
     <script>
+        // CONFIGURACIÓN SUPABASE
         const SUPABASE_URL = 'https://cirrapytmbnjlhxunkaq.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnJhcHl0bWJuamxoeHVua2FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NzAyMDAsImV4cCI6MjA3ODU0NjIwMH0.OtJiLGj1EvhPICFaA9ruL02Z9kSQ2jT0t3Smqph81C4';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        
+        const VAPID_PUBLIC_KEY = "BCkvES3UU5IUHo52kr0VegCslrRYrCo7LcgfJTFAfU-x8g7Ioca5Q-WHU8qyMPDhee6Lbls-l_cjqNQxQuUpoJw";
+
         let currentUser = null;
         let storeCode = null;
         let activeChatClientId = null;
@@ -301,60 +236,99 @@
         let editingId = null;
         const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
-        // --- FUNCIÓN DE TESTEO (CORREGIDA CON PROXY) ---
-        async function testNotification() {
-          const ONESIGNAL_API_KEY = "os_v2_app_v4bs5h3rnrgx7d6rgkeuyksm3btr7jjnnhie6hnmxwfda2phu4ueftilt4qqaezxflffovm66bybtzygef7jjk43akzh3mwmxk2hebi";
-          const ONESIGNAL_APP_ID = "af032e9f-716c-4d7f-8fd1-32894c2a4cd8";
-          
-          const btn = event.target;
-          const originalText = btn.innerText;
-          btn.disabled = true; btn.innerText = "⏳ Enviando...";
-
-          console.log("Iniciando prueba con Proxy...");
-          
-          try {
-              // USAMOS CORSPROXY.IO PARA SALTAR EL BLOQUEO DE VERCEL/CHROME
-              const targetUrl = 'https://onesignal.com/api/v1/notifications';
-              const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
-
-              const response = await fetch(proxyUrl, {
-                method: 'POST',
-                headers: {
-                    'accept': 'application/json',
-                    'content-type': 'application/json',
-                    'Authorization': 'Basic ' + ONESIGNAL_API_KEY
-                },
-                body: JSON.stringify({
-                    app_id: ONESIGNAL_APP_ID,
-                    headings: { en: "🔔 PRUEBA EXITOSA", es: "🔔 PRUEBA EXITOSA" },
-                    contents: { en: "Sistema de alertas funcionando OK.", es: "Sistema de alertas funcionando OK." },
-                    filters: [ { field: "tag", key: "rol", relation: "=", value: "admin" } ]
-                })
-            });
-            
-            const data = await response.json();
-            console.log("Respuesta:", data);
-
-            if(data.id) {
-                alert("✅ ¡ENVIADO! Revisa tu barra de notificaciones.");
-                if(data.recipients === 0) alert("⚠️ Se envió, pero nadie tiene el tag 'admin'. Recarga la página para que se te asigne.");
-            } else {
-                alert("Error OneSignal: " + JSON.stringify(data));
+        // ----------------------------------------------------
+        // 1. LÓGICA DE NOTIFICACIONES PUSH (Service Worker)
+        // ----------------------------------------------------
+        
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
             }
-            
-          } catch (e) {
-              console.error(e);
-              alert("❌ Error de conexión: " + e.message);
-          } finally {
-              btn.disabled = false; btn.innerText = originalText;
-          }
+            return outputArray;
         }
 
-        // --- AUTENTICACIÓN Y LÓGICA ---
+        async function registerServiceWorker() {
+            if ('serviceWorker' in navigator && 'PushManager' in window) {
+                try {
+                    // Intentamos registrar sw.js (asegúrate que esté en la carpeta raíz)
+                    const registration = await navigator.serviceWorker.register('./sw.js');
+                    console.log('SW Registrado');
+                    return registration;
+                } catch (error) {
+                    console.error('Error SW:', error);
+                }
+            }
+        }
+
+        async function subscribeUser() {
+            const registration = await registerServiceWorker();
+            if (!registration) return;
+
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+            });
+
+            if (currentUser) {
+                const subData = JSON.parse(JSON.stringify(subscription));
+                const { error } = await supabase.from('push_subscriptions').upsert({
+                    user_id: currentUser.id,
+                    endpoint: subData.endpoint,
+                    p256dh: subData.keys.p256dh,
+                    auth: subData.keys.auth
+                }, { onConflict: 'endpoint' });
+                
+                if(!error) console.log("✅ Suscripción guardada en DB");
+            }
+        }
+
+        async function testNotification() {
+            const btn = event.target;
+            const txtOriginal = btn.innerText;
+            
+            if(!currentUser) { alert("Inicia sesión primero"); return; }
+            
+            btn.disabled = true; 
+            btn.innerText = "⏳ Configurando...";
+            
+            try {
+                // 1. Asegurar suscripción
+                await subscribeUser();
+                
+                btn.innerText = "🚀 Enviando...";
+                
+                // 2. Invocar Edge Function
+                const { data, error } = await supabase.functions.invoke('push-notifier', {
+                    body: { type: 'TEST', user_id: currentUser.id }
+                });
+
+                if(error) throw error;
+
+                alert("✅ ¡Enviado! Revisa las notificaciones de tu dispositivo.");
+
+            } catch (e) {
+                console.error(e);
+                alert("Error: " + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = txtOriginal;
+            }
+        }
+
+        // ----------------------------------------------------
+        // 2. LÓGICA GENERAL DEL ADMIN
+        // ----------------------------------------------------
+
         supabase.auth.onAuthStateChange((event, session) => {
             if (session) {
                 currentUser = session.user;
                 initAdmin(session.user);
+                // Intentar registrar push al entrar
+                setTimeout(registerServiceWorker, 1000);
             } else {
                 document.getElementById('login-container').style.display = 'block';
                 document.getElementById('dashboard').style.display = 'none';
@@ -379,8 +353,6 @@
             setupGlobalRealtime();
         }
 
-        function copyCode() { navigator.clipboard.writeText(storeCode); alert("Código copiado: " + storeCode); }
-
         document.getElementById('auth-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
@@ -388,6 +360,8 @@
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) document.getElementById('auth-msg').textContent = "Error: " + error.message;
         });
+
+        async function logout() { await supabase.auth.signOut(); window.location.reload(); }
 
         // PRODUCTOS
         document.getElementById('product-form').addEventListener('submit', async (e) => {
@@ -438,6 +412,7 @@
             if(!data || data.length === 0) { table.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Sin productos.</td></tr>'; return; }
             table.innerHTML = `<thead><tr><th>FOTO</th><th>DETALLE</th><th>$</th><th>ACCIONES</th></tr></thead><tbody>${data.map(p => `<tr><td><img src="${p.imagen_url || 'https://via.placeholder.com/50'}" class="product-img"></td><td><div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div><div style="font-size:0.75rem; color:#94a3b8;">Stock: ${p.stock}</div></td><td style="font-weight:bold;">${p.precio}</td><td><button class="btn-icon btn-edit" onclick="startEdit(${p.id})"><i class="fas fa-pen"></i></button><button class="btn-icon btn-danger" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>`;
         }
+
         function startEdit(id) {
             const p = productsCache.find(x => x.id === id);
             if(!p) return;
@@ -467,39 +442,50 @@
             }).join('');
         }
 
-        // NOTIFICACIONES Y CONTADORES
-        function showNotification(title, message) {
+        // UI HELPERS
+        function showToast(title, message) {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             toast.className = 'toast-notification';
             toast.innerHTML = `<i class="fas fa-bell"></i><div class="toast-content"><div>${title}</div><small>${message}</small></div>`;
             container.appendChild(toast);
-            try { notificationSound.play().catch(e => console.log("Audio bloqueado")); } catch(e){}
+            try { notificationSound.play().catch(()=>{}); } catch(e){}
             setTimeout(() => { toast.style.animation = 'fadeOut 0.5s forwards'; setTimeout(() => toast.remove(), 500); }, 4000);
         }
 
         async function updateDashboardCounters() {
             const { count: unreadMsgs } = await supabase.from('mensajes').select('*', { count: 'exact', head: true }).eq('tienda_id', currentUser.id).eq('leido', false).eq('enviado_por_rol', 'cliente');
             const { count: pendingOrders } = await supabase.from('pedidos').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente'); 
-            document.getElementById('badge-chats').textContent = unreadMsgs;
-            document.getElementById('badge-chats').style.display = unreadMsgs > 0 ? 'block' : 'none';
-            document.getElementById('badge-orders').textContent = pendingOrders;
-            document.getElementById('badge-orders').style.display = pendingOrders > 0 ? 'block' : 'none';
+            
+            const bChat = document.getElementById('badge-chats');
+            const bOrd = document.getElementById('badge-orders');
+            
+            bChat.textContent = unreadMsgs; bChat.style.display = unreadMsgs > 0 ? 'block' : 'none';
+            bOrd.textContent = pendingOrders; bOrd.style.display = pendingOrders > 0 ? 'block' : 'none';
         }
 
-        // CHAT
+        function copyCode() { navigator.clipboard.writeText(storeCode); alert("Código copiado: " + storeCode); }
+
+        function switchTab(t) {
+            document.querySelectorAll('.panel-section').forEach(s => s.classList.remove('active'));
+            document.getElementById('tab-'+t).classList.add('active');
+            document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+            const btn = event.target.closest('.tab'); if(btn) btn.classList.add('active');
+            if(t === 'chats') loadChatsList(); if(t === 'pedidos') loadOrders(); if(t === 'config') loadConfig();
+        }
+
+        // REALTIME & CHAT
         function setupGlobalRealtime() {
-            supabase.channel('admin-global-msgs').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, payload => {
+            supabase.channel('admin-global').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, payload => {
                 if(payload.new.tienda_id !== currentUser.id) return;
                 if(payload.new.enviado_por_rol === 'cliente') {
-                    if (activeChatClientId !== payload.new.cliente_id) { showNotification('Nuevo Mensaje', 'Cliente envió mensaje'); updateDashboardCounters(); }
+                    if (activeChatClientId !== payload.new.cliente_id) { showToast('Nuevo Mensaje', 'Cliente envió mensaje'); updateDashboardCounters(); }
                 }
                 if(document.getElementById('tab-chats').classList.contains('active')) loadChatsList();
                 if(activeChatClientId && payload.new.cliente_id === activeChatClientId && payload.new.enviado_por_rol !== 'dueño') renderMessage(payload.new);
-            }).subscribe();
-
-            supabase.channel('admin-global-orders').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, payload => {
-                 showNotification('Nuevo Pedido', '¡Nuevo pedido recibido!');
+            })
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, () => {
+                 showToast('Nuevo Pedido', '¡Revisa la lista!');
                  updateDashboardCounters();
                  if(document.getElementById('tab-pedidos').classList.contains('active')) loadOrders();
             }).subscribe();
@@ -529,18 +515,21 @@
             container.innerHTML = ''; data.forEach(renderMessage);
             await supabase.from('mensajes').update({ leido: true }).eq('cliente_id', clientId).eq('enviado_por_rol', 'cliente');
             updateDashboardCounters();
+            
             if(activeChannel) supabase.removeChannel(activeChannel);
-            activeChannel = supabase.channel(`chat_room_${currentUser.id}_${clientId}`).on('broadcast', { event: 'typing' }, () => {
+            activeChannel = supabase.channel(`chat_${clientId}`).on('broadcast', { event: 'typing' }, () => {
                 const ind = document.getElementById('typing-indicator'); ind.textContent = `${clientName} escribe...`; setTimeout(() => ind.textContent = '', 3000);
             }).subscribe();
         }
+
         function renderMessage(msg) {
             const div = document.createElement('div'); div.className = `msg ${msg.enviado_por_rol === 'dueño' ? 'me' : 'them'}`;
             let html = msg.contenido.replace(/\n/g, '<br>');
             if (!html.includes('<img')) html = html.replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank" class="map-btn">Ver Enlace</a>`);
             div.innerHTML = html;
-            document.getElementById('messages-container').appendChild(div).scrollIntoView();
+            const c = document.getElementById('messages-container'); c.appendChild(div); c.scrollTop = c.scrollHeight;
         }
+
         async function sendMessage(e) {
             e.preventDefault(); const input = document.getElementById('msg-input'); const text = input.value.trim();
             if(!text || !activeChatClientId) return; input.value = '';
@@ -553,7 +542,7 @@
             document.getElementById('chats-inbox').style.display = 'block'; loadChatsList();
         }
 
-        // CONFIGURACIÓN
+        // CONFIG
         document.getElementById('config-form').addEventListener('submit', async (e) => {
             e.preventDefault(); const btn = document.getElementById('btn-save-config'); btn.textContent = "Guardando..."; btn.disabled = true;
             try {
@@ -587,15 +576,6 @@
             if(data.banco_tipo) document.getElementById('conf-tipo').value = data.banco_tipo;
             if (data.qr_imagen_url) { document.getElementById('qr-preview').src = data.qr_imagen_url; document.getElementById('qr-preview').style.display = 'block'; }
         }
-
-        function switchTab(t) {
-            document.querySelectorAll('.panel-section').forEach(s => s.classList.remove('active'));
-            document.getElementById('tab-'+t).classList.add('active');
-            document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-            const btn = event.target.closest('.tab'); if(btn) btn.classList.add('active');
-            if(t === 'chats') loadChatsList(); if(t === 'pedidos') loadOrders(); if(t === 'config') loadConfig();
-        }
-        async function logout() { await supabase.auth.signOut(); window.location.reload(); }
     </script>
 </body>
 </html>
