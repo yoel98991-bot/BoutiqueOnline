@@ -7,6 +7,25 @@
     <title>Admin Studio PWA</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "af032e9f-716c-4d7f-8fd1-32894c2a4cd8",
+          // safari_web_id: "web.onesignal.auto.xxxxx", // Opcional para macOS
+          notifyButton: {
+            enable: true,
+          },
+        });
+        
+        // ETIQUETA CLAVE: Identificar al usuario como ADMIN
+        OneSignal.User.addTag("rol", "admin");
+        console.log("Admin Tagged for Notifications");
+      });
+    </script>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -29,7 +48,7 @@
         .tab { padding: 10px 20px; border: none; background: white; color: #64748b; font-weight: 600; border-radius: 30px; font-size: 0.9rem; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.02); position: relative; }
         .tab.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(30, 41, 59, 0.3); }
 
-        /* --- NUEVO: BADGES DE CONTADOR --- */
+        /* --- BADGES DE CONTADOR --- */
         .badge-count {
             position: absolute;
             top: -5px;
@@ -46,7 +65,7 @@
         }
         @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
 
-        /* --- NUEVO: TOAST NOTIFICATIONS --- */
+        /* --- TOAST NOTIFICATIONS --- */
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
         .toast-notification {
             background: white;
