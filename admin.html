@@ -44,14 +44,14 @@
         .panel-section { display: none; animation: fadeIn 0.3s ease; }
         .panel-section.active { display: block; }
 
-        /* Table Styles (Restored) */
+        /* Table Styles */
         .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -20px; padding: 0 20px; }
         table { width: 100%; border-collapse: collapse; white-space: nowrap; }
         th { text-align: left; padding: 12px; color: #64748b; font-size: 0.8rem; border-bottom: 1px solid var(--border); }
         td { padding: 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
         .product-img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: #eee; }
 
-        /* Order Cards (Restored) */
+        /* Order Cards */
         .order-item { padding: 15px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; background: white; }
         .badge { font-size: 0.7rem; padding: 4px 8px; border-radius: 10px; font-weight: bold; }
         .badge-pending { background: #fff7ed; color: #c2410c; }
@@ -70,6 +70,9 @@
         .msg.me { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
         .msg.them { background: white; color: var(--text); align-self: flex-start; border-bottom-left-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         
+        /* ESTILOS PARA IMAGENES EN CHAT ADMIN */
+        .msg img { max-width: 100% !important; max-height: 300px; border-radius: 8px; margin-top: 5px; display: block; cursor: pointer; }
+
         /* Map Button Style */
         .map-btn { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; padding: 8px 12px; background: #e0e7ff; color: var(--accent); text-decoration: none; font-weight: 600; border-radius: 8px; font-size: 0.85rem; border: 1px solid #c7d2fe; transition: background 0.2s; }
         .map-btn:hover { background: #c7d2fe; }
@@ -178,8 +181,6 @@
         <div id="tab-config" class="panel-section">
             <div class="card">
                 <h3><i class="fas fa-university"></i> Datos Bancarios / Pago Móvil</h3>
-                <p style="color:#64748b; font-size:0.9rem; margin-bottom:15px;">Estos datos aparecerán a tus clientes al finalizar la compra.</p>
-                
                 <form id="config-form">
                     <label>Banco</label>
                     <input type="text" id="conf-banco" placeholder="Ej: Banco Venezuela / Banesco">
@@ -235,7 +236,6 @@
         let productsCache = []; 
         let editingId = null;
 
-        // --- AUTH & INIT ---
         supabase.auth.onAuthStateChange((event, session) => {
             if (session) {
                 currentUser = session.user;
@@ -248,19 +248,12 @@
 
         async function initAdmin(user) {
             let { data: userData } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
-            
             if (!userData) {
                 userData = { id: user.id, email: user.email, nombre: 'Admin', rol: 'dueño' };
                 await supabase.from('usuarios').insert(userData);
             }
-
-            if (!userData.codigo_tienda) {
-                const code = 'TIENDA-' + Math.random().toString(36).substring(2, 6).toUpperCase();
-                await supabase.from('usuarios').update({ codigo_tienda: code }).eq('id', user.id);
-                storeCode = code;
-            } else {
-                storeCode = userData.codigo_tienda;
-            }
+            storeCode = userData.codigo_tienda || 'TIENDA-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+            if (!userData.codigo_tienda) await supabase.from('usuarios').update({ codigo_tienda: storeCode }).eq('id', user.id);
 
             document.getElementById('store-code-display').textContent = "CÓDIGO: " + storeCode;
             document.getElementById('login-container').style.display = 'none';
@@ -269,10 +262,7 @@
             setupGlobalRealtime();
         }
 
-        function copyCode() {
-            navigator.clipboard.writeText(storeCode);
-            alert("Código copiado: " + storeCode);
-        }
+        function copyCode() { navigator.clipboard.writeText(storeCode); alert("Código copiado: " + storeCode); }
 
         document.getElementById('auth-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -297,8 +287,7 @@
                     const { data } = supabase.storage.from('imagenes-productos').getPublicUrl(fileName);
                     imageUrl = data.publicUrl;
                 } else if (editingId) {
-                    const existing = productsCache.find(p => p.id === editingId);
-                    imageUrl = existing.imagen_url;
+                    imageUrl = productsCache.find(p => p.id === editingId).imagen_url;
                 }
 
                 const productData = {
@@ -312,12 +301,9 @@
                     ...(imageUrl && { imagen_url: imageUrl }) 
                 };
 
-                if (editingId) {
-                    await supabase.from('productos').update(productData).eq('id', editingId);
-                } else {
-                    productData.imagen_url = imageUrl; 
-                    await supabase.from('productos').insert([productData]);
-                }
+                if (editingId) await supabase.from('productos').update(productData).eq('id', editingId);
+                else { productData.imagen_url = imageUrl; await supabase.from('productos').insert([productData]); }
+                
                 alert(editingId ? "Actualizado" : "Publicado");
                 resetForm();
                 loadProducts();
@@ -357,9 +343,7 @@
             document.getElementById('form-card').scrollIntoView({ behavior: 'smooth' });
         }
 
-        async function deleteProduct(id) {
-            if(confirm('¿Eliminar?')) { await supabase.from('productos').delete().eq('id', id); loadProducts(); }
-        }
+        async function deleteProduct(id) { if(confirm('¿Eliminar?')) { await supabase.from('productos').delete().eq('id', id); loadProducts(); } }
 
         async function loadOrders() {
             const { data } = await supabase.from('pedidos').select('*, clientes(nombre, telefono)').order('fecha', {ascending:false});
@@ -368,11 +352,8 @@
             
             list.innerHTML = data.map(o => {
                 let productsHTML = 'Sin productos';
-                if (o.productos && o.productos.items) {
-                    productsHTML = o.productos.items.map(i => i.name).join(', ');
-                } else if (Array.isArray(o.productos)) {
-                    productsHTML = o.productos.map(i => i.name).join(', ');
-                }
+                if (o.productos && o.productos.items) productsHTML = o.productos.items.map(i => i.name).join(', ');
+                else if (Array.isArray(o.productos)) productsHTML = o.productos.map(i => i.name).join(', ');
                 
                 return `<div class="order-item"><div class="order-header" style="display:flex; justify-content:space-between; margin-bottom:8px;"><div style="font-weight:600; font-size:0.9rem;"><i class="fas fa-user"></i> ${o.clientes?.nombre || 'Anónimo'}</div><span class="badge badge-pending">${o.estado}</span></div><div style="font-size:0.85rem; color:#64748b; margin-bottom:10px;"><div><i class="fab fa-whatsapp"></i> ${o.clientes?.telefono || 'Sin tel'}</div><div style="margin-top:4px; color:#334155;">🛒 ${productsHTML}</div></div><div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #e2e8f0; padding-top:8px;"><small style="color:#94a3b8;">${new Date(o.fecha).toLocaleDateString()}</small><div style="font-weight:700; color:var(--primary);">$${o.total}</div></div></div>`;
             }).join('');
@@ -380,16 +361,11 @@
 
         // --- CHAT LOGIC ---
         function setupGlobalRealtime() {
-            supabase.channel('admin-global')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, 
-                payload => {
-                    if(payload.new.tienda_id !== currentUser.id) return;
-                    if(document.getElementById('tab-chats').classList.contains('active')) loadChatsList();
-                    if(activeChatClientId && payload.new.cliente_id === activeChatClientId && payload.new.enviado_por_rol !== 'dueño') {
-                        renderMessage(payload.new);
-                    }
-                })
-                .subscribe();
+            supabase.channel('admin-global').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, payload => {
+                if(payload.new.tienda_id !== currentUser.id) return;
+                if(document.getElementById('tab-chats').classList.contains('active')) loadChatsList();
+                if(activeChatClientId && payload.new.cliente_id === activeChatClientId && payload.new.enviado_por_rol !== 'dueño') renderMessage(payload.new);
+            }).subscribe();
         }
 
         async function loadChatsList() {
@@ -416,21 +392,25 @@
             await supabase.from('mensajes').update({ leido: true }).eq('cliente_id', clientId).eq('enviado_por_rol', 'cliente');
 
             if(activeChannel) supabase.removeChannel(activeChannel);
-            activeChannel = supabase.channel(`chat_room_${currentUser.id}_${clientId}`)
-                .on('broadcast', { event: 'typing' }, () => {
-                    const ind = document.getElementById('typing-indicator');
-                    ind.textContent = `${clientName} está escribiendo...`;
-                    setTimeout(() => ind.textContent = '', 3000);
-                }).subscribe();
+            activeChannel = supabase.channel(`chat_room_${currentUser.id}_${clientId}`).on('broadcast', { event: 'typing' }, () => {
+                const ind = document.getElementById('typing-indicator');
+                ind.textContent = `${clientName} está escribiendo...`;
+                setTimeout(() => ind.textContent = '', 3000);
+            }).subscribe();
         }
 
         function renderMessage(msg) {
             const div = document.createElement('div');
             div.className = `msg ${msg.enviado_por_rol === 'dueño' ? 'me' : 'them'}`;
-            const urlPattern = /(https?:\/\/[^\s]+)/g;
-            let htmlContent = msg.contenido.replace(/\n/g, '<br>').replace(urlPattern, (url) => {
-                return `<a href="${url}" target="_blank" class="map-btn"><i class="fas fa-map-marked-alt"></i> Ver Ubicación</a>`;
-            });
+            
+            let htmlContent = msg.contenido.replace(/\n/g, '<br>');
+            
+            // Solo convertir links a botones si NO hay una etiqueta de imagen en el mensaje
+            if (!htmlContent.includes('<img')) {
+                const urlPattern = /(https?:\/\/[^\s]+)/g;
+                htmlContent = htmlContent.replace(urlPattern, (url) => `<a href="${url}" target="_blank" class="map-btn"><i class="fas fa-map-marked-alt"></i> Ver Link</a>`);
+            }
+            
             div.innerHTML = htmlContent;
             const c = document.getElementById('messages-container');
             c.appendChild(div);
@@ -456,92 +436,46 @@
             loadChatsList();
         }
 
-      document.getElementById('config-form').addEventListener('submit', async (e) => {
+        document.getElementById('config-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-save-config');
-            btn.textContent = "Guardando..."; 
-            btn.disabled = true;
-
+            btn.textContent = "Guardando..."; btn.disabled = true;
             try {
                 const file = document.getElementById('qr-input').files[0];
-                // Si ya había una imagen cargada, mantenemos esa URL por defecto
                 let qrUrl = document.getElementById('qr-preview').src; 
                 
                 if (file) {
-                    // 1. Extraemos la extensión del archivo (ej: png, jpg)
-                    const fileExt = file.name.split('.').pop();
-                    
-                    // 2. Creamos un nombre único INCLUYENDO la extensión
-                    const fileName = `qr_${currentUser.id}_${Date.now()}.${fileExt}`;
-
-                    // 3. Subimos al bucket 'imagenes-pagos'
-                    const { error: uploadErr } = await supabase.storage
-                        .from('imagenes-pagos')
-                        .upload(fileName, file, {
-                            cacheControl: '3600',
-                            upsert: true // Sobrescribe si hay conflicto
-                        });
-
-                    if(uploadErr) throw uploadErr;
-                    
-                    // 4. Obtenemos la URL pública válida
-                    const { data } = supabase.storage
-                        .from('imagenes-pagos')
-                        .getPublicUrl(fileName);
-                    
+                    const fileName = `qr_${currentUser.id}_${Date.now()}.${file.name.split('.').pop()}`;
+                    await supabase.storage.from('imagenes-pagos').upload(fileName, file, { upsert: true });
+                    const { data } = supabase.storage.from('imagenes-pagos').getPublicUrl(fileName);
                     qrUrl = data.publicUrl;
                 }
 
-                // Preparamos los datos para guardar en la base de datos
                 const updates = {
                     banco_nombre: document.getElementById('conf-banco').value,
                     banco_titular: document.getElementById('conf-titular').value,
                     banco_ci: document.getElementById('conf-ci').value,
                     banco_numero: document.getElementById('conf-numero').value,
                     banco_tipo: document.getElementById('conf-tipo').value,
-                    // Verificamos que sea una URL válida (http...) antes de guardar
                     qr_imagen_url: qrUrl && qrUrl.startsWith('http') ? qrUrl : null
                 };
 
-                const { error } = await supabase.from('usuarios').update(updates).eq('id', currentUser.id);
-                if(error) throw error;
-
+                await supabase.from('usuarios').update(updates).eq('id', currentUser.id);
                 alert("¡Datos de pago actualizados!");
-                
-                // (Opcional) Actualizar la vista previa inmediatamente para confirmar visualmente
-                if(qrUrl && qrUrl.startsWith('http')) {
-                    const img = document.getElementById('qr-preview');
-                    img.src = qrUrl;
-                    img.style.display = 'block';
-                }
-
-            } catch (err) {
-                console.error(err); // Útil para ver el error real en la consola
-                alert("Error al guardar: " + (err.message || err.error_description || "Error desconocido"));
-            } finally {
-                btn.disabled = false; 
-                btn.textContent = "Guardar Configuración";
-            }
+                if(qrUrl.startsWith('http')) { document.getElementById('qr-preview').src = qrUrl; document.getElementById('qr-preview').style.display = 'block'; }
+            } catch (err) { alert("Error: " + err.message); } 
+            finally { btn.disabled = false; btn.textContent = "Guardar Configuración"; }
         });
 
-
-        
         async function loadConfig() {
             const { data, error } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
             if (error || !data) return;
-
             document.getElementById('conf-banco').value = data.banco_nombre || '';
             document.getElementById('conf-titular').value = data.banco_titular || '';
             document.getElementById('conf-ci').value = data.banco_ci || '';
             document.getElementById('conf-numero').value = data.banco_numero || '';
             if(data.banco_tipo) document.getElementById('conf-tipo').value = data.banco_tipo;
-
-            if (data.qr_imagen_url) {
-                const img = document.getElementById('qr-preview');
-                img.src = data.qr_imagen_url;
-                img.style.display = 'block';
-                document.getElementById('qr-text').textContent = "Cambiar imagen";
-            }
+            if (data.qr_imagen_url) { document.getElementById('qr-preview').src = data.qr_imagen_url; document.getElementById('qr-preview').style.display = 'block'; }
         }
 
         function switchTab(t) {
@@ -549,7 +483,6 @@
             document.getElementById('tab-'+t).classList.add('active');
             document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
-            
             if(t === 'chats') loadChatsList();
             if(t === 'pedidos') loadOrders();
             if(t === 'config') loadConfig();
