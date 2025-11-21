@@ -613,21 +613,54 @@
         }
 
         // REALTIME & CHAT
-        function setupGlobalRealtime() {
-            supabase.channel('admin-global').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, payload => {
-                if(payload.new.tienda_id !== currentUser.id) return;
-                if(payload.new.enviado_por_rol === 'cliente') {
-                    if (activeChatClientId !== payload.new.cliente_id) { showToast('Nuevo Mensaje', 'Cliente envió mensaje'); updateDashboardCounters(); }
-                }
-                if(document.getElementById('tab-chats').classList.contains('active')) loadChatsList();
-                if(activeChatClientId && payload.new.cliente_id === activeChatClientId && payload.new.enviado_por_rol !== 'dueño') renderMessage(payload.new);
-            })
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, () => {
-                 showToast('Nuevo Pedido', '¡Revisa la lista!');
-                 updateDashboardCounters();
-                 if(document.getElementById('tab-pedidos').classList.contains('active')) loadOrders();
-            }).subscribe();
+      function setupGlobalRealtime() {
+    // Desuscribir canales previos para evitar duplicados
+    supabase.removeAllChannels();
+
+    supabase.channel('admin-global')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, payload => {
+        
+        // 1. Verificar que el mensaje es para esta tienda
+        if(payload.new.tienda_id != currentUser.id) return;
+
+        // 2. Si el mensaje lo envió el cliente
+        if(payload.new.enviado_por_rol === 'cliente') {
+            // Si NO tengo abierto el chat de este cliente, aviso con notificación
+            // Usamos != para permitir comparar texto con número
+            if (activeChatClientId != payload.new.cliente_id) { 
+                showToast('Nuevo Mensaje', 'Cliente envió mensaje'); 
+                updateDashboardCounters(); 
+            }
         }
+
+        // 3. Actualizar la lista de la izquierda si está visible
+        if(document.getElementById('tab-chats').classList.contains('active')) loadChatsList();
+
+        // 4. CRÍTICO: Dibujar el mensaje si tengo el chat abierto
+        // Usamos == para que '15' (texto) sea igual a 15 (número)
+        if(activeChatClientId && payload.new.cliente_id == activeChatClientId) {
+            
+            // Solo lo dibujamos si NO soy yo el que lo envió (para no duplicar)
+            if(payload.new.enviado_por_rol !== 'dueño') {
+                renderMessage(payload.new);
+                
+                // Forzamos el scroll hacia abajo con un pequeño retraso para asegurar que se renderizó
+                setTimeout(() => {
+                    const c = document.getElementById('messages-container');
+                    c.scrollTop = c.scrollHeight;
+                }, 50);
+            }
+        }
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, () => {
+            showToast('Nuevo Pedido', '¡Revisa la lista!');
+            updateDashboardCounters();
+            if(document.getElementById('tab-pedidos').classList.contains('active')) loadOrders();
+    })
+    .subscribe((status) => {
+        console.log("Estado Conexión Realtime:", status);
+    });
+}
 
         async function loadChatsList() {
             const { data } = await supabase.from('mensajes').select('*, clientes(id, nombre)').eq('tienda_id', currentUser.id).order('created_at', { ascending: false }).limit(200);
