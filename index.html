@@ -35,7 +35,6 @@
         .chat-btn { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4); cursor: pointer; z-index: 100; transition: transform 0.2s; }
         .chat-btn:active { transform: scale(0.9); }
         
-        /* Notificación Badge (NUEVO) */
         .chat-badge { position: absolute; top: -5px; right: -5px; background-color: #ef4444; color: white; font-size: 0.75rem; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; display: none; animation: popIn 0.3s ease; z-index: 102; }
         @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
 
@@ -49,8 +48,6 @@
         .msg.me { background: var(--accent); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
         .msg.store { background: white; color: var(--text-main); align-self: flex-start; border-bottom-left-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .typing { font-size: 0.7rem; color: #94a3b8; margin-left: 10px; height: 15px; }
-        
-        /* Chat Images */
         .chat-img { max-width: 100%; border-radius: 8px; margin-top: 5px; border: 2px solid rgba(0,0,0,0.1); cursor: pointer; display: block; }
 
         /* Cart Styles */
@@ -104,7 +101,9 @@
     </div>
 
     <header>
-        <div style="font-weight: 700; font-size: 1.2rem;"><i class="fas fa-store"></i> STUDIO</div>
+        <div id="store-branding" style="font-weight: 700; font-size: 1.2rem; display:flex; align-items:center;">
+            <i class="fas fa-store"></i> <span style="margin-left:5px;">STUDIO</span>
+        </div>
         <div id="client-info" style="font-size: 0.8rem; color: #6b7280;"></div>
     </header>
 
@@ -211,7 +210,7 @@
         let productsCache = []; 
         let storePaymentInfo = null;
         
-        // NUEVAS VARIABLES PARA NOTIFICACIONES
+        // VARIABLES PARA NOTIFICACIONES
         let unreadCount = 0;
         const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
@@ -281,10 +280,18 @@
                     </div>`).join('');
             }
 
+            // CARGAR DATOS DE LA TIENDA (PAGOS + LOGO)
             const { data: storeData } = await supabase.from('usuarios').select('*').eq('id', session.storeId).single();
             if(storeData) {
                 storePaymentInfo = storeData;
                 renderPaymentInfo();
+
+                // LÓGICA PARA MOSTRAR LOGO SI EXISTE
+                if (storeData.logo_url) {
+                    const brandingDiv = document.getElementById('store-branding');
+                    // Reemplazamos el texto/icono por la imagen
+                    brandingDiv.innerHTML = `<img src="${storeData.logo_url}" alt="Logo Tienda" style="height: 40px; max-width: 180px; object-fit: contain;">`;
+                }
             }
         }
 
