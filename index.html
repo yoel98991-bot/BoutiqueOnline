@@ -35,6 +35,10 @@
         .chat-btn { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4); cursor: pointer; z-index: 100; transition: transform 0.2s; }
         .chat-btn:active { transform: scale(0.9); }
         
+        /* Notificación Badge (NUEVO) */
+        .chat-badge { position: absolute; top: -5px; right: -5px; background-color: #ef4444; color: white; font-size: 0.75rem; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; display: none; animation: popIn 0.3s ease; z-index: 102; }
+        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+
         .chat-widget { display: none; position: fixed; bottom: 100px; right: 20px; width: 350px; max-width: 90%; height: 500px; background: white; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); flex-direction: column; z-index: 100; overflow: hidden; }
         .chat-widget.open { display: flex; }
         .chat-header { background: var(--accent); color: white; padding: 15px; font-weight: 600; display: flex; justify-content: space-between; }
@@ -111,6 +115,7 @@
 
     <div class="chat-btn" onclick="toggleChat()">
         <i class="fas fa-comment-dots"></i>
+        <span id="unread-badge" class="chat-badge">0</span>
     </div>
 
     <div class="chat-widget" id="chat-box">
@@ -200,10 +205,15 @@
             clientId: localStorage.getItem('clientId'),
             clientName: localStorage.getItem('clientName')
         };
+        
         let chatChannel = null;
         let cart = [];
         let productsCache = []; 
         let storePaymentInfo = null;
+        
+        // NUEVAS VARIABLES PARA NOTIFICACIONES
+        let unreadCount = 0;
+        const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
         if (session.storeId && session.clientId) {
             initApp();
@@ -334,7 +344,6 @@
             }
         }
 
-        function toggleCart() { document.getElementById('cart-overlay').classList.toggle('open'); }
         function toggleDeliveryFields() {
             const method = document.getElementById('delivery-method').value;
             document.getElementById('delivery-info').style.display = method === 'delivery' ? 'block' : 'none';
@@ -359,8 +368,7 @@
             }, { enableHighAccuracy: true, timeout: 10000 });
         }
 
-        // --- ENVÍO DE PEDIDO Y MENSAJES (YA NO LLAMAMOS A ONESIGNAL) ---
-        // El sistema de Webhooks de Supabase se encarga de avisar al admin
+        // --- ENVÍO DE PEDIDO ---
 
         async function checkout() {
             if (cart.length === 0) return alert("Agrega productos primero.");
@@ -376,19 +384,17 @@
             const orderMetadata = { items: cart.map(p => ({ id: p.id, name: p.nombre, price: p.precio })), delivery: { method, address: method === 'delivery' ? address : 'N/A' } };
 
             try {
-                // 1. Insertamos Pedido (Esto dispara el Webhook de Supabase -> Edge Function -> Admin Phone)
                 await supabase.from('pedidos').insert({ cliente_id: session.clientId, total: total, productos: orderMetadata, estado: 'pendiente' });
                 
                 let autoMsg = `✅ ¡Nuevo pedido! Total: $${total.toFixed(2)} (${cart.length} items).\n${method === 'delivery' ? '🛵 Delivery: ' + address : '📍 Retiro en Tienda.'}`;
                 if(storePaymentInfo && storePaymentInfo.banco_numero) autoMsg += `\n\n💳 He visto los datos. Enviaré comprobante por aquí.`;
 
-                // 2. Insertamos el Mensaje Automático (También dispara notificación si configuraste el webhook en mensajes)
                 await supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: autoMsg });
                 renderMsg({ contenido: autoMsg, enviado_por_rol: 'cliente' });
                 
                 cart = []; updateCartUI(); toggleCart();
                 alert("¡Pedido enviado correctamente!");
-                document.getElementById('chat-box').classList.add('open');
+                toggleChat(); // Abrir chat automáticamente
             } catch (err) {
                 alert("Error: " + err.message);
             } finally {
@@ -396,7 +402,7 @@
             }
         }
 
-        // --- CHAT ---
+        // --- CHAT CON NOTIFICACIONES ---
         async function initChat() {
             const { data } = await supabase.from('mensajes').select('*').eq('tienda_id', session.storeId).eq('cliente_id', session.clientId).order('created_at', { ascending: true });
             if(data) data.forEach(renderMsg);
@@ -408,10 +414,32 @@
                     setTimeout(() => document.getElementById('typing-ind').textContent = '', 3000);
                 }).subscribe();
 
-            // Escuchar mensajes NUEVOS (Respuestas del Admin)
+            // ESCUCHAR MENSAJES NUEVOS Y NOTIFICAR
             supabase.channel('client-inbox-' + session.clientId).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `cliente_id=eq.${session.clientId}` }, payload => {
-                if (payload.new.enviado_por_rol !== 'cliente') renderMsg(payload.new);
+                
+                // Si el mensaje NO lo envié yo (lo envió la tienda)
+                if (payload.new.enviado_por_rol !== 'cliente') {
+                    renderMsg(payload.new);
+                    
+                    const chatBox = document.getElementById('chat-box');
+                    // Si la ventana de chat está CERRADA, aumentamos badge y sonido
+                    if (!chatBox.classList.contains('open')) {
+                        unreadCount++;
+                        updateBadgeUI();
+                        try { msgSound.play().catch(e=>{}); } catch(e){}
+                    }
+                }
             }).subscribe();
+        }
+
+        function updateBadgeUI() {
+            const badge = document.getElementById('unread-badge');
+            if (unreadCount > 0) {
+                badge.style.display = 'flex';
+                badge.textContent = unreadCount;
+            } else {
+                badge.style.display = 'none';
+            }
         }
 
         function renderMsg(msg) {
@@ -441,7 +469,6 @@
                 const { data } = supabase.storage.from('chat-adjuntos').getPublicUrl(fileName);
                 const imgContent = `Comprobante de pago:<br><img src="${data.publicUrl}" class="chat-img" onclick="window.open(this.src, '_blank')">`;
 
-                // Insertar mensaje (Dispara Webhook -> Admin)
                 await supabase.from('mensajes').insert({
                     tienda_id: session.storeId,
                     cliente_id: session.clientId,
@@ -467,13 +494,25 @@
 
             input.value = '';
             renderMsg({ contenido: text, enviado_por_rol: 'cliente' });
-            
-            // Insertar mensaje (Dispara Webhook -> Admin)
             await supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: text });
         }
 
         function notifyTyping() { if(chatChannel) chatChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); }
-        function toggleChat() { document.getElementById('chat-box').classList.toggle('open'); scrollToBottom(); }
+        
+        function toggleChat() { 
+            const chatBox = document.getElementById('chat-box');
+            chatBox.classList.toggle('open'); 
+            
+            // Al abrir, limpiamos notificaciones
+            if (chatBox.classList.contains('open')) {
+                unreadCount = 0;
+                updateBadgeUI();
+                scrollToBottom();
+            }
+        }
+
+        function toggleCart() { document.getElementById('cart-overlay').classList.toggle('open'); }
+
         function scrollToBottom() { const d = document.getElementById('chat-msgs'); d.scrollTop = d.scrollHeight; }
     </script>
 </body>
