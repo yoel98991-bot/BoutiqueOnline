@@ -7,9 +7,9 @@
     <title>Admin Studio</title>
 
     <link rel="manifest" href="./manifest.json">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Studio">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Studio">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -68,7 +68,7 @@
         .product-img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: #eee; }
 
         /* Orders */
-        .order-item { padding: 15px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; background: white; }
+        .order-item { padding: 15px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; background: white; transition: all 0.3s ease; }
         .badge-pending { background: #fff7ed; color: #c2410c; font-size: 0.7rem; padding: 4px 8px; border-radius: 10px; font-weight: bold;}
         
         /* Chat */
@@ -260,7 +260,6 @@
         async function registerServiceWorker() {
             if ('serviceWorker' in navigator && 'PushManager' in window) {
                 try {
-                    // Intentamos registrar sw.js (asegúrate que esté en la carpeta raíz)
                     const registration = await navigator.serviceWorker.register('./sw.js');
                     console.log('SW Registrado');
                     return registration;
@@ -302,20 +301,15 @@
             btn.innerText = "⏳ Configurando...";
             
             try {
-                // 1. Asegurar suscripción
                 await subscribeUser();
-                
                 btn.innerText = "🚀 Enviando...";
                 
-                // 2. Invocar Edge Function
                 const { data, error } = await supabase.functions.invoke('push-notifier', {
                     body: { type: 'TEST', user_id: currentUser.id }
                 });
 
                 if(error) throw error;
-
                 alert("✅ ¡Enviado! Revisa las notificaciones de tu dispositivo.");
-
             } catch (e) {
                 console.error(e);
                 alert("Error: " + e.message);
@@ -333,7 +327,6 @@
             if (session) {
                 currentUser = session.user;
                 initAdmin(session.user);
-                // Intentar registrar push al entrar
                 setTimeout(registerServiceWorker, 1000);
             } else {
                 document.getElementById('login-container').style.display = 'block';
@@ -436,172 +429,156 @@
         }
         async function deleteProduct(id) { if(confirm('¿Eliminar?')) { await supabase.from('productos').delete().eq('id', id); loadProducts(); } }
 
-        // PEDIDOS
-       // Variable global para controlar si vemos el historial o solo pendientes
-let showingHistory = false; 
+        // ----------------------------------------------------
+        // 3. PEDIDOS (Lógica mejorada para Stock y UI)
+        // ----------------------------------------------------
+        
+        let showingHistory = false; 
 
-async function loadOrders() {
-    // 1. Buscamos los pedidos en la base de datos
-    const { data } = await supabase
-        .from('pedidos')
-        .select('*, clientes(nombre, telefono)')
-        .order('fecha', {ascending:false});
-    
-    ordersCache = data || [];
-    updateDashboardCounters();
-
-    const list = document.getElementById('orders-list');
-    
-    // 2. FILTRADO: Si showingHistory es falso, SOLO mostramos los pendientes
-    const visibleOrders = showingHistory 
-        ? ordersCache 
-        : ordersCache.filter(o => o.estado === 'pendiente');
-
-    // 3. Cabecera con botón para alternar vista
-    let htmlContent = `
-        <div style="margin-bottom:15px; text-align:right;">
-            <button onclick="toggleHistory()" class="btn btn-outline" style="font-size:0.8rem; padding: 5px 10px;">
-                ${showingHistory ? '<i class="fas fa-eye-slash"></i> Ocultar Completados' : '<i class="fas fa-history"></i> Ver Historial Completo'}
-            </button>
-        </div>
-    `;
-
-    if(visibleOrders.length === 0) { 
-        htmlContent += `<div style="text-align:center; padding:40px; color:#94a3b8;">
-            <i class="fas fa-check-circle" style="font-size:2rem; margin-bottom:10px; display:block;"></i>
-            ${showingHistory ? 'No hay ningún pedido registrado.' : '¡Todo listo! No hay pedidos pendientes.'}
-        </div>`;
-        list.innerHTML = htmlContent;
-        return; 
-    }
-
-    // 4. Generamos las tarjetas
-    htmlContent += visibleOrders.map(o => {
-        // Normalizar productos
-        let itemsArray = [];
-        if (o.productos && o.productos.items) itemsArray = o.productos.items;
-        else if (Array.isArray(o.productos)) itemsArray = o.productos;
-
-        const productsHTML = itemsArray.length > 0 ? itemsArray.map(i => i.name).join(', ') : 'Sin detalle';
-
-        // Botón de acción (Solo aparece si es pendiente)
-        // Al hacer click, la función completeOrder() se ejecutará, cambiará el estado, 
-        // recargará esta lista y el filtro de arriba lo ocultará automáticamente.
-        const actionBtn = o.estado === 'pendiente' 
-            ? `<button onclick="completeOrder(${o.id})" class="btn btn-primary" style="padding: 10px; font-size: 0.9rem; margin-top:12px; background:#22c55e; box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.4);">
-                 <i class="fas fa-check"></i> COMPLETAR Y DESPACHAR
-               </button>` 
-            : `<div style="margin-top:10px; padding:8px; background:#f0fdf4; color:#15803d; border-radius:8px; text-align:center; font-size:0.85rem; font-weight:600;">
-                 <i class="fas fa-check-double"></i> Entregado el ${new Date(o.fecha).toLocaleDateString()}
-               </div>`;
-
-        const badgeStyle = o.estado === 'pendiente' 
-            ? 'background: #fff7ed; color: #c2410c;' 
-            : 'background: #dcfce7; color: #15803d;';
-
-        return `
-        <div class="order-item" style="border-left: 4px solid ${o.estado === 'pendiente' ? '#f97316' : '#22c55e'};">
-            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                <div style="font-weight:600; font-size:0.9rem;">
-                    <i class="fas fa-user"></i> ${o.clientes?.nombre || 'Cliente'}
-                </div>
-                <span class="badge-pending" style="${badgeStyle}">${o.estado.toUpperCase()}</span>
-            </div>
-            <div style="font-size:0.85rem; color:#64748b;">
-                <div style="margin-bottom:4px;"><i class="fab fa-whatsapp"></i> ${o.clientes?.telefono || '--'}</div>
-                <div style="background:#f8fafc; padding:8px; border-radius:8px; border:1px solid #e2e8f0;">
-                    🛒 ${productsHTML}
-                </div>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:8px;">
-                <div style="font-weight:800; font-size:1.1rem; color:var(--primary);">$${o.total}</div>
-                <small style="color:#94a3b8;">${new Date(o.fecha).toLocaleDateString()}</small>
-            </div>
-            ${actionBtn}
-        </div>`;
-    }).join('');
-
-    list.innerHTML = htmlContent;
-}
-
-// Función auxiliar para el botón de historial
-function toggleHistory() {
-    showingHistory = !showingHistory;
-    loadOrders(); // Recarga la lista aplicando el nuevo filtro
-}
-
-        async function completeOrder(orderId) {
-    if (!confirm("¿Confirmas que entregaste este pedido? Se descontará del stock.")) return;
-
-    const order = ordersCache.find(o => o.id === orderId);
-    if (!order) return alert("Error: No se encontró el pedido en memoria.");
-
-    // 1. Normalizar lista de items
-    let items = [];
-    if (order.productos && order.productos.items) items = order.productos.items;
-    else if (Array.isArray(order.productos)) items = order.productos;
-
-    if (items.length === 0) return alert("Este pedido no tiene productos.");
-
-    // 2. Agrupar cantidades por ID de producto (Ej: { ID_5: 2, ID_8: 1 })
-    const productQuantities = {};
-    items.forEach(item => {
-        productQuantities[item.id] = (productQuantities[item.id] || 0) + 1;
-    });
-
-    try {
-        // Mostrar estado de carga (opcional, visualmente útil)
-        const btn = event.target; 
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
-        btn.disabled = true;
-
-        // 3. Iterar y actualizar stock
-        // NOTA: Hacemos esto en bucle porque Supabase JS no permite actualizaciones masivas con lógica matemática compleja fácilmente sin funciones SQL RPC.
-        for (const [prodId, qty] of Object.entries(productQuantities)) {
+        // Función 1: Cargar datos de la nube
+        async function loadOrders() {
+            const { data } = await supabase
+                .from('pedidos')
+                .select('*, clientes(nombre, telefono)')
+                .order('fecha', {ascending:false});
             
-            // A. Obtener stock actual más reciente
-            const { data: currentProd, error: fetchError } = await supabase
-                .from('productos')
-                .select('stock, nombre')
-                .eq('id', prodId)
-                .single();
-
-            if (fetchError) throw new Error(`Error al buscar producto ID ${prodId}`);
-
-            // B. Calcular nuevo stock
-            const newStock = currentProd.stock - qty;
+            ordersCache = data || [];
+            updateDashboardCounters();
             
-            // (Opcional) Advertencia si el stock baja de 0, pero permitimos la operación
-            if (newStock < 0) console.warn(`El producto ${currentProd.nombre} quedará con stock negativo.`);
-
-            // C. Actualizar en base de datos
-            const { error: updateError } = await supabase
-                .from('productos')
-                .update({ stock: newStock })
-                .eq('id', prodId);
-
-            if (updateError) throw new Error(`Error al actualizar stock de ${currentProd.nombre}`);
+            // Llamamos a la función que dibuja en pantalla
+            renderOrders();
         }
 
-        // 4. Marcar pedido como completado
-        const { error: orderError } = await supabase
-            .from('pedidos')
-            .update({ estado: 'completado' })
-            .eq('id', orderId);
+        // Función 2: Dibujar en pantalla (con filtro local)
+        function renderOrders() {
+            const list = document.getElementById('orders-list');
+            
+            // Filtro: Si showingHistory es false, solo mostramos pendientes
+            const visibleOrders = showingHistory 
+                ? ordersCache 
+                : ordersCache.filter(o => o.estado === 'pendiente');
 
-        if (orderError) throw orderError;
+            // Botón de historial
+            let htmlContent = `
+                <div style="margin-bottom:15px; text-align:right;">
+                    <button onclick="toggleHistory()" class="btn btn-outline" style="font-size:0.8rem; padding: 5px 10px;">
+                        ${showingHistory ? '<i class="fas fa-eye-slash"></i> Ocultar Completados' : '<i class="fas fa-history"></i> Ver Historial Completo'}
+                    </button>
+                </div>
+            `;
 
-        alert("✅ Pedido completado e inventario actualizado.");
-        loadOrders(); // Recargar la lista visual
-        loadProducts(); // Recargar la lista de productos para ver el nuevo stock
+            if(visibleOrders.length === 0) { 
+                htmlContent += `<div style="text-align:center; padding:40px; color:#94a3b8;">
+                    <i class="fas fa-check-circle" style="font-size:2rem; margin-bottom:10px; display:block;"></i>
+                    ${showingHistory ? 'No hay ningún pedido registrado.' : '¡Todo al día! No hay pedidos pendientes.'}
+                </div>`;
+                list.innerHTML = htmlContent;
+                return; 
+            }
 
-    } catch (err) {
-        alert("Ocurrió un error: " + err.message);
-        console.error(err);
-        loadOrders(); // Restaurar estado del botón
-    }
-}
+            htmlContent += visibleOrders.map(o => {
+                let itemsArray = [];
+                if (o.productos && o.productos.items) itemsArray = o.productos.items;
+                else if (Array.isArray(o.productos)) itemsArray = o.productos;
+
+                const productsHTML = itemsArray.length > 0 ? itemsArray.map(i => i.name).join(', ') : 'Sin detalle';
+
+                // Botón de acción
+                const actionBtn = o.estado === 'pendiente' 
+                    ? `<button onclick="completeOrder(${o.id})" class="btn btn-primary" style="padding: 10px; font-size: 0.9rem; margin-top:12px; background:#22c55e; box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.4);">
+                        <i class="fas fa-check"></i> COMPLETAR Y DESPACHAR
+                    </button>` 
+                    : `<div style="margin-top:10px; padding:8px; background:#f0fdf4; color:#15803d; border-radius:8px; text-align:center; font-size:0.85rem; font-weight:600;">
+                        <i class="fas fa-check-double"></i> Entregado el ${new Date(o.fecha).toLocaleDateString()}
+                    </div>`;
+
+                const badgeStyle = o.estado === 'pendiente' 
+                    ? 'background: #fff7ed; color: #c2410c;' 
+                    : 'background: #dcfce7; color: #15803d;';
+
+                return `
+                <div class="order-item" style="border-left: 4px solid ${o.estado === 'pendiente' ? '#f97316' : '#22c55e'}; animation: fadeIn 0.3s;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                        <div style="font-weight:600; font-size:0.9rem;">
+                            <i class="fas fa-user"></i> ${o.clientes?.nombre || 'Cliente'}
+                        </div>
+                        <span class="badge-pending" style="${badgeStyle}">${o.estado.toUpperCase()}</span>
+                    </div>
+                    <div style="font-size:0.85rem; color:#64748b;">
+                        <div style="margin-bottom:4px;"><i class="fab fa-whatsapp"></i> ${o.clientes?.telefono || '--'}</div>
+                        <div style="background:#f8fafc; padding:8px; border-radius:8px; border:1px solid #e2e8f0;">
+                            🛒 ${productsHTML}
+                        </div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:8px;">
+                        <div style="font-weight:800; font-size:1.1rem; color:var(--primary);">$${o.total}</div>
+                        <small style="color:#94a3b8;">${new Date(o.fecha).toLocaleDateString()}</small>
+                    </div>
+                    ${actionBtn}
+                </div>`;
+            }).join('');
+
+            list.innerHTML = htmlContent;
+        }
+
+        function toggleHistory() {
+            showingHistory = !showingHistory;
+            renderOrders();
+        }
+
+        async function completeOrder(orderId) {
+            if (!confirm("¿Confirmas que entregaste este pedido? Se descontará del stock.")) return;
+
+            // Buscamos en caché local
+            const orderIndex = ordersCache.findIndex(o => o.id === orderId);
+            if (orderIndex === -1) return alert("Error: No se encontró el pedido en memoria.");
+            
+            const order = ordersCache[orderIndex];
+            let items = [];
+            if (order.productos && order.productos.items) items = order.productos.items;
+            else if (Array.isArray(order.productos)) items = order.productos;
+
+            // Agrupar cantidades
+            const productQuantities = {};
+            items.forEach(item => {
+                productQuantities[item.id] = (productQuantities[item.id] || 0) + 1;
+            });
+
+            try {
+                const btn = event.target; 
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+                btn.disabled = true;
+
+                // 1. Restar Stock (Bucle por producto)
+                for (const [prodId, qty] of Object.entries(productQuantities)) {
+                    const { data: currentProd, error: fetchError } = await supabase.from('productos').select('stock').eq('id', prodId).single();
+                    if (!fetchError) {
+                        await supabase.from('productos').update({ stock: currentProd.stock - qty }).eq('id', prodId);
+                    }
+                }
+
+                // 2. Actualizar Estado en Base de Datos
+                const { error: orderError } = await supabase
+                    .from('pedidos')
+                    .update({ estado: 'completado' })
+                    .eq('id', orderId);
+
+                if (orderError) throw orderError;
+
+                alert("✅ Despachado correctamente.");
+
+                // 3. Actualizar UI Instántaneamente (Sin recargar de la nube)
+                ordersCache[orderIndex].estado = 'completado';
+                renderOrders(); // La tarjeta desaparecerá porque ya no es pendiente
+                
+                updateDashboardCounters();
+                loadProducts(); // Actualizar la tabla de inventario
+
+            } catch (err) {
+                alert("Ocurrió un error: " + err.message);
+                loadOrders(); // Si falla, recargamos todo
+            }
+        }
 
         // UI HELPERS
         function showToast(title, message) {
