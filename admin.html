@@ -334,23 +334,27 @@
             }
         });
 
-        async function initAdmin(user) {
-            let { data: userData } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
-            if (!userData) {
-                userData = { id: user.id, email: user.email, nombre: 'Admin', rol: 'dueño' };
-                await supabase.from('usuarios').insert(userData);
-            }
-            storeCode = userData.codigo_tienda || 'TIENDA-' + Math.random().toString(36).substring(2, 6).toUpperCase();
-            if (!userData.codigo_tienda) await supabase.from('usuarios').update({ codigo_tienda: storeCode }).eq('id', user.id);
+     async function initAdmin(user) {
+    let { data: userData } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
+    if (!userData) {
+        userData = { id: user.id, email: user.email, nombre: 'Admin', rol: 'dueño' };
+        await supabase.from('usuarios').insert(userData);
+    }
+    storeCode = userData.codigo_tienda || 'TIENDA-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+    if (!userData.codigo_tienda) await supabase.from('usuarios').update({ codigo_tienda: storeCode }).eq('id', user.id);
 
-            document.getElementById('store-code-display').textContent = "CÓDIGO: " + storeCode;
-            document.getElementById('login-container').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            
-            loadProducts();
-            updateDashboardCounters();
-            setupGlobalRealtime();
-        }
+    document.getElementById('store-code-display').textContent = "CÓDIGO: " + storeCode;
+    document.getElementById('login-container').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    
+    loadProducts();
+    updateDashboardCounters();
+    
+    // Inicializar realtime con retraso para asegurar que todo esté cargado
+    setTimeout(() => {
+        setupGlobalRealtime();
+    }, 1000);
+}
 
         document.getElementById('auth-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -360,7 +364,7 @@
             if (error) document.getElementById('auth-msg').textContent = "Error: " + error.message;
         });
 
-       async function logout() {
+      async function logout() {
     // Limpiar canales apropiadamente
     if (globalChannel) {
         await globalChannel.unsubscribe();
@@ -371,6 +375,7 @@
         activeChannel = null;
     }
     
+    reconnectAttempts = 0;
     await supabase.auth.signOut(); 
     window.location.reload();
 }
@@ -416,6 +421,19 @@
             document.getElementById('btn-cancel').style.display = 'none';
             document.getElementById('form-title').innerHTML = '<i class="fas fa-plus-circle"></i> Nuevo Producto';
         }
+        
+        // Verificar estado de realtime periódicamente
+function startRealtimeHealthCheck() {
+    setInterval(() => {
+        if (!globalChannel) {
+            console.log('🔄 RealTime no activo, reiniciando...');
+            setupGlobalRealtime();
+        }
+    }, 30000); // Chequear cada 30 segundos
+}
+
+// Llamar esta función después de initAdmin
+// startRealtimeHealthCheck();
 
         async function loadProducts() {
             const { data } = await supabase.from('productos').select('*').eq('creado_por', currentUser.id).order('id', {ascending:false});
@@ -626,15 +644,22 @@
         }
 
         // REALTIME & CHAT
-   let globalChannel = null;
+let globalChannel = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
 
 function setupGlobalRealtime() {
-    // Solo crear el canal si no existe
+    // Limpiar canal existente si hay problemas
     if (globalChannel) {
-        return; // Ya existe, no crear otro
+        try {
+            supabase.removeChannel(globalChannel);
+        } catch (e) {
+            console.log("Limpiando canal previo...");
+        }
+        globalChannel = null;
     }
     
-    globalChannel = supabase.channel('admin-global')
+    globalChannel = supabase.channel('admin-global-' + Date.now()) // Nombre único
     .on('postgres_changes', { 
         event: 'INSERT', 
         schema: 'public', 
@@ -644,7 +669,7 @@ function setupGlobalRealtime() {
         console.log("📨 Nuevo mensaje recibido:", payload);
         
         // 1. Verificar que el mensaje es para esta tienda
-        if(payload.new.tienda_id !== currentUser.id) return;
+        if(payload.new.tienda_id != currentUser.id) return;
 
         // 2. Si el mensaje lo envió el cliente
         if(payload.new.enviado_por_rol === 'cliente') {
@@ -676,8 +701,7 @@ function setupGlobalRealtime() {
     .on('postgres_changes', { 
         event: 'INSERT', 
         schema: 'public', 
-        table: 'pedidos',
-        filter: `estado=eq.pendiente`
+        table: 'pedidos'
     }, (payload) => {
         console.log("🛒 Nuevo pedido recibido:", payload);
         showToast('Nuevo Pedido', '¡Revisa la lista!');
@@ -686,18 +710,29 @@ function setupGlobalRealtime() {
             loadOrders();
         }
     })
-    .on('system', { event: 'connection_error' }, (payload) => {
-        console.error('❌ Error de conexión realtime:', payload);
-    })
-    .on('system', { event: 'closed' }, () => {
-        console.warn('⚠️ Canal realtime cerrado, reconectando...');
-        globalChannel = null;
-        setTimeout(setupGlobalRealtime, 2000);
-    })
-    .subscribe((status) => {
+    .subscribe((status, error) => {
         console.log("🔔 Estado Conexión Realtime:", status);
+        
         if (status === 'SUBSCRIBED') {
             console.log('✅ Canal realtime suscrito correctamente');
+            reconnectAttempts = 0; // Resetear contador de reconexiones
+        } 
+        else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+            console.error('❌ Error/cierre de canal:', error);
+            globalChannel = null;
+            reconnectAttempts++;
+            
+            if (reconnectAttempts <= MAX_RECONNECT_ATTEMPTS) {
+                console.log(`🔄 Intentando reconectar... (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+                setTimeout(setupGlobalRealtime, 2000 * reconnectAttempts); // Backoff exponencial
+            } else {
+                console.error('🚫 Máximo de intentos de reconexión alcanzado');
+            }
+        }
+        else if (status === 'TIMED_OUT') {
+            console.warn('⏰ Timeout de conexión');
+            globalChannel = null;
+            setTimeout(setupGlobalRealtime, 3000);
         }
     });
 }
