@@ -437,72 +437,97 @@
         async function deleteProduct(id) { if(confirm('¿Eliminar?')) { await supabase.from('productos').delete().eq('id', id); loadProducts(); } }
 
         // PEDIDOS
-        async function loadOrders() {
+       // Variable global para controlar si vemos el historial o solo pendientes
+let showingHistory = false; 
+
+async function loadOrders() {
+    // 1. Buscamos los pedidos en la base de datos
     const { data } = await supabase
         .from('pedidos')
         .select('*, clientes(nombre, telefono)')
         .order('fecha', {ascending:false});
     
-    // Guardamos en cache para usarlo al dar clic en completar
-    ordersCache = data || []; 
-    
-    const list = document.getElementById('orders-list');
+    ordersCache = data || [];
     updateDashboardCounters();
+
+    const list = document.getElementById('orders-list');
     
-    if(!data || data.length === 0) { 
-        list.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">Sin pedidos</div>'; 
+    // 2. FILTRADO: Si showingHistory es falso, SOLO mostramos los pendientes
+    const visibleOrders = showingHistory 
+        ? ordersCache 
+        : ordersCache.filter(o => o.estado === 'pendiente');
+
+    // 3. Cabecera con botón para alternar vista
+    let htmlContent = `
+        <div style="margin-bottom:15px; text-align:right;">
+            <button onclick="toggleHistory()" class="btn btn-outline" style="font-size:0.8rem; padding: 5px 10px;">
+                ${showingHistory ? '<i class="fas fa-eye-slash"></i> Ocultar Completados' : '<i class="fas fa-history"></i> Ver Historial Completo'}
+            </button>
+        </div>
+    `;
+
+    if(visibleOrders.length === 0) { 
+        htmlContent += `<div style="text-align:center; padding:40px; color:#94a3b8;">
+            <i class="fas fa-check-circle" style="font-size:2rem; margin-bottom:10px; display:block;"></i>
+            ${showingHistory ? 'No hay ningún pedido registrado.' : '¡Todo listo! No hay pedidos pendientes.'}
+        </div>`;
+        list.innerHTML = htmlContent;
         return; 
     }
 
-    list.innerHTML = data.map(o => {
-        // Manejo flexible de la estructura de productos
+    // 4. Generamos las tarjetas
+    htmlContent += visibleOrders.map(o => {
+        // Normalizar productos
         let itemsArray = [];
-        if (o.productos && o.productos.items) {
-            itemsArray = o.productos.items;
-        } else if (Array.isArray(o.productos)) {
-            itemsArray = o.productos;
-        }
+        if (o.productos && o.productos.items) itemsArray = o.productos.items;
+        else if (Array.isArray(o.productos)) itemsArray = o.productos;
 
-        const productsHTML = itemsArray.length > 0 
-            ? itemsArray.map(i => i.name).join(', ') 
-            : 'Sin detalle';
+        const productsHTML = itemsArray.length > 0 ? itemsArray.map(i => i.name).join(', ') : 'Sin detalle';
 
-        // Lógica de Botón vs Badge
-        let actionHTML = '';
-        if (o.estado === 'pendiente') {
-            actionHTML = `<button onclick="completeOrder(${o.id})" class="btn btn-primary" style="padding: 8px; font-size: 0.8rem; margin-top:10px; background:#22c55e;">
-                            <i class="fas fa-check"></i> Marcar Completado y Restar Stock
-                          </button>`;
-        } else if (o.estado === 'completado') {
-            actionHTML = `<div style="margin-top:10px; color: #15803d; font-weight:bold; font-size:0.85rem;">
-                            <i class="fas fa-check-circle"></i> Despachado
-                          </div>`;
-        }
+        // Botón de acción (Solo aparece si es pendiente)
+        // Al hacer click, la función completeOrder() se ejecutará, cambiará el estado, 
+        // recargará esta lista y el filtro de arriba lo ocultará automáticamente.
+        const actionBtn = o.estado === 'pendiente' 
+            ? `<button onclick="completeOrder(${o.id})" class="btn btn-primary" style="padding: 10px; font-size: 0.9rem; margin-top:12px; background:#22c55e; box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.4);">
+                 <i class="fas fa-check"></i> COMPLETAR Y DESPACHAR
+               </button>` 
+            : `<div style="margin-top:10px; padding:8px; background:#f0fdf4; color:#15803d; border-radius:8px; text-align:center; font-size:0.85rem; font-weight:600;">
+                 <i class="fas fa-check-double"></i> Entregado el ${new Date(o.fecha).toLocaleDateString()}
+               </div>`;
 
-        // Estilo del badge superior
         const badgeStyle = o.estado === 'pendiente' 
             ? 'background: #fff7ed; color: #c2410c;' 
             : 'background: #dcfce7; color: #15803d;';
 
         return `
-        <div class="order-item">
+        <div class="order-item" style="border-left: 4px solid ${o.estado === 'pendiente' ? '#f97316' : '#22c55e'};">
             <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
                 <div style="font-weight:600; font-size:0.9rem;">
-                    <i class="fas fa-user"></i> ${o.clientes?.nombre || 'Anónimo'}
+                    <i class="fas fa-user"></i> ${o.clientes?.nombre || 'Cliente'}
                 </div>
-                <span class="badge-pending" style="${badgeStyle}">${o.estado}</span>
+                <span class="badge-pending" style="${badgeStyle}">${o.estado.toUpperCase()}</span>
             </div>
-            <div style="font-size:0.85rem; color:#64748b; margin-bottom:10px;">
-                <div><i class="fab fa-whatsapp"></i> ${o.clientes?.telefono || 'Sin tel'}</div>
-                <div style="margin-top:4px; color:#334155;">🛒 ${productsHTML}</div>
+            <div style="font-size:0.85rem; color:#64748b;">
+                <div style="margin-bottom:4px;"><i class="fab fa-whatsapp"></i> ${o.clientes?.telefono || '--'}</div>
+                <div style="background:#f8fafc; padding:8px; border-radius:8px; border:1px solid #e2e8f0;">
+                    🛒 ${productsHTML}
+                </div>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #e2e8f0; padding-top:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:8px;">
+                <div style="font-weight:800; font-size:1.1rem; color:var(--primary);">$${o.total}</div>
                 <small style="color:#94a3b8;">${new Date(o.fecha).toLocaleDateString()}</small>
-                <div style="font-weight:700; color:var(--primary);">$${o.total}</div>
             </div>
-            ${actionHTML}
+            ${actionBtn}
         </div>`;
     }).join('');
+
+    list.innerHTML = htmlContent;
+}
+
+// Función auxiliar para el botón de historial
+function toggleHistory() {
+    showingHistory = !showingHistory;
+    loadOrders(); // Recarga la lista aplicando el nuevo filtro
 }
 
         async function completeOrder(orderId) {
