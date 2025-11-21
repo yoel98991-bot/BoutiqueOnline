@@ -388,111 +388,116 @@
             window.location.reload();
         }
 
-        // ----------------------------------------------------
-        // 3. REALTIME CORREGIDO - SIN CICLOS INFINITOS
-        // ----------------------------------------------------
 
-        function setupGlobalRealtime() {
-            // Limpiar canal existente y timeout previo
-            if (globalChannel) {
-                try {
-                    supabase.removeChannel(globalChannel);
-                } catch (e) {
-                    console.log("Limpiando canal previo...");
+
+// ----------------------------------------------------
+// 3. REALTIME CORREGIDO Y ESTABILIZADO
+// ----------------------------------------------------
+
+let isReconnecting = false;
+
+async function setupGlobalRealtime() {
+    // Si ya hay un canal activo, no hacemos nada para evitar duplicados
+    if (globalChannel && ['SUBSCRIBED', 'JOINED'].includes(globalChannel.state)) {
+        console.log("⚠️ El canal ya está conectado.");
+        return;
+    }
+
+    // Limpieza previa asegurada
+    if (globalChannel) {
+        await supabase.removeChannel(globalChannel);
+        globalChannel = null;
+    }
+
+    console.log("🔄 Iniciando canal realtime...");
+
+    // Usamos un nombre único para evitar conflictos con sesiones previas
+    const channelName = `admin-global-${currentUser.id}-${Date.now()}`;
+
+    globalChannel = supabase.channel(channelName)
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'mensajes',
+            filter: `tienda_id=eq.${currentUser.id}`
+        }, payload => {
+            // ... TU LÓGICA DE MENSAJES (MANTENER IGUAL) ...
+            console.log("📨 Nuevo mensaje recibido:", payload);
+            if (payload.new.tienda_id != currentUser.id) return;
+
+            if (payload.new.enviado_por_rol === 'cliente') {
+                if (activeChatClientId != payload.new.cliente_id) {
+                    showToast('Nuevo Mensaje', 'Cliente envió mensaje');
+                    updateDashboardCounters();
                 }
-                globalChannel = null;
             }
-            
-            if (reconnectTimeout) {
-                clearTimeout(reconnectTimeout);
-                reconnectTimeout = null;
+            if (document.getElementById('tab-chats').classList.contains('active')) {
+                loadChatsList();
             }
+            if (activeChatClientId && payload.new.cliente_id == activeChatClientId) {
+                if (payload.new.enviado_por_rol !== 'dueño') {
+                    renderMessage(payload.new);
+                    setTimeout(() => {
+                        const c = document.getElementById('messages-container');
+                        c.scrollTop = c.scrollHeight;
+                    }, 50);
+                }
+            }
+        })
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'pedidos'
+        }, (payload) => {
+            // ... TU LÓGICA DE PEDIDOS (MANTENER IGUAL) ...
+            console.log("🛒 Nuevo pedido recibido:", payload);
+            showToast('Nuevo Pedido', '¡Revisa la lista!');
+            updateDashboardCounters();
+            if (document.getElementById('tab-pedidos').classList.contains('active')) {
+                loadOrders();
+            }
+        })
+        .subscribe((status, error) => {
+            console.log(`🔔 Estado Realtime (${channelName}):`, status);
 
-            console.log("🔄 Iniciando canal realtime...");
-            
-            globalChannel = supabase.channel('admin-global')
-            .on('postgres_changes', { 
-                event: 'INSERT', 
-                schema: 'public', 
-                table: 'mensajes',
-                filter: `tienda_id=eq.${currentUser.id}`
-            }, payload => {
-                console.log("📨 Nuevo mensaje recibido:", payload);
+            if (status === 'SUBSCRIBED') {
+                console.log('✅ Conectado y escuchando cambios.');
+                isReconnecting = false;
                 
-                // Verificar que el mensaje es para esta tienda
-                if(payload.new.tienda_id != currentUser.id) {
-                    console.log("❌ Mensaje no es para esta tienda, ignorando");
-                    return;
-                }
-
-                // Si el mensaje lo envió el cliente
-                if(payload.new.enviado_por_rol === 'cliente') {
-                    // Si NO tengo abierto el chat de este cliente, aviso con notificación
-                    if (activeChatClientId != payload.new.cliente_id) { 
-                        showToast('Nuevo Mensaje', 'Cliente envió mensaje'); 
-                        updateDashboardCounters(); 
-                    }
-                }
-
-                // Actualizar la lista de la izquierda si está visible
-                if(document.getElementById('tab-chats').classList.contains('active')) {
-                    loadChatsList();
-                }
-
-                // Dibujar el mensaje si tengo el chat abierto
-                if(activeChatClientId && payload.new.cliente_id == activeChatClientId) {
-                    // Solo lo dibujamos si NO soy yo el que lo envió (para no duplicar)
-                    if(payload.new.enviado_por_rol !== 'dueño') {
-                        renderMessage(payload.new);
-                        
-                        setTimeout(() => {
-                            const c = document.getElementById('messages-container');
-                            c.scrollTop = c.scrollHeight;
-                        }, 50);
-                    }
-                }
-            })
-            .on('postgres_changes', { 
-                event: 'INSERT', 
-                schema: 'public', 
-                table: 'pedidos'
-            }, (payload) => {
-                console.log("🛒 Nuevo pedido recibido:", payload);
-                showToast('Nuevo Pedido', '¡Revisa la lista!');
-                updateDashboardCounters();
-                if(document.getElementById('tab-pedidos').classList.contains('active')) {
-                    loadOrders();
-                }
-            })
-            .on('system', { event: 'disconnect' }, () => {
-                console.warn('🔌 Desconectado del servidor realtime');
-                scheduleReconnect();
-            })
-            .subscribe((status, error) => {
-                console.log("🔔 Estado Conexión Realtime:", status);
-                
-                if (status === 'SUBSCRIBED') {
-                    console.log('✅ Canal realtime suscrito correctamente');
-                } 
-                else if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
-                    console.error('❌ Error/cierre de canal:', error || status);
-                    scheduleReconnect();
-                }
-            });
-        }
-
-        function scheduleReconnect() {
-            if (reconnectTimeout) {
-                clearTimeout(reconnectTimeout);
-            }
+                // Opcional: Mostrar en la UI que está conectado
+                const statusBadge = document.getElementById('store-code-display');
+                if(statusBadge) statusBadge.style.borderColor = '#22c55e'; // Verde
+            } 
             
-            console.log(`🔄 Reconectando en ${RECONNECT_DELAY/1000} segundos...`);
-            reconnectTimeout = setTimeout(() => {
-                if (currentUser) { // Solo reconectar si el usuario sigue logueado
-                    setupGlobalRealtime();
-                }
-            }, RECONNECT_DELAY);
-        }
+            if (status === 'CHANNEL_ERROR') {
+                console.error('❌ Error de canal:', error);
+                // No forzamos reconexión inmediata, Supabase tiene backoff exponencial interno.
+                // Solo si pasa mucho tiempo sin conectar podríamos intervenir.
+            }
+
+            if (status === 'TIMED_OUT') {
+                console.warn('⚠️ Tiempo de espera agotado, reintentando suavemente...');
+                // Aquí sí podemos intentar una reconexión suave si Supabase se quedó colgado
+                if (!isReconnecting) handleConnectionDrop();
+            }
+        });
+}
+
+function handleConnectionDrop() {
+    if (isReconnecting) return;
+    isReconnecting = true;
+    
+    // Indicador visual de desconexión
+    const statusBadge = document.getElementById('store-code-display');
+    if(statusBadge) statusBadge.style.borderColor = '#ef4444'; // Rojo
+
+    console.log("⏳ Intentando restablecer conexión en 5s...");
+    
+    setTimeout(() => {
+        if (currentUser) setupGlobalRealtime();
+    }, 5000);
+}
+
 
         // ----------------------------------------------------
         // 4. PRODUCTOS
