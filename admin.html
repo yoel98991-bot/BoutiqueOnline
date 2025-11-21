@@ -27,7 +27,7 @@
         
         /* Header */
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--surface); padding: 15px 20px; border-radius: var(--radius); box-shadow: var(--shadow); flex-wrap: wrap; gap: 10px;}
-        .store-code-badge { background: #eff6ff; color: var(--accent); padding: 5px 12px; border-radius: 8px; font-weight: 600; border: 1px dashed var(--accent); font-size: 0.9rem; cursor: pointer; }
+        .store-code-badge { background: #eff6ff; color: var(--accent); padding: 5px 12px; border-radius: 8px; font-weight: 600; border: 1px dashed var(--accent); font-size: 0.9rem; cursor: pointer; transition: border-color 0.3s; border-width: 2px; }
 
         /* Tabs Navigation */
         .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
@@ -235,6 +235,8 @@
 
         let currentUser = null;
         let storeCode = null;
+        
+        // VARIABLES GLOBALES
         let activeChatClientId = null;
         let activeChannel = null;
         let productsCache = []; 
@@ -242,10 +244,9 @@
         let editingId = null;
         const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
-        // VARIABLES PARA REALTIME CORREGIDAS
+        // VARIABLES PARA REALTIME (CORREGIDO)
         let globalChannel = null;
-        let reconnectTimeout = null;
-        const RECONNECT_DELAY = 5000; // 5 segundos
+        let isReconnecting = false;
 
         // ----------------------------------------------------
         // 1. LÓGICA DE NOTIFICACIONES PUSH (Service Worker)
@@ -355,7 +356,7 @@
             loadProducts();
             updateDashboardCounters();
             
-            // Inicializar realtime con retraso para asegurar que todo esté cargado
+            // Inicializar realtime con retraso
             setTimeout(() => {
                 setupGlobalRealtime();
             }, 2000);
@@ -370,134 +371,121 @@
         });
 
         async function logout() {
-            // Limpiar canales y timeouts
             if (globalChannel) {
-                await globalChannel.unsubscribe();
+                await supabase.removeChannel(globalChannel);
                 globalChannel = null;
             }
             if (activeChannel) {
-                await activeChannel.unsubscribe();
+                await supabase.removeChannel(activeChannel);
                 activeChannel = null;
             }
-            if (reconnectTimeout) {
-                clearTimeout(reconnectTimeout);
-                reconnectTimeout = null;
-            }
-            
             await supabase.auth.signOut(); 
             window.location.reload();
         }
 
+        // ----------------------------------------------------
+        // 3. REALTIME CORREGIDO Y ESTABILIZADO
+        // ----------------------------------------------------
 
-
-// ----------------------------------------------------
-// 3. REALTIME CORREGIDO Y ESTABILIZADO
-// ----------------------------------------------------
-
-let isReconnecting = false;
-
-async function setupGlobalRealtime() {
-    // Si ya hay un canal activo, no hacemos nada para evitar duplicados
-    if (globalChannel && ['SUBSCRIBED', 'JOINED'].includes(globalChannel.state)) {
-        console.log("⚠️ El canal ya está conectado.");
-        return;
-    }
-
-    // Limpieza previa asegurada
-    if (globalChannel) {
-        await supabase.removeChannel(globalChannel);
-        globalChannel = null;
-    }
-
-    console.log("🔄 Iniciando canal realtime...");
-
-    // Usamos un nombre único para evitar conflictos con sesiones previas
-    const channelName = `admin-global-${currentUser.id}-${Date.now()}`;
-
-    globalChannel = supabase.channel(channelName)
-        .on('postgres_changes', {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'mensajes',
-            filter: `tienda_id=eq.${currentUser.id}`
-        }, payload => {
-            // ... TU LÓGICA DE MENSAJES (MANTENER IGUAL) ...
-            console.log("📨 Nuevo mensaje recibido:", payload);
-            if (payload.new.tienda_id != currentUser.id) return;
-
-            if (payload.new.enviado_por_rol === 'cliente') {
-                if (activeChatClientId != payload.new.cliente_id) {
-                    showToast('Nuevo Mensaje', 'Cliente envió mensaje');
-                    updateDashboardCounters();
-                }
+        async function setupGlobalRealtime() {
+            // Si ya hay un canal activo, no hacemos nada para evitar duplicados
+            if (globalChannel && ['SUBSCRIBED', 'JOINED'].includes(globalChannel.state)) {
+                console.log("⚠️ El canal ya está conectado.");
+                return;
             }
-            if (document.getElementById('tab-chats').classList.contains('active')) {
-                loadChatsList();
-            }
-            if (activeChatClientId && payload.new.cliente_id == activeChatClientId) {
-                if (payload.new.enviado_por_rol !== 'dueño') {
-                    renderMessage(payload.new);
-                    setTimeout(() => {
-                        const c = document.getElementById('messages-container');
-                        c.scrollTop = c.scrollHeight;
-                    }, 50);
-                }
-            }
-        })
-        .on('postgres_changes', {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'pedidos'
-        }, (payload) => {
-            // ... TU LÓGICA DE PEDIDOS (MANTENER IGUAL) ...
-            console.log("🛒 Nuevo pedido recibido:", payload);
-            showToast('Nuevo Pedido', '¡Revisa la lista!');
-            updateDashboardCounters();
-            if (document.getElementById('tab-pedidos').classList.contains('active')) {
-                loadOrders();
-            }
-        })
-        .subscribe((status, error) => {
-            console.log(`🔔 Estado Realtime (${channelName}):`, status);
 
-            if (status === 'SUBSCRIBED') {
-                console.log('✅ Conectado y escuchando cambios.');
-                isReconnecting = false;
+            // Limpieza previa asegurada
+            if (globalChannel) {
+                await supabase.removeChannel(globalChannel);
+                globalChannel = null;
+            }
+
+            console.log("🔄 Iniciando canal realtime...");
+
+            // Usamos un nombre único para evitar conflictos con sesiones previas
+            const channelName = `admin-global-${currentUser.id}-${Date.now()}`;
+
+            globalChannel = supabase.channel(channelName)
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'mensajes',
+                filter: `tienda_id=eq.${currentUser.id}`
+            }, payload => {
+                console.log("📨 Nuevo mensaje recibido:", payload);
                 
-                // Opcional: Mostrar en la UI que está conectado
-                const statusBadge = document.getElementById('store-code-display');
-                if(statusBadge) statusBadge.style.borderColor = '#22c55e'; // Verde
-            } 
+                if(payload.new.tienda_id != currentUser.id) return;
+
+                // Si el mensaje lo envió el cliente
+                if(payload.new.enviado_por_rol === 'cliente') {
+                    // Convertir a String para comparar seguramente
+                    const incomingClientId = String(payload.new.cliente_id);
+                    const currentChatId = String(activeChatClientId);
+
+                    if (currentChatId !== incomingClientId) { 
+                        showToast('Nuevo Mensaje', 'Cliente envió mensaje'); 
+                        updateDashboardCounters(); 
+                    }
+                }
+
+                if(document.getElementById('tab-chats').classList.contains('active')) {
+                    loadChatsList();
+                }
+
+                // LOGICA CORREGIDA PARA RENDERIZAR EL MENSAJE
+                const incomingClientId = String(payload.new.cliente_id);
+                const currentChatId = String(activeChatClientId);
+
+                if (activeChatClientId && incomingClientId === currentChatId) {
+                    if(payload.new.enviado_por_rol !== 'dueño') {
+                        renderMessage(payload.new);
+                        
+                        setTimeout(() => {
+                            const c = document.getElementById('messages-container');
+                            if(c) c.scrollTop = c.scrollHeight;
+                        }, 100);
+                    }
+                }
+            })
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'pedidos'
+            }, (payload) => {
+                console.log("🛒 Nuevo pedido recibido:", payload);
+                showToast('Nuevo Pedido', '¡Revisa la lista!');
+                updateDashboardCounters();
+                if(document.getElementById('tab-pedidos').classList.contains('active')) {
+                    loadOrders();
+                }
+            })
+            .subscribe((status, error) => {
+                console.log(`🔔 Estado Realtime (${channelName}):`, status);
+                
+                if (status === 'SUBSCRIBED') {
+                    console.log('✅ Conectado y escuchando cambios.');
+                    isReconnecting = false;
+                    const badge = document.getElementById('store-code-display');
+                    if(badge) badge.style.borderColor = '#22c55e'; // Verde
+                } 
+                else if (status === 'TIMED_OUT' || status === 'CLOSED') {
+                    if (!isReconnecting) handleConnectionDrop();
+                }
+            });
+        }
+
+        function handleConnectionDrop() {
+            if (isReconnecting) return;
+            isReconnecting = true;
             
-            if (status === 'CHANNEL_ERROR') {
-                console.error('❌ Error de canal:', error);
-                // No forzamos reconexión inmediata, Supabase tiene backoff exponencial interno.
-                // Solo si pasa mucho tiempo sin conectar podríamos intervenir.
-            }
-
-            if (status === 'TIMED_OUT') {
-                console.warn('⚠️ Tiempo de espera agotado, reintentando suavemente...');
-                // Aquí sí podemos intentar una reconexión suave si Supabase se quedó colgado
-                if (!isReconnecting) handleConnectionDrop();
-            }
-        });
-}
-
-function handleConnectionDrop() {
-    if (isReconnecting) return;
-    isReconnecting = true;
-    
-    // Indicador visual de desconexión
-    const statusBadge = document.getElementById('store-code-display');
-    if(statusBadge) statusBadge.style.borderColor = '#ef4444'; // Rojo
-
-    console.log("⏳ Intentando restablecer conexión en 5s...");
-    
-    setTimeout(() => {
-        if (currentUser) setupGlobalRealtime();
-    }, 5000);
-}
-
+            const badge = document.getElementById('store-code-display');
+            if(badge) badge.style.borderColor = '#ef4444'; // Rojo
+            
+            console.log("⏳ Intentando restablecer conexión en 5s...");
+            setTimeout(() => {
+                if (currentUser) setupGlobalRealtime();
+            }, 5000);
+        }
 
         // ----------------------------------------------------
         // 4. PRODUCTOS
@@ -751,7 +739,7 @@ function handleConnectionDrop() {
         }
 
         // ----------------------------------------------------
-        // 7. CHAT FUNCTIONS
+        // 7. CHAT FUNCTIONS (CORREGIDAS)
         // ----------------------------------------------------
 
         async function loadChatsList() {
@@ -776,26 +764,45 @@ function handleConnectionDrop() {
             const container = document.getElementById('messages-container');
             container.innerHTML = '<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin"></i></div>';
             
+            // Cargar mensajes
             const { data } = await supabase.from('mensajes').select('*').eq('tienda_id', currentUser.id).eq('cliente_id', clientId).order('created_at', { ascending: true });
             container.innerHTML = ''; 
-            data.forEach(renderMessage);
+            if(data) data.forEach(renderMessage);
             
             await supabase.from('mensajes').update({ leido: true }).eq('cliente_id', clientId).eq('enviado_por_rol', 'cliente');
             updateDashboardCounters();
             
-            if(activeChannel) {
-                supabase.removeChannel(activeChannel);
+            // Limpieza segura del canal anterior
+            if (activeChannel) {
+                await supabase.removeChannel(activeChannel);
+                activeChannel = null;
             }
             
-            activeChannel = supabase.channel(`chat_${clientId}`)
+            // Canal exclusivo para typing y eventos de este chat
+            const channelName = `typing_${currentUser.id}_${clientId}`;
+            activeChannel = supabase.channel(channelName)
                 .on('broadcast', { event: 'typing' }, () => {
                     const ind = document.getElementById('typing-indicator'); 
-                    ind.textContent = `${clientName} escribe...`; 
-                    setTimeout(() => ind.textContent = '', 3000);
+                    if(ind) {
+                        ind.textContent = `${clientName} escribe...`; 
+                        if(ind.timeout) clearTimeout(ind.timeout);
+                        ind.timeout = setTimeout(() => ind.textContent = '', 3000);
+                    }
                 })
-                .subscribe((status) => {
-                    console.log(`Canal typing ${clientId}:`, status);
-                });
+                .subscribe();
+        }
+
+        async function closeChat() {
+            activeChatClientId = null; 
+            
+            if (activeChannel) {
+                await supabase.removeChannel(activeChannel);
+                activeChannel = null;
+            }
+
+            document.getElementById('chat-interface').classList.remove('active');
+            document.getElementById('chats-inbox').style.display = 'block'; 
+            loadChatsList();
         }
 
         function renderMessage(msg) {
@@ -803,7 +810,8 @@ function handleConnectionDrop() {
             let html = msg.contenido.replace(/\n/g, '<br>');
             if (!html.includes('<img')) html = html.replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank" class="map-btn">Ver Enlace</a>`);
             div.innerHTML = html;
-            const c = document.getElementById('messages-container'); c.appendChild(div); c.scrollTop = c.scrollHeight;
+            const c = document.getElementById('messages-container'); 
+            if(c) { c.appendChild(div); c.scrollTop = c.scrollHeight; }
         }
 
         async function sendMessage(e) {
@@ -815,13 +823,6 @@ function handleConnectionDrop() {
         
         function notifyTyping() { 
             if(activeChannel) activeChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); 
-        }
-        
-        function closeChat() {
-            activeChatClientId = null; 
-            document.getElementById('chat-interface').classList.remove('active');
-            document.getElementById('chats-inbox').style.display = 'block'; 
-            loadChatsList();
         }
 
         // ----------------------------------------------------
