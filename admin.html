@@ -13,6 +13,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -87,6 +90,16 @@
         .typing-indicator { font-size: 0.75rem; color: #64748b; margin-left: 55px; margin-top: -15px; margin-bottom: 10px; height: 15px; }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- ESTILOS PARA EL CROPPER Y LOGO --- */
+        #crop-modal { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index: 5000; display:none; justify-content:center; align-items:center; flex-direction:column; padding: 20px; }
+        .crop-container { max-width: 90%; max-height: 70vh; background: #333; overflow: hidden; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .crop-container img { max-width: 100%; display: block; }
+        .crop-controls { margin-top: 20px; display: flex; gap: 15px; }
+        
+        .logo-preview-container { background: white; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 15px; text-align: center; cursor: pointer; margin-bottom: 20px; transition: 0.3s; }
+        .logo-preview-container:hover { border-color: var(--accent); background: #f0f9ff; }
+        .current-logo { max-height: 60px; max-width: 100%; object-fit: contain; }
     </style>
 </head>
 <body>
@@ -118,7 +131,7 @@
             <button class="tab active" onclick="switchTab('productos')"><i class="fas fa-box"></i> Productos</button>
             <button class="tab" onclick="switchTab('chats')"><i class="fas fa-comments"></i> Chats <span id="badge-chats" class="badge-count">0</span></button>
             <button class="tab" onclick="switchTab('pedidos')"><i class="fas fa-bell"></i> Pedidos <span id="badge-orders" class="badge-count">0</span></button>
-            <button class="tab" onclick="switchTab('config')"><i class="fas fa-cog"></i> Pagos</button>
+            <button class="tab" onclick="switchTab('config')"><i class="fas fa-cog"></i> Configuración</button>
         </div>
 
         <div id="tab-productos" class="panel-section active">
@@ -183,6 +196,20 @@
 
         <div id="tab-config" class="panel-section">
             
+            <div class="card">
+                <h3><i class="fas fa-image"></i> Identidad Visual</h3>
+                <p style="font-size:0.85rem; color:#64748b; margin-bottom:15px;">Sube tu logo. Se recortará automáticamente en formato horizontal (Banner).</p>
+                
+                <div class="logo-preview-container" onclick="document.getElementById('logo-input').click()">
+                    <div id="logo-placeholder">
+                        <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 10px;"></i>
+                        <p style="margin:0; font-weight:600; color:#64748b;">Toca para subir Logo</p>
+                    </div>
+                    <img id="logo-img-preview" class="current-logo" style="display:none;">
+                    <input type="file" id="logo-input" accept="image/*" style="display:none;">
+                </div>
+            </div>
+
             <div class="card" style="border: 2px solid #fca5a5; background: #fff5f5;">
                 <h3 style="color: #dc2626;"><i class="fas fa-bell"></i> Notificaciones Push</h3>
                 <p style="font-size: 0.85rem; color: #7f1d1d; margin-bottom: 10px;">
@@ -226,6 +253,18 @@
         </div>
     </div>
 
+    <div id="crop-modal">
+        <div class="crop-container">
+            <img id="crop-image-target" src="">
+        </div>
+        <div class="crop-controls">
+            <button onclick="cancelCrop()" class="btn btn-danger" style="width: auto;">Cancelar</button>
+            <button onclick="confirmCrop()" class="btn btn-primary" style="width: auto;">
+                <i class="fas fa-crop-alt"></i> Recortar y Guardar
+            </button>
+        </div>
+    </div>
+
     <script>
         // CONFIGURACIÓN SUPABASE
         const SUPABASE_URL = 'https://cirrapytmbnjlhxunkaq.supabase.co';
@@ -244,14 +283,11 @@
         let editingId = null;
         const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
-        // VARIABLES PARA REALTIME (CORREGIDO)
+        // VARIABLES PARA REALTIME
         let globalChannel = null;
         let isReconnecting = false;
 
-        // ----------------------------------------------------
-        // 1. LÓGICA DE NOTIFICACIONES PUSH (Service Worker)
-        // ----------------------------------------------------
-        
+        // --- LÓGICA DE NOTIFICACIONES PUSH ---
         function urlBase64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
             const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -286,14 +322,13 @@
 
             if (currentUser) {
                 const subData = JSON.parse(JSON.stringify(subscription));
-                const { error } = await supabase.from('push_subscriptions').upsert({
+                await supabase.from('push_subscriptions').upsert({
                     user_id: currentUser.id,
                     endpoint: subData.endpoint,
                     p256dh: subData.keys.p256dh,
                     auth: subData.keys.auth
                 }, { onConflict: 'endpoint' });
-                
-                if(!error) console.log("✅ Suscripción guardada en DB");
+                console.log("✅ Suscripción guardada");
             }
         }
 
@@ -303,32 +338,21 @@
             
             if(!currentUser) { alert("Inicia sesión primero"); return; }
             
-            btn.disabled = true; 
-            btn.innerText = "⏳ Configurando...";
-            
+            btn.disabled = true; btn.innerText = "⏳ Configurando...";
             try {
                 await subscribeUser();
                 btn.innerText = "🚀 Enviando...";
-                
-                const { data, error } = await supabase.functions.invoke('push-notifier', {
-                    body: { type: 'TEST', user_id: currentUser.id }
-                });
-
+                const { error } = await supabase.functions.invoke('push-notifier', { body: { type: 'TEST', user_id: currentUser.id } });
                 if(error) throw error;
-                alert("✅ ¡Enviado! Revisa las notificaciones de tu dispositivo.");
+                alert("✅ ¡Enviado!");
             } catch (e) {
-                console.error(e);
-                alert("Error: " + e.message);
+                console.error(e); alert("Error: " + e.message);
             } finally {
-                btn.disabled = false;
-                btn.innerText = txtOriginal;
+                btn.disabled = false; btn.innerText = txtOriginal;
             }
         }
 
-        // ----------------------------------------------------
-        // 2. LÓGICA GENERAL DEL ADMIN
-        // ----------------------------------------------------
-
+        // --- AUTENTICACIÓN Y ADMIN ---
         supabase.auth.onAuthStateChange((event, session) => {
             if (session) {
                 currentUser = session.user;
@@ -355,11 +379,7 @@
             
             loadProducts();
             updateDashboardCounters();
-            
-            // Inicializar realtime con retraso
-            setTimeout(() => {
-                setupGlobalRealtime();
-            }, 2000);
+            setTimeout(() => setupGlobalRealtime(), 2000);
         }
 
         document.getElementById('auth-form').addEventListener('submit', async (e) => {
@@ -371,104 +391,45 @@
         });
 
         async function logout() {
-            if (globalChannel) {
-                await supabase.removeChannel(globalChannel);
-                globalChannel = null;
-            }
-            if (activeChannel) {
-                await supabase.removeChannel(activeChannel);
-                activeChannel = null;
-            }
+            if (globalChannel) await supabase.removeChannel(globalChannel);
+            if (activeChannel) await supabase.removeChannel(activeChannel);
             await supabase.auth.signOut(); 
             window.location.reload();
         }
 
-        // ----------------------------------------------------
-        // 3. REALTIME CORREGIDO Y ESTABILIZADO
-        // ----------------------------------------------------
-
+        // --- REALTIME ---
         async function setupGlobalRealtime() {
-            // Si ya hay un canal activo, no hacemos nada para evitar duplicados
-            if (globalChannel && ['SUBSCRIBED', 'JOINED'].includes(globalChannel.state)) {
-                console.log("⚠️ El canal ya está conectado.");
-                return;
-            }
+            if (globalChannel && ['SUBSCRIBED', 'JOINED'].includes(globalChannel.state)) return;
+            if (globalChannel) await supabase.removeChannel(globalChannel);
 
-            // Limpieza previa asegurada
-            if (globalChannel) {
-                await supabase.removeChannel(globalChannel);
-                globalChannel = null;
-            }
-
-            console.log("🔄 Iniciando canal realtime...");
-
-            // Usamos un nombre único para evitar conflictos con sesiones previas
-            const channelName = `admin-global-${currentUser.id}-${Date.now()}`;
-
-            globalChannel = supabase.channel(channelName)
-            .on('postgres_changes', { 
-                event: 'INSERT', 
-                schema: 'public', 
-                table: 'mensajes',
-                filter: `tienda_id=eq.${currentUser.id}`
-            }, payload => {
-                console.log("📨 Nuevo mensaje recibido:", payload);
-                
+            globalChannel = supabase.channel(`admin-global-${currentUser.id}-${Date.now()}`)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `tienda_id=eq.${currentUser.id}` }, payload => {
                 if(payload.new.tienda_id != currentUser.id) return;
-
-                // Si el mensaje lo envió el cliente
                 if(payload.new.enviado_por_rol === 'cliente') {
-                    // Convertir a String para comparar seguramente
                     const incomingClientId = String(payload.new.cliente_id);
                     const currentChatId = String(activeChatClientId);
-
-                    if (currentChatId !== incomingClientId) { 
-                        showToast('Nuevo Mensaje', 'Cliente envió mensaje'); 
-                        updateDashboardCounters(); 
-                    }
+                    if (currentChatId !== incomingClientId) { showToast('Nuevo Mensaje', 'Cliente envió mensaje'); updateDashboardCounters(); }
                 }
-
-                if(document.getElementById('tab-chats').classList.contains('active')) {
-                    loadChatsList();
-                }
-
-                // LOGICA CORREGIDA PARA RENDERIZAR EL MENSAJE
+                if(document.getElementById('tab-chats').classList.contains('active')) loadChatsList();
+                
                 const incomingClientId = String(payload.new.cliente_id);
                 const currentChatId = String(activeChatClientId);
-
-                if (activeChatClientId && incomingClientId === currentChatId) {
-                    if(payload.new.enviado_por_rol !== 'dueño') {
-                        renderMessage(payload.new);
-                        
-                        setTimeout(() => {
-                            const c = document.getElementById('messages-container');
-                            if(c) c.scrollTop = c.scrollHeight;
-                        }, 100);
-                    }
+                if (activeChatClientId && incomingClientId === currentChatId && payload.new.enviado_por_rol !== 'dueño') {
+                    renderMessage(payload.new);
+                    setTimeout(() => { const c = document.getElementById('messages-container'); if(c) c.scrollTop = c.scrollHeight; }, 100);
                 }
             })
-            .on('postgres_changes', { 
-                event: 'INSERT', 
-                schema: 'public', 
-                table: 'pedidos'
-            }, (payload) => {
-                console.log("🛒 Nuevo pedido recibido:", payload);
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, (payload) => {
                 showToast('Nuevo Pedido', '¡Revisa la lista!');
                 updateDashboardCounters();
-                if(document.getElementById('tab-pedidos').classList.contains('active')) {
-                    loadOrders();
-                }
+                if(document.getElementById('tab-pedidos').classList.contains('active')) loadOrders();
             })
-            .subscribe((status, error) => {
-                console.log(`🔔 Estado Realtime (${channelName}):`, status);
-                
+            .subscribe((status) => {
                 if (status === 'SUBSCRIBED') {
-                    console.log('✅ Conectado y escuchando cambios.');
                     isReconnecting = false;
                     const badge = document.getElementById('store-code-display');
-                    if(badge) badge.style.borderColor = '#22c55e'; // Verde
-                } 
-                else if (status === 'TIMED_OUT' || status === 'CLOSED') {
+                    if(badge) badge.style.borderColor = '#22c55e'; 
+                } else if (status === 'TIMED_OUT' || status === 'CLOSED') {
                     if (!isReconnecting) handleConnectionDrop();
                 }
             });
@@ -477,24 +438,15 @@
         function handleConnectionDrop() {
             if (isReconnecting) return;
             isReconnecting = true;
-            
             const badge = document.getElementById('store-code-display');
-            if(badge) badge.style.borderColor = '#ef4444'; // Rojo
-            
-            console.log("⏳ Intentando restablecer conexión en 5s...");
-            setTimeout(() => {
-                if (currentUser) setupGlobalRealtime();
-            }, 5000);
+            if(badge) badge.style.borderColor = '#ef4444'; 
+            setTimeout(() => { if (currentUser) setupGlobalRealtime(); }, 5000);
         }
 
-        // ----------------------------------------------------
-        // 4. PRODUCTOS
-        // ----------------------------------------------------
-
+        // --- PRODUCTOS ---
         document.getElementById('product-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('btn-save');
-            btn.textContent = "Guardando..."; btn.disabled = true;
+            const btn = document.getElementById('btn-save'); btn.textContent = "Guardando..."; btn.disabled = true;
             try {
                 const file = document.getElementById('imagen-input').files[0];
                 let imageUrl = null;
@@ -518,7 +470,6 @@
                 };
                 if (editingId) await supabase.from('productos').update(productData).eq('id', editingId);
                 else { productData.imagen_url = imageUrl; await supabase.from('productos').insert([productData]); }
-                alert(editingId ? "Actualizado" : "Publicado");
                 resetForm(); loadProducts();
             } catch (error) { alert("Error: " + error.message); } 
             finally { btn.disabled = false; btn.textContent = "Publicar"; }
@@ -556,157 +507,68 @@
             document.getElementById('form-card').scrollIntoView({ behavior: 'smooth' });
         }
         
-        async function deleteProduct(id) { 
-            if(confirm('¿Eliminar?')) { 
-                await supabase.from('productos').delete().eq('id', id); 
-                loadProducts(); 
-            } 
-        }
+        async function deleteProduct(id) { if(confirm('¿Eliminar?')) { await supabase.from('productos').delete().eq('id', id); loadProducts(); } }
 
-        // ----------------------------------------------------
-        // 5. PEDIDOS (Lógica mejorada para Stock y UI)
-        // ----------------------------------------------------
-        
+        // --- PEDIDOS ---
         let showingHistory = false; 
-
         async function loadOrders() {
-            const { data } = await supabase
-                .from('pedidos')
-                .select('*, clientes(nombre, telefono)')
-                .order('fecha', {ascending:false});
-            
+            const { data } = await supabase.from('pedidos').select('*, clientes(nombre, telefono)').order('fecha', {ascending:false});
             ordersCache = data || [];
             updateDashboardCounters();
-            
             renderOrders();
         }
 
         function renderOrders() {
             const list = document.getElementById('orders-list');
-            
-            const visibleOrders = showingHistory 
-                ? ordersCache 
-                : ordersCache.filter(o => o.estado === 'pendiente');
+            const visibleOrders = showingHistory ? ordersCache : ordersCache.filter(o => o.estado === 'pendiente');
 
-            let htmlContent = `
-                <div style="margin-bottom:15px; text-align:right;">
-                    <button onclick="toggleHistory()" class="btn btn-outline" style="font-size:0.8rem; padding: 5px 10px;">
-                        ${showingHistory ? '<i class="fas fa-eye-slash"></i> Ocultar Completados' : '<i class="fas fa-history"></i> Ver Historial Completo'}
-                    </button>
-                </div>
-            `;
+            let html = `<div style="margin-bottom:15px; text-align:right;"><button onclick="toggleHistory()" class="btn btn-outline" style="font-size:0.8rem; padding: 5px 10px;">${showingHistory ? '<i class="fas fa-eye-slash"></i> Ocultar Completados' : '<i class="fas fa-history"></i> Ver Historial'}</button></div>`;
 
-            if(visibleOrders.length === 0) { 
-                htmlContent += `<div style="text-align:center; padding:40px; color:#94a3b8;">
-                    <i class="fas fa-check-circle" style="font-size:2rem; margin-bottom:10px; display:block;"></i>
-                    ${showingHistory ? 'No hay ningún pedido registrado.' : '¡Todo al día! No hay pedidos pendientes.'}
-                </div>`;
-                list.innerHTML = htmlContent;
-                return; 
-            }
+            if(visibleOrders.length === 0) { list.innerHTML = html + `<div style="text-align:center; padding:40px; color:#94a3b8;">No hay pedidos pendientes.</div>`; return; }
 
-            htmlContent += visibleOrders.map(o => {
+            html += visibleOrders.map(o => {
                 let itemsArray = [];
                 if (o.productos && o.productos.items) itemsArray = o.productos.items;
                 else if (Array.isArray(o.productos)) itemsArray = o.productos;
-
                 const productsHTML = itemsArray.length > 0 ? itemsArray.map(i => i.name).join(', ') : 'Sin detalle';
 
                 const actionBtn = o.estado === 'pendiente' 
-                    ? `<button onclick="completeOrder(${o.id})" class="btn btn-primary" style="padding: 10px; font-size: 0.9rem; margin-top:12px; background:#22c55e; box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.4);">
-                        <i class="fas fa-check"></i> COMPLETAR Y DESPACHAR
-                    </button>` 
-                    : `<div style="margin-top:10px; padding:8px; background:#f0fdf4; color:#15803d; border-radius:8px; text-align:center; font-size:0.85rem; font-weight:600;">
-                        <i class="fas fa-check-double"></i> Entregado el ${new Date(o.fecha).toLocaleDateString()}
-                    </div>`;
+                    ? `<button onclick="completeOrder(${o.id})" class="btn btn-primary" style="padding: 10px; margin-top:12px; background:#22c55e;"><i class="fas fa-check"></i> DESPACHAR</button>` 
+                    : `<div style="margin-top:10px; padding:8px; background:#f0fdf4; color:#15803d; border-radius:8px; text-align:center; font-size:0.85rem;"><i class="fas fa-check-double"></i> Entregado</div>`;
 
-                const badgeStyle = o.estado === 'pendiente' 
-                    ? 'background: #fff7ed; color: #c2410c;' 
-                    : 'background: #dcfce7; color: #15803d;';
-
-                return `
-                <div class="order-item" style="border-left: 4px solid ${o.estado === 'pendiente' ? '#f97316' : '#22c55e'}; animation: fadeIn 0.3s;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                        <div style="font-weight:600; font-size:0.9rem;">
-                            <i class="fas fa-user"></i> ${o.clientes?.nombre || 'Cliente'}
-                        </div>
-                        <span class="badge-pending" style="${badgeStyle}">${o.estado.toUpperCase()}</span>
+                return `<div class="order-item" style="border-left: 4px solid ${o.estado === 'pendiente' ? '#f97316' : '#22c55e'};">
+                    <div style="display:flex; justify-content:space-between;">
+                        <div style="font-weight:600;">${o.clientes?.nombre || 'Cliente'}</div>
+                        <span class="badge-pending">${o.estado.toUpperCase()}</span>
                     </div>
-                    <div style="font-size:0.85rem; color:#64748b;">
-                        <div style="margin-bottom:4px;"><i class="fab fa-whatsapp"></i> ${o.clientes?.telefono || '--'}</div>
-                        <div style="background:#f8fafc; padding:8px; border-radius:8px; border:1px solid #e2e8f0;">
-                            🛒 ${productsHTML}
-                        </div>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:8px;">
-                        <div style="font-weight:800; font-size:1.1rem; color:var(--primary);">$${o.total}</div>
-                        <small style="color:#94a3b8;">${new Date(o.fecha).toLocaleDateString()}</small>
-                    </div>
-                    ${actionBtn}
-                </div>`;
+                    <div style="font-size:0.85rem; color:#64748b; margin-top:5px;">${productsHTML}</div>
+                    <div style="display:flex; justify-content:space-between; margin-top:10px; font-weight:bold;">
+                        <span>$${o.total}</span> <small>${new Date(o.fecha).toLocaleDateString()}</small>
+                    </div>${actionBtn}</div>`;
             }).join('');
-
-            list.innerHTML = htmlContent;
+            list.innerHTML = html;
         }
 
-        function toggleHistory() {
-            showingHistory = !showingHistory;
-            renderOrders();
-        }
+        function toggleHistory() { showingHistory = !showingHistory; renderOrders(); }
 
         async function completeOrder(orderId) {
-            if (!confirm("¿Confirmas que entregaste este pedido? Se descontará del stock.")) return;
-
-            const orderIndex = ordersCache.findIndex(o => o.id === orderId);
-            if (orderIndex === -1) return alert("Error: No se encontró el pedido en memoria.");
-            
-            const order = ordersCache[orderIndex];
+            if (!confirm("¿Entregado? Se descontará del stock.")) return;
+            const order = ordersCache.find(o => o.id === orderId);
             let items = [];
             if (order.productos && order.productos.items) items = order.productos.items;
             else if (Array.isArray(order.productos)) items = order.productos;
-
-            const productQuantities = {};
-            items.forEach(item => {
-                productQuantities[item.id] = (productQuantities[item.id] || 0) + 1;
-            });
-
+            
             try {
-                const btn = event.target; 
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
-                btn.disabled = true;
-
-                for (const [prodId, qty] of Object.entries(productQuantities)) {
-                    const { data: currentProd, error: fetchError } = await supabase.from('productos').select('stock').eq('id', prodId).single();
-                    if (!fetchError) {
-                        await supabase.from('productos').update({ stock: currentProd.stock - qty }).eq('id', prodId);
-                    }
+                for (const item of items) {
+                    const { data: curr } = await supabase.from('productos').select('stock').eq('id', item.id).single();
+                    if (curr) await supabase.from('productos').update({ stock: curr.stock - 1 }).eq('id', item.id);
                 }
-
-                const { error: orderError } = await supabase
-                    .from('pedidos')
-                    .update({ estado: 'completado' })
-                    .eq('id', orderId);
-
-                if (orderError) throw orderError;
-
-                alert("✅ Despachado correctamente.");
-
-                ordersCache[orderIndex].estado = 'completado';
-                renderOrders();
-                
-                updateDashboardCounters();
-                loadProducts();
-
-            } catch (err) {
-                alert("Ocurrió un error: " + err.message);
-                loadOrders();
-            }
+                await supabase.from('pedidos').update({ estado: 'completado' }).eq('id', orderId);
+                loadOrders(); loadProducts();
+            } catch (e) { alert("Error: " + e.message); }
         }
 
-        // ----------------------------------------------------
-        // 6. UI HELPERS
-        // ----------------------------------------------------
-
+        // --- UI & CHATS ---
         function showToast(title, message) {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -714,7 +576,7 @@
             toast.innerHTML = `<i class="fas fa-bell"></i><div class="toast-content"><div>${title}</div><small>${message}</small></div>`;
             container.appendChild(toast);
             try { notificationSound.play().catch(()=>{}); } catch(e){}
-            setTimeout(() => { toast.style.animation = 'fadeOut 0.5s forwards'; setTimeout(() => toast.remove(), 500); }, 4000);
+            setTimeout(() => { toast.remove(); }, 4000);
         }
 
         async function updateDashboardCounters() {
@@ -723,13 +585,11 @@
             
             const bChat = document.getElementById('badge-chats');
             const bOrd = document.getElementById('badge-orders');
-            
             bChat.textContent = unreadMsgs; bChat.style.display = unreadMsgs > 0 ? 'block' : 'none';
             bOrd.textContent = pendingOrders; bOrd.style.display = pendingOrders > 0 ? 'block' : 'none';
         }
 
         function copyCode() { navigator.clipboard.writeText(storeCode); alert("Código copiado: " + storeCode); }
-
         function switchTab(t) {
             document.querySelectorAll('.panel-section').forEach(s => s.classList.remove('active'));
             document.getElementById('tab-'+t).classList.add('active');
@@ -738,20 +598,15 @@
             if(t === 'chats') loadChatsList(); if(t === 'pedidos') loadOrders(); if(t === 'config') loadConfig();
         }
 
-        // ----------------------------------------------------
-        // 7. CHAT FUNCTIONS (CORREGIDAS)
-        // ----------------------------------------------------
-
         async function loadChatsList() {
             const { data } = await supabase.from('mensajes').select('*, clientes(id, nombre)').eq('tienda_id', currentUser.id).order('created_at', { ascending: false }).limit(200);
             const grouped = {};
             data.forEach(msg => { if (!grouped[msg.cliente_id]) { grouped[msg.cliente_id] = { client: msg.clientes, lastMsg: msg }; } });
             updateDashboardCounters();
-            const listHTML = Object.values(grouped).map(item => {
+            document.getElementById('chats-list').innerHTML = Object.values(grouped).map(item => {
                 const isUnread = !item.lastMsg.leido && item.lastMsg.enviado_por_rol === 'cliente';
-                return `<div class="chat-list-item ${isUnread ? 'unread' : ''}" onclick="openChat('${item.client.id}', '${item.client.nombre}')"><div class="avatar">${item.client.nombre.substring(0,2).toUpperCase()}${isUnread ? '<div style="position:absolute; bottom:0; right:0; width:12px; height:12px; background:#ef4444; border-radius:50%; border:2px solid white;"></div>' : ''}</div><div style="flex:1;"><div style="display:flex; justify-content:space-between;"><div style="font-weight:600;">${item.client.nombre}</div><small style="color:#94a3b8;">${new Date(item.lastMsg.created_at).toLocaleDateString()}</small></div><div style="font-size:0.85rem; color:${isUnread ? '#000' : '#64748b'};">${item.lastMsg.enviado_por_rol === 'dueño' ? 'Tú: ' : ''}${item.lastMsg.contenido.substring(0, 30)}...</div></div></div>`;
-            }).join('');
-            document.getElementById('chats-list').innerHTML = listHTML || '<div style="padding:20px; text-align:center;">No hay chats</div>';
+                return `<div class="chat-list-item ${isUnread ? 'unread' : ''}" onclick="openChat('${item.client.id}', '${item.client.nombre}')"><div class="avatar">${item.client.nombre.substring(0,2).toUpperCase()}</div><div style="flex:1;"><div style="font-weight:600;">${item.client.nombre}</div><div style="font-size:0.85rem; color:#64748b;">${item.lastMsg.contenido.substring(0, 30)}...</div></div></div>`;
+            }).join('') || '<div style="padding:20px; text-align:center;">No hay chats</div>';
         }
 
         async function openChat(clientId, clientName) {
@@ -760,46 +615,24 @@
             document.getElementById('chat-interface').classList.add('active');
             document.getElementById('current-chat-name').textContent = clientName;
             document.getElementById('current-chat-avatar').textContent = clientName.substring(0,2).toUpperCase();
+            document.getElementById('messages-container').innerHTML = 'Cargando...';
             
-            const container = document.getElementById('messages-container');
-            container.innerHTML = '<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin"></i></div>';
-            
-            // Cargar mensajes
             const { data } = await supabase.from('mensajes').select('*').eq('tienda_id', currentUser.id).eq('cliente_id', clientId).order('created_at', { ascending: true });
-            container.innerHTML = ''; 
+            document.getElementById('messages-container').innerHTML = ''; 
             if(data) data.forEach(renderMessage);
             
             await supabase.from('mensajes').update({ leido: true }).eq('cliente_id', clientId).eq('enviado_por_rol', 'cliente');
             updateDashboardCounters();
             
-            // Limpieza segura del canal anterior
-            if (activeChannel) {
-                await supabase.removeChannel(activeChannel);
-                activeChannel = null;
-            }
-            
-            // Canal exclusivo para typing y eventos de este chat
-            const channelName = `typing_${currentUser.id}_${clientId}`;
-            activeChannel = supabase.channel(channelName)
-                .on('broadcast', { event: 'typing' }, () => {
-                    const ind = document.getElementById('typing-indicator'); 
-                    if(ind) {
-                        ind.textContent = `${clientName} escribe...`; 
-                        if(ind.timeout) clearTimeout(ind.timeout);
-                        ind.timeout = setTimeout(() => ind.textContent = '', 3000);
-                    }
-                })
-                .subscribe();
+            if (activeChannel) await supabase.removeChannel(activeChannel);
+            activeChannel = supabase.channel(`typing_${currentUser.id}_${clientId}`).on('broadcast', { event: 'typing' }, () => {
+                const ind = document.getElementById('typing-indicator'); ind.textContent = `${clientName} escribe...`; setTimeout(() => ind.textContent = '', 3000);
+            }).subscribe();
         }
 
-        async function closeChat() {
+        function closeChat() {
             activeChatClientId = null; 
-            
-            if (activeChannel) {
-                await supabase.removeChannel(activeChannel);
-                activeChannel = null;
-            }
-
+            if (activeChannel) { supabase.removeChannel(activeChannel); activeChannel = null; }
             document.getElementById('chat-interface').classList.remove('active');
             document.getElementById('chats-inbox').style.display = 'block'; 
             loadChatsList();
@@ -810,8 +643,7 @@
             let html = msg.contenido.replace(/\n/g, '<br>');
             if (!html.includes('<img')) html = html.replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank" class="map-btn">Ver Enlace</a>`);
             div.innerHTML = html;
-            const c = document.getElementById('messages-container'); 
-            if(c) { c.appendChild(div); c.scrollTop = c.scrollHeight; }
+            const c = document.getElementById('messages-container'); c.appendChild(div); c.scrollTop = c.scrollHeight;
         }
 
         async function sendMessage(e) {
@@ -820,14 +652,71 @@
             renderMessage({ contenido: text, enviado_por_rol: 'dueño' });
             await supabase.from('mensajes').insert({ tienda_id: currentUser.id, cliente_id: activeChatClientId, enviado_por_rol: 'dueño', contenido: text });
         }
+        function notifyTyping() { if(activeChannel) activeChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); }
+
+        // --- LOGO, CROPPER Y CONFIGURACIÓN ---
         
-        function notifyTyping() { 
-            if(activeChannel) activeChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); 
+        let cropper;
+        const logoInput = document.getElementById('logo-input');
+        const cropModal = document.getElementById('crop-modal');
+        const imageTarget = document.getElementById('crop-image-target');
+        
+        logoInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    imageTarget.src = evt.target.result;
+                    openCropModal();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function openCropModal() {
+            cropModal.style.display = 'flex';
+            if(cropper) cropper.destroy();
+            cropper = new Cropper(imageTarget, { aspectRatio: 4 / 1, viewMode: 2, autoCropArea: 1 });
         }
 
-        // ----------------------------------------------------
-        // 8. CONFIGURACIÓN
-        // ----------------------------------------------------
+        function cancelCrop() {
+            cropModal.style.display = 'none';
+            logoInput.value = ''; 
+            if(cropper) cropper.destroy();
+        }
+
+        async function confirmCrop() {
+            if(!cropper) return;
+            const canvas = cropper.getCroppedCanvas({ width: 600, height: 150 });
+            canvas.toBlob(async (blob) => {
+                const btnConfirm = document.querySelector('#crop-modal .btn-primary');
+                const txtOriginal = btnConfirm.innerHTML;
+                btnConfirm.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo...'; btnConfirm.disabled = true;
+                try {
+                    const fileName = `logo_${currentUser.id}_${Date.now()}.png`;
+                    const { error: uploadErr } = await supabase.storage.from('tienda-logos').upload(fileName, blob, { contentType: 'image/png', upsert: true });
+                    if (uploadErr) throw uploadErr;
+                    const { data: urlData } = supabase.storage.from('tienda-logos').getPublicUrl(fileName);
+                    const { error: dbErr } = await supabase.from('usuarios').update({ logo_url: urlData.publicUrl }).eq('id', currentUser.id);
+                    if (dbErr) throw dbErr;
+                    alert('¡Logo actualizado con éxito!');
+                    updateAdminLogoUI(urlData.publicUrl);
+                    cancelCrop();
+                } catch (error) {
+                    alert('Error al subir logo: ' + error.message);
+                } finally {
+                    btnConfirm.innerHTML = txtOriginal; btnConfirm.disabled = false;
+                }
+            }, 'image/png');
+        }
+
+        function updateAdminLogoUI(url) {
+            const preview = document.getElementById('logo-img-preview');
+            const placeholder = document.getElementById('logo-placeholder');
+            if(url) {
+                preview.src = url; preview.style.display = 'block'; placeholder.style.display = 'none';
+            }
+        }
 
         document.getElementById('config-form').addEventListener('submit', async (e) => {
             e.preventDefault(); const btn = document.getElementById('btn-save-config'); btn.textContent = "Guardando..."; btn.disabled = true;
@@ -856,12 +745,16 @@
         async function loadConfig() {
             const { data } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
             if (!data) return;
+            // Datos Bancarios
             document.getElementById('conf-banco').value = data.banco_nombre || '';
             document.getElementById('conf-titular').value = data.banco_titular || '';
             document.getElementById('conf-ci').value = data.banco_ci || '';
             document.getElementById('conf-numero').value = data.banco_numero || '';
             if(data.banco_tipo) document.getElementById('conf-tipo').value = data.banco_tipo;
             if (data.qr_imagen_url) { document.getElementById('qr-preview').src = data.qr_imagen_url; document.getElementById('qr-preview').style.display = 'block'; }
+            
+            // Logo
+            if(data.logo_url) updateAdminLogoUI(data.logo_url);
         }
     </script>
 </body>
