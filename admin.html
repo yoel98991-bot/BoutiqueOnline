@@ -242,6 +242,11 @@
         let editingId = null;
         const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
+        // VARIABLES PARA REALTIME CORREGIDAS
+        let globalChannel = null;
+        let reconnectTimeout = null;
+        const RECONNECT_DELAY = 5000; // 5 segundos
+
         // ----------------------------------------------------
         // 1. LÓGICA DE NOTIFICACIONES PUSH (Service Worker)
         // ----------------------------------------------------
@@ -334,27 +339,27 @@
             }
         });
 
-     async function initAdmin(user) {
-    let { data: userData } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
-    if (!userData) {
-        userData = { id: user.id, email: user.email, nombre: 'Admin', rol: 'dueño' };
-        await supabase.from('usuarios').insert(userData);
-    }
-    storeCode = userData.codigo_tienda || 'TIENDA-' + Math.random().toString(36).substring(2, 6).toUpperCase();
-    if (!userData.codigo_tienda) await supabase.from('usuarios').update({ codigo_tienda: storeCode }).eq('id', user.id);
+        async function initAdmin(user) {
+            let { data: userData } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
+            if (!userData) {
+                userData = { id: user.id, email: user.email, nombre: 'Admin', rol: 'dueño' };
+                await supabase.from('usuarios').insert(userData);
+            }
+            storeCode = userData.codigo_tienda || 'TIENDA-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+            if (!userData.codigo_tienda) await supabase.from('usuarios').update({ codigo_tienda: storeCode }).eq('id', user.id);
 
-    document.getElementById('store-code-display').textContent = "CÓDIGO: " + storeCode;
-    document.getElementById('login-container').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'block';
-    
-    loadProducts();
-    updateDashboardCounters();
-    
-    // Inicializar realtime con retraso para asegurar que todo esté cargado
-    setTimeout(() => {
-        setupGlobalRealtime();
-    }, 1000);
-}
+            document.getElementById('store-code-display').textContent = "CÓDIGO: " + storeCode;
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            
+            loadProducts();
+            updateDashboardCounters();
+            
+            // Inicializar realtime con retraso para asegurar que todo esté cargado
+            setTimeout(() => {
+                setupGlobalRealtime();
+            }, 2000);
+        }
 
         document.getElementById('auth-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -364,23 +369,135 @@
             if (error) document.getElementById('auth-msg').textContent = "Error: " + error.message;
         });
 
-      async function logout() {
-    // Limpiar canales apropiadamente
-    if (globalChannel) {
-        await globalChannel.unsubscribe();
-        globalChannel = null;
-    }
-    if (activeChannel) {
-        await activeChannel.unsubscribe();
-        activeChannel = null;
-    }
-    
-    reconnectAttempts = 0;
-    await supabase.auth.signOut(); 
-    window.location.reload();
-}
+        async function logout() {
+            // Limpiar canales y timeouts
+            if (globalChannel) {
+                await globalChannel.unsubscribe();
+                globalChannel = null;
+            }
+            if (activeChannel) {
+                await activeChannel.unsubscribe();
+                activeChannel = null;
+            }
+            if (reconnectTimeout) {
+                clearTimeout(reconnectTimeout);
+                reconnectTimeout = null;
+            }
+            
+            await supabase.auth.signOut(); 
+            window.location.reload();
+        }
 
-        // PRODUCTOS
+        // ----------------------------------------------------
+        // 3. REALTIME CORREGIDO - SIN CICLOS INFINITOS
+        // ----------------------------------------------------
+
+        function setupGlobalRealtime() {
+            // Limpiar canal existente y timeout previo
+            if (globalChannel) {
+                try {
+                    supabase.removeChannel(globalChannel);
+                } catch (e) {
+                    console.log("Limpiando canal previo...");
+                }
+                globalChannel = null;
+            }
+            
+            if (reconnectTimeout) {
+                clearTimeout(reconnectTimeout);
+                reconnectTimeout = null;
+            }
+
+            console.log("🔄 Iniciando canal realtime...");
+            
+            globalChannel = supabase.channel('admin-global')
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'mensajes',
+                filter: `tienda_id=eq.${currentUser.id}`
+            }, payload => {
+                console.log("📨 Nuevo mensaje recibido:", payload);
+                
+                // Verificar que el mensaje es para esta tienda
+                if(payload.new.tienda_id != currentUser.id) {
+                    console.log("❌ Mensaje no es para esta tienda, ignorando");
+                    return;
+                }
+
+                // Si el mensaje lo envió el cliente
+                if(payload.new.enviado_por_rol === 'cliente') {
+                    // Si NO tengo abierto el chat de este cliente, aviso con notificación
+                    if (activeChatClientId != payload.new.cliente_id) { 
+                        showToast('Nuevo Mensaje', 'Cliente envió mensaje'); 
+                        updateDashboardCounters(); 
+                    }
+                }
+
+                // Actualizar la lista de la izquierda si está visible
+                if(document.getElementById('tab-chats').classList.contains('active')) {
+                    loadChatsList();
+                }
+
+                // Dibujar el mensaje si tengo el chat abierto
+                if(activeChatClientId && payload.new.cliente_id == activeChatClientId) {
+                    // Solo lo dibujamos si NO soy yo el que lo envió (para no duplicar)
+                    if(payload.new.enviado_por_rol !== 'dueño') {
+                        renderMessage(payload.new);
+                        
+                        setTimeout(() => {
+                            const c = document.getElementById('messages-container');
+                            c.scrollTop = c.scrollHeight;
+                        }, 50);
+                    }
+                }
+            })
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'pedidos'
+            }, (payload) => {
+                console.log("🛒 Nuevo pedido recibido:", payload);
+                showToast('Nuevo Pedido', '¡Revisa la lista!');
+                updateDashboardCounters();
+                if(document.getElementById('tab-pedidos').classList.contains('active')) {
+                    loadOrders();
+                }
+            })
+            .on('system', { event: 'disconnect' }, () => {
+                console.warn('🔌 Desconectado del servidor realtime');
+                scheduleReconnect();
+            })
+            .subscribe((status, error) => {
+                console.log("🔔 Estado Conexión Realtime:", status);
+                
+                if (status === 'SUBSCRIBED') {
+                    console.log('✅ Canal realtime suscrito correctamente');
+                } 
+                else if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
+                    console.error('❌ Error/cierre de canal:', error || status);
+                    scheduleReconnect();
+                }
+            });
+        }
+
+        function scheduleReconnect() {
+            if (reconnectTimeout) {
+                clearTimeout(reconnectTimeout);
+            }
+            
+            console.log(`🔄 Reconectando en ${RECONNECT_DELAY/1000} segundos...`);
+            reconnectTimeout = setTimeout(() => {
+                if (currentUser) { // Solo reconectar si el usuario sigue logueado
+                    setupGlobalRealtime();
+                }
+            }, RECONNECT_DELAY);
+        }
+
+        // ----------------------------------------------------
+        // 4. PRODUCTOS
+        // ----------------------------------------------------
+
         document.getElementById('product-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-save');
@@ -421,19 +538,6 @@
             document.getElementById('btn-cancel').style.display = 'none';
             document.getElementById('form-title').innerHTML = '<i class="fas fa-plus-circle"></i> Nuevo Producto';
         }
-        
-        // Verificar estado de realtime periódicamente
-function startRealtimeHealthCheck() {
-    setInterval(() => {
-        if (!globalChannel) {
-            console.log('🔄 RealTime no activo, reiniciando...');
-            setupGlobalRealtime();
-        }
-    }, 30000); // Chequear cada 30 segundos
-}
-
-// Llamar esta función después de initAdmin
-// startRealtimeHealthCheck();
 
         async function loadProducts() {
             const { data } = await supabase.from('productos').select('*').eq('creado_por', currentUser.id).order('id', {ascending:false});
@@ -458,15 +562,20 @@ function startRealtimeHealthCheck() {
             document.getElementById('btn-cancel').style.display = 'inline-block';
             document.getElementById('form-card').scrollIntoView({ behavior: 'smooth' });
         }
-        async function deleteProduct(id) { if(confirm('¿Eliminar?')) { await supabase.from('productos').delete().eq('id', id); loadProducts(); } }
+        
+        async function deleteProduct(id) { 
+            if(confirm('¿Eliminar?')) { 
+                await supabase.from('productos').delete().eq('id', id); 
+                loadProducts(); 
+            } 
+        }
 
         // ----------------------------------------------------
-        // 3. PEDIDOS (Lógica mejorada para Stock y UI)
+        // 5. PEDIDOS (Lógica mejorada para Stock y UI)
         // ----------------------------------------------------
         
         let showingHistory = false; 
 
-        // Función 1: Cargar datos de la nube
         async function loadOrders() {
             const { data } = await supabase
                 .from('pedidos')
@@ -476,20 +585,16 @@ function startRealtimeHealthCheck() {
             ordersCache = data || [];
             updateDashboardCounters();
             
-            // Llamamos a la función que dibuja en pantalla
             renderOrders();
         }
 
-        // Función 2: Dibujar en pantalla (con filtro local)
         function renderOrders() {
             const list = document.getElementById('orders-list');
             
-            // Filtro: Si showingHistory es false, solo mostramos pendientes
             const visibleOrders = showingHistory 
                 ? ordersCache 
                 : ordersCache.filter(o => o.estado === 'pendiente');
 
-            // Botón de historial
             let htmlContent = `
                 <div style="margin-bottom:15px; text-align:right;">
                     <button onclick="toggleHistory()" class="btn btn-outline" style="font-size:0.8rem; padding: 5px 10px;">
@@ -514,7 +619,6 @@ function startRealtimeHealthCheck() {
 
                 const productsHTML = itemsArray.length > 0 ? itemsArray.map(i => i.name).join(', ') : 'Sin detalle';
 
-                // Botón de acción
                 const actionBtn = o.estado === 'pendiente' 
                     ? `<button onclick="completeOrder(${o.id})" class="btn btn-primary" style="padding: 10px; font-size: 0.9rem; margin-top:12px; background:#22c55e; box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.4);">
                         <i class="fas fa-check"></i> COMPLETAR Y DESPACHAR
@@ -560,7 +664,6 @@ function startRealtimeHealthCheck() {
         async function completeOrder(orderId) {
             if (!confirm("¿Confirmas que entregaste este pedido? Se descontará del stock.")) return;
 
-            // Buscamos en caché local
             const orderIndex = ordersCache.findIndex(o => o.id === orderId);
             if (orderIndex === -1) return alert("Error: No se encontró el pedido en memoria.");
             
@@ -569,7 +672,6 @@ function startRealtimeHealthCheck() {
             if (order.productos && order.productos.items) items = order.productos.items;
             else if (Array.isArray(order.productos)) items = order.productos;
 
-            // Agrupar cantidades
             const productQuantities = {};
             items.forEach(item => {
                 productQuantities[item.id] = (productQuantities[item.id] || 0) + 1;
@@ -580,7 +682,6 @@ function startRealtimeHealthCheck() {
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
                 btn.disabled = true;
 
-                // 1. Restar Stock (Bucle por producto)
                 for (const [prodId, qty] of Object.entries(productQuantities)) {
                     const { data: currentProd, error: fetchError } = await supabase.from('productos').select('stock').eq('id', prodId).single();
                     if (!fetchError) {
@@ -588,7 +689,6 @@ function startRealtimeHealthCheck() {
                     }
                 }
 
-                // 2. Actualizar Estado en Base de Datos
                 const { error: orderError } = await supabase
                     .from('pedidos')
                     .update({ estado: 'completado' })
@@ -598,20 +698,22 @@ function startRealtimeHealthCheck() {
 
                 alert("✅ Despachado correctamente.");
 
-                // 3. Actualizar UI Instántaneamente (Sin recargar de la nube)
                 ordersCache[orderIndex].estado = 'completado';
-                renderOrders(); // La tarjeta desaparecerá porque ya no es pendiente
+                renderOrders();
                 
                 updateDashboardCounters();
-                loadProducts(); // Actualizar la tabla de inventario
+                loadProducts();
 
             } catch (err) {
                 alert("Ocurrió un error: " + err.message);
-                loadOrders(); // Si falla, recargamos todo
+                loadOrders();
             }
         }
 
-        // UI HELPERS
+        // ----------------------------------------------------
+        // 6. UI HELPERS
+        // ----------------------------------------------------
+
         function showToast(title, message) {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -643,99 +745,9 @@ function startRealtimeHealthCheck() {
             if(t === 'chats') loadChatsList(); if(t === 'pedidos') loadOrders(); if(t === 'config') loadConfig();
         }
 
-        // REALTIME & CHAT
-let globalChannel = null;
-let reconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 5;
-
-function setupGlobalRealtime() {
-    // Limpiar canal existente si hay problemas
-    if (globalChannel) {
-        try {
-            supabase.removeChannel(globalChannel);
-        } catch (e) {
-            console.log("Limpiando canal previo...");
-        }
-        globalChannel = null;
-    }
-    
-    globalChannel = supabase.channel('admin-global-' + Date.now()) // Nombre único
-    .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'mensajes',
-        filter: `tienda_id=eq.${currentUser.id}`
-    }, payload => {
-        console.log("📨 Nuevo mensaje recibido:", payload);
-        
-        // 1. Verificar que el mensaje es para esta tienda
-        if(payload.new.tienda_id != currentUser.id) return;
-
-        // 2. Si el mensaje lo envió el cliente
-        if(payload.new.enviado_por_rol === 'cliente') {
-            // Si NO tengo abierto el chat de este cliente, aviso con notificación
-            if (activeChatClientId != payload.new.cliente_id) { 
-                showToast('Nuevo Mensaje', 'Cliente envió mensaje'); 
-                updateDashboardCounters(); 
-            }
-        }
-
-        // 3. Actualizar la lista de la izquierda si está visible
-        if(document.getElementById('tab-chats').classList.contains('active')) {
-            loadChatsList();
-        }
-
-        // 4. Dibujar el mensaje si tengo el chat abierto
-        if(activeChatClientId && payload.new.cliente_id == activeChatClientId) {
-            // Solo lo dibujamos si NO soy yo el que lo envió (para no duplicar)
-            if(payload.new.enviado_por_rol !== 'dueño') {
-                renderMessage(payload.new);
-                
-                setTimeout(() => {
-                    const c = document.getElementById('messages-container');
-                    c.scrollTop = c.scrollHeight;
-                }, 50);
-            }
-        }
-    })
-    .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'pedidos'
-    }, (payload) => {
-        console.log("🛒 Nuevo pedido recibido:", payload);
-        showToast('Nuevo Pedido', '¡Revisa la lista!');
-        updateDashboardCounters();
-        if(document.getElementById('tab-pedidos').classList.contains('active')) {
-            loadOrders();
-        }
-    })
-    .subscribe((status, error) => {
-        console.log("🔔 Estado Conexión Realtime:", status);
-        
-        if (status === 'SUBSCRIBED') {
-            console.log('✅ Canal realtime suscrito correctamente');
-            reconnectAttempts = 0; // Resetear contador de reconexiones
-        } 
-        else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
-            console.error('❌ Error/cierre de canal:', error);
-            globalChannel = null;
-            reconnectAttempts++;
-            
-            if (reconnectAttempts <= MAX_RECONNECT_ATTEMPTS) {
-                console.log(`🔄 Intentando reconectar... (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
-                setTimeout(setupGlobalRealtime, 2000 * reconnectAttempts); // Backoff exponencial
-            } else {
-                console.error('🚫 Máximo de intentos de reconexión alcanzado');
-            }
-        }
-        else if (status === 'TIMED_OUT') {
-            console.warn('⏰ Timeout de conexión');
-            globalChannel = null;
-            setTimeout(setupGlobalRealtime, 3000);
-        }
-    });
-}
+        // ----------------------------------------------------
+        // 7. CHAT FUNCTIONS
+        // ----------------------------------------------------
 
         async function loadChatsList() {
             const { data } = await supabase.from('mensajes').select('*, clientes(id, nombre)').eq('tienda_id', currentUser.id).order('created_at', { ascending: false }).limit(200);
@@ -749,38 +761,37 @@ function setupGlobalRealtime() {
             document.getElementById('chats-list').innerHTML = listHTML || '<div style="padding:20px; text-align:center;">No hay chats</div>';
         }
 
-       async function openChat(clientId, clientName) {
-    activeChatClientId = clientId;
-    document.getElementById('chats-inbox').style.display = 'none';
-    document.getElementById('chat-interface').classList.add('active');
-    document.getElementById('current-chat-name').textContent = clientName;
-    document.getElementById('current-chat-avatar').textContent = clientName.substring(0,2).toUpperCase();
-    
-    const container = document.getElementById('messages-container');
-    container.innerHTML = '<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin"></i></div>';
-    
-    const { data } = await supabase.from('mensajes').select('*').eq('tienda_id', currentUser.id).eq('cliente_id', clientId).order('created_at', { ascending: true });
-    container.innerHTML = ''; 
-    data.forEach(renderMessage);
-    
-    await supabase.from('mensajes').update({ leido: true }).eq('cliente_id', clientId).eq('enviado_por_rol', 'cliente');
-    updateDashboardCounters();
-    
-    // Mejor gestión del canal de typing
-    if(activeChannel) {
-        supabase.removeChannel(activeChannel);
-    }
-    
-    activeChannel = supabase.channel(`chat_${clientId}`)
-        .on('broadcast', { event: 'typing' }, () => {
-            const ind = document.getElementById('typing-indicator'); 
-            ind.textContent = `${clientName} escribe...`; 
-            setTimeout(() => ind.textContent = '', 3000);
-        })
-        .subscribe((status) => {
-            console.log(`Canal typing ${clientId}:`, status);
-        });
-}
+        async function openChat(clientId, clientName) {
+            activeChatClientId = clientId;
+            document.getElementById('chats-inbox').style.display = 'none';
+            document.getElementById('chat-interface').classList.add('active');
+            document.getElementById('current-chat-name').textContent = clientName;
+            document.getElementById('current-chat-avatar').textContent = clientName.substring(0,2).toUpperCase();
+            
+            const container = document.getElementById('messages-container');
+            container.innerHTML = '<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin"></i></div>';
+            
+            const { data } = await supabase.from('mensajes').select('*').eq('tienda_id', currentUser.id).eq('cliente_id', clientId).order('created_at', { ascending: true });
+            container.innerHTML = ''; 
+            data.forEach(renderMessage);
+            
+            await supabase.from('mensajes').update({ leido: true }).eq('cliente_id', clientId).eq('enviado_por_rol', 'cliente');
+            updateDashboardCounters();
+            
+            if(activeChannel) {
+                supabase.removeChannel(activeChannel);
+            }
+            
+            activeChannel = supabase.channel(`chat_${clientId}`)
+                .on('broadcast', { event: 'typing' }, () => {
+                    const ind = document.getElementById('typing-indicator'); 
+                    ind.textContent = `${clientName} escribe...`; 
+                    setTimeout(() => ind.textContent = '', 3000);
+                })
+                .subscribe((status) => {
+                    console.log(`Canal typing ${clientId}:`, status);
+                });
+        }
 
         function renderMessage(msg) {
             const div = document.createElement('div'); div.className = `msg ${msg.enviado_por_rol === 'dueño' ? 'me' : 'them'}`;
@@ -796,23 +807,22 @@ function setupGlobalRealtime() {
             renderMessage({ contenido: text, enviado_por_rol: 'dueño' });
             await supabase.from('mensajes').insert({ tienda_id: currentUser.id, cliente_id: activeChatClientId, enviado_por_rol: 'dueño', contenido: text });
         }
-        function notifyTyping() { if(activeChannel) activeChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); }
-        function closeChat() {
-            activeChatClientId = null; document.getElementById('chat-interface').classList.remove('active');
-            document.getElementById('chats-inbox').style.display = 'block'; loadChatsList();
+        
+        function notifyTyping() { 
+            if(activeChannel) activeChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); 
         }
         
-        function checkRealtimeConnection() {
-    if (!globalChannel) {
-        console.log('🔄 Reconectando canal realtime...');
-        setupGlobalRealtime();
-    }
-}
+        function closeChat() {
+            activeChatClientId = null; 
+            document.getElementById('chat-interface').classList.remove('active');
+            document.getElementById('chats-inbox').style.display = 'block'; 
+            loadChatsList();
+        }
 
-// Verificar conexión periódicamente
-setInterval(checkRealtimeConnection, 30000); // Cada 30 segundos
+        // ----------------------------------------------------
+        // 8. CONFIGURACIÓN
+        // ----------------------------------------------------
 
-        // CONFIG
         document.getElementById('config-form').addEventListener('submit', async (e) => {
             e.preventDefault(); const btn = document.getElementById('btn-save-config'); btn.textContent = "Guardando..."; btn.disabled = true;
             try {
@@ -836,6 +846,7 @@ setInterval(checkRealtimeConnection, 30000); // Cada 30 segundos
                 if(qrUrl.startsWith('http')) { document.getElementById('qr-preview').src = qrUrl; document.getElementById('qr-preview').style.display = 'block'; }
             } catch (err) { alert("Error: " + err.message); } finally { btn.disabled = false; btn.textContent = "Guardar Configuración"; }
         });
+        
         async function loadConfig() {
             const { data } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
             if (!data) return;
