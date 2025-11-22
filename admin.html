@@ -34,45 +34,42 @@
 
         /* Tabs Navigation */
         .nav-tabs { 
-    display: flex; 
-    gap: 10px; 
-    margin-bottom: 20px; 
-    overflow-x: auto; 
-    padding: 10px; /* AUMENTADO: Antes era solo padding-bottom: 5px */
-    margin-left: -10px; /* Ajuste visual para compensar el padding a la izquierda */
-    margin-right: -10px;
-    width: calc(100% + 20px);
-}
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 20px; 
+            overflow-x: auto; 
+            padding: 10px; 
+            margin-left: -10px; 
+            margin-right: -10px;
+            width: calc(100% + 20px);
+        }
         .nav-tabs::-webkit-scrollbar { display: none; }
         .tab { padding: 10px 20px; border: none; background: white; color: #64748b; font-weight: 600; border-radius: 30px; font-size: 0.9rem; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.02); position: relative; }
         .tab.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(30, 41, 59, 0.3); }
 
         /* Badges */
-        .nav-tabs::-webkit-scrollbar { display: none; } /* Ocultar barra de scroll estética */
+        .badge-count { 
+            position: absolute; 
+            top: -8px; 
+            right: -5px; 
+            background-color: #ef4444; 
+            color: white; 
+            font-size: 0.7rem; 
+            padding: 2px 6px; 
+            border-radius: 10px; 
+            font-weight: bold; 
+            display: none; 
+            animation: popIn 0.3s ease;
+            z-index: 10; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+            border: 2px solid white; 
+        }
 
-/* 2. Aseguramos que el contador esté por encima de todo */
-.badge-count { 
-    position: absolute; 
-    top: -8px; /* Subimos un poquito más para que se vea más estético */
-    right: -5px; 
-    background-color: #ef4444; 
-    color: white; 
-    font-size: 0.7rem; 
-    padding: 2px 6px; 
-    border-radius: 10px; 
-    font-weight: bold; 
-    display: none; 
-    animation: popIn 0.3s ease;
-    z-index: 10; /* Aseguramos que flote encima */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Sombra para darle profundidad */
-    border: 2px solid white; /* Borde blanco para separarlo visualmente del botón */
-}
         /* Toasts */
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
         .toast-notification { background: white; border-left: 4px solid var(--accent); padding: 15px 20px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 15px; animation: slideInRight 0.3s ease-out forwards; min-width: 250px; }
         .toast-content div { font-weight: 600; font-size: 0.9rem; }
         @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }
 
         /* UI Components */
         .card { background: var(--surface); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 20px; }
@@ -116,7 +113,7 @@
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- ESTILOS PARA EL CROPPER Y LOGO --- */
+        /* CROPPER */
         #crop-modal { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index: 5000; display:none; justify-content:center; align-items:center; flex-direction:column; padding: 20px; }
         .crop-container { max-width: 90%; max-height: 70vh; background: #333; overflow: hidden; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .crop-container img { max-width: 100%; display: block; }
@@ -145,8 +142,15 @@
         <div class="header">
             <div>
                 <h2 style="margin:0; font-size:1.1rem; color: var(--primary);">Studio Panel</h2>
-                <div id="store-code-display" class="store-code-badge" onclick="copyCode()">
-                    <i class="fas fa-spinner fa-spin"></i>
+                
+                <div style="display:flex; gap: 10px; margin-top: 5px; align-items: center;">
+                    <div id="store-code-display" class="store-code-badge" onclick="copyCode()" title="Copiar código">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </div>
+
+                    <button onclick="shareStoreLink()" class="btn-icon" style="background: var(--accent); color: white; box-shadow: 0 2px 5px rgba(99, 102, 241, 0.4); width: auto; padding: 0 12px; font-size: 0.85rem; height: 32px;" title="Promocionar Tienda">
+                        <i class="fas fa-share-alt"></i> <span style="margin-left:5px;">Promocionar</span>
+                    </button>
                 </div>
             </div>
             <button onclick="logout()" class="btn btn-outline"><i class="fas fa-sign-out-alt"></i></button>
@@ -223,8 +227,7 @@
             
             <div class="card">
                 <h3><i class="fas fa-image"></i> Identidad Visual</h3>
-                <p style="font-size:0.85rem; color:#64748b; margin-bottom:15px;">Sube tu logo. Se recortará automáticamente en formato horizontal (Banner).</p>
-                
+                <p style="font-size:0.85rem; color:#64748b; margin-bottom:15px;">Sube tu logo. Se recortará automáticamente.</p>
                 <div class="logo-preview-container" onclick="document.getElementById('logo-input').click()">
                     <div id="logo-placeholder">
                         <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 10px;"></i>
@@ -235,20 +238,20 @@
                 </div>
             </div>
 
-            <div class="card" style="border: 2px solid #fca5a5; background: #fff5f5;">
-                <h3 style="color: #dc2626;"><i class="fas fa-bell"></i> Notificaciones Push</h3>
-                <p style="font-size: 0.85rem; color: #7f1d1d; margin-bottom: 10px;">
-                    1. Asegúrate de haber aceptado los permisos.<br>
-                    2. Presiona el botón para verificar que la conexión con Supabase Funciona.
-                </p>
-                <button onclick="testNotification()" class="btn" style="background: #dc2626; color: white;">
-                    🔔 PROBAR CONEXIÓN
-                </button>
-            </div>
-
             <div class="card">
-                <h3><i class="fas fa-university"></i> Datos Bancarios</h3>
+                <h3><i class="fas fa-university"></i> Datos Bancarios & Link</h3>
                 <form id="config-form">
+                    
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f0fdf4; border: 1px dashed #22c55e; border-radius: 12px;">
+                        <label style="color: #15803d;">🔗 Enlace Personalizado (Alias)</label>
+                        <p style="font-size: 0.8rem; color: #166534; margin-bottom: 8px;">
+                            Elige un nombre corto para tu tienda.
+                        </p>
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <span style="font-weight: bold; color: #aaa;">?u=</span>
+                            <input type="text" id="conf-alias" placeholder="ej: modas-ana" style="margin:0; text-transform: lowercase; font-weight: bold;" oninput="this.value = this.value.replace(/[^a-z0-9-]/g, '')">
+                        </div>
+                    </div>
                     <label>Banco</label>
                     <input type="text" id="conf-banco" placeholder="Ej: Banco Venezuela">
                     <div class="form-grid">
@@ -275,23 +278,26 @@
                     <button type="submit" id="btn-save-config" class="btn btn-primary">Guardar Configuración</button>
                 </form>
             </div>
+            
+            <div class="card" style="border: 2px solid #fca5a5; background: #fff5f5;">
+                <h3 style="color: #dc2626;"><i class="fas fa-bell"></i> Notificaciones Push</h3>
+                <p style="font-size: 0.85rem; color: #7f1d1d; margin-bottom: 10px;">
+                    1. Acepta permisos.<br>2. Prueba la conexión.
+                </p>
+                <button onclick="testNotification()" class="btn" style="background: #dc2626; color: white;">🔔 PROBAR CONEXIÓN</button>
+            </div>
         </div>
     </div>
 
     <div id="crop-modal">
-        <div class="crop-container">
-            <img id="crop-image-target" src="">
-        </div>
+        <div class="crop-container"><img id="crop-image-target" src=""></div>
         <div class="crop-controls">
             <button onclick="cancelCrop()" class="btn btn-danger" style="width: auto;">Cancelar</button>
-            <button onclick="confirmCrop()" class="btn btn-primary" style="width: auto;">
-                <i class="fas fa-crop-alt"></i> Recortar y Guardar
-            </button>
+            <button onclick="confirmCrop()" class="btn btn-primary" style="width: auto;"><i class="fas fa-crop-alt"></i> Recortar y Guardar</button>
         </div>
     </div>
 
     <script>
-        // CONFIGURACIÓN SUPABASE
         const SUPABASE_URL = 'https://cirrapytmbnjlhxunkaq.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnJhcHl0bWJuamxoeHVua2FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NzAyMDAsImV4cCI6MjA3ODU0NjIwMH0.OtJiLGj1EvhPICFaA9ruL02Z9kSQ2jT0t3Smqph81C4';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -299,28 +305,22 @@
 
         let currentUser = null;
         let storeCode = null;
-        
-        // VARIABLES GLOBALES
         let activeChatClientId = null;
         let activeChannel = null;
         let productsCache = []; 
         let ordersCache = [];
         let editingId = null;
         const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-
-        // VARIABLES PARA REALTIME
         let globalChannel = null;
         let isReconnecting = false;
 
-        // --- LÓGICA DE NOTIFICACIONES PUSH ---
+        // --- FUNCIONES PUSH ---
         function urlBase64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
             const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
             const rawData = window.atob(base64);
             const outputArray = new Uint8Array(rawData.length);
-            for (let i = 0; i < rawData.length; ++i) {
-                outputArray[i] = rawData.charCodeAt(i);
-            }
+            for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
             return outputArray;
         }
 
@@ -328,23 +328,18 @@
             if ('serviceWorker' in navigator && 'PushManager' in window) {
                 try {
                     const registration = await navigator.serviceWorker.register('./sw.js');
-                    console.log('SW Registrado');
                     return registration;
-                } catch (error) {
-                    console.error('Error SW:', error);
-                }
+                } catch (error) { console.error('Error SW:', error); }
             }
         }
 
         async function subscribeUser() {
             const registration = await registerServiceWorker();
             if (!registration) return;
-
             const subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
             });
-
             if (currentUser) {
                 const subData = JSON.parse(JSON.stringify(subscription));
                 await supabase.from('push_subscriptions').upsert({
@@ -353,31 +348,23 @@
                     p256dh: subData.keys.p256dh,
                     auth: subData.keys.auth
                 }, { onConflict: 'endpoint' });
-                console.log("✅ Suscripción guardada");
             }
         }
 
         async function testNotification() {
-            const btn = event.target;
-            const txtOriginal = btn.innerText;
-            
+            const btn = event.target; const txtOriginal = btn.innerText;
             if(!currentUser) { alert("Inicia sesión primero"); return; }
-            
             btn.disabled = true; btn.innerText = "⏳ Configurando...";
             try {
                 await subscribeUser();
                 btn.innerText = "🚀 Enviando...";
                 const { error } = await supabase.functions.invoke('push-notifier', { body: { type: 'TEST', user_id: currentUser.id } });
-                if(error) throw error;
-                alert("✅ ¡Enviado!");
-            } catch (e) {
-                console.error(e); alert("Error: " + e.message);
-            } finally {
-                btn.disabled = false; btn.innerText = txtOriginal;
-            }
+                if(error) throw error; alert("✅ ¡Enviado!");
+            } catch (e) { console.error(e); alert("Error: " + e.message); } 
+            finally { btn.disabled = false; btn.innerText = txtOriginal; }
         }
 
-        // --- AUTENTICACIÓN Y ADMIN ---
+        // --- AUTH Y CARGA ---
         supabase.auth.onAuthStateChange((event, session) => {
             if (session) {
                 currentUser = session.user;
@@ -417,16 +404,13 @@
 
         async function logout() {
             if (globalChannel) await supabase.removeChannel(globalChannel);
-            if (activeChannel) await supabase.removeChannel(activeChannel);
-            await supabase.auth.signOut(); 
-            window.location.reload();
+            await supabase.auth.signOut(); window.location.reload();
         }
 
         // --- REALTIME ---
         async function setupGlobalRealtime() {
             if (globalChannel && ['SUBSCRIBED', 'JOINED'].includes(globalChannel.state)) return;
             if (globalChannel) await supabase.removeChannel(globalChannel);
-
             globalChannel = supabase.channel(`admin-global-${currentUser.id}-${Date.now()}`)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `tienda_id=eq.${currentUser.id}` }, payload => {
                 if(payload.new.tienda_id != currentUser.id) return;
@@ -436,42 +420,57 @@
                     if (currentChatId !== incomingClientId) { showToast('Nuevo Mensaje', 'Cliente envió mensaje'); updateDashboardCounters(); }
                 }
                 if(document.getElementById('tab-chats').classList.contains('active')) loadChatsList();
-                
                 const incomingClientId = String(payload.new.cliente_id);
-                const currentChatId = String(activeChatClientId);
-                if (activeChatClientId && incomingClientId === currentChatId && payload.new.enviado_por_rol !== 'dueño') {
+                if (activeChatClientId && incomingClientId === String(activeChatClientId) && payload.new.enviado_por_rol !== 'dueño') {
                     renderMessage(payload.new);
-                    setTimeout(() => { const c = document.getElementById('messages-container'); if(c) c.scrollTop = c.scrollHeight; }, 100);
                 }
             })
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, (payload) => {
-                showToast('Nuevo Pedido', '¡Revisa la lista!');
-                updateDashboardCounters();
+                showToast('Nuevo Pedido', '¡Revisa la lista!'); updateDashboardCounters();
                 if(document.getElementById('tab-pedidos').classList.contains('active')) loadOrders();
             })
             .subscribe((status) => {
-                if (status === 'SUBSCRIBED') {
-                    isReconnecting = false;
-                    const badge = document.getElementById('store-code-display');
-                    if(badge) badge.style.borderColor = '#22c55e'; 
-                } else if (status === 'TIMED_OUT' || status === 'CLOSED') {
-                    if (!isReconnecting) handleConnectionDrop();
-                }
+                if (status === 'SUBSCRIBED') { isReconnecting = false; document.getElementById('store-code-display').style.borderColor = '#22c55e'; }
+                else if (status === 'TIMED_OUT' || status === 'CLOSED') { if (!isReconnecting) handleConnectionDrop(); }
             });
         }
-
         function handleConnectionDrop() {
-            if (isReconnecting) return;
-            isReconnecting = true;
-            const badge = document.getElementById('store-code-display');
-            if(badge) badge.style.borderColor = '#ef4444'; 
+            if (isReconnecting) return; isReconnecting = true;
+            document.getElementById('store-code-display').style.borderColor = '#ef4444'; 
             setTimeout(() => { if (currentUser) setupGlobalRealtime(); }, 5000);
         }
 
+        // --- COMPARTIR / PROMOCIONAR ---
+        async function shareStoreLink() {
+            // Buscamos si hay un alias en el input de configuración o cargamos la url por defecto
+            const aliasInput = document.getElementById('conf-alias').value.trim();
+            const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+            
+            // Preferencia: Alias > Código
+            const finalParam = aliasInput ? `?u=${aliasInput}` : `?tienda=${storeCode}`;
+            const promoUrl = `${baseUrl}/index.html${finalParam}`;
+
+            const shareData = {
+                title: 'Mi Boutique Online',
+                text: '¡Hola! Te invito a visitar mi catálogo online y realizar tus pedidos aquí:',
+                url: promoUrl
+            };
+
+            if (navigator.share) {
+                try { await navigator.share(shareData); } catch (err) {}
+            } else {
+                try {
+                    await navigator.clipboard.writeText(promoUrl);
+                    showToast("¡Enlace Copiado!", "Pégalo en tus redes.");
+                } catch (err) { alert("Tu enlace es: " + promoUrl); }
+            }
+        }
+
+        function copyCode() { navigator.clipboard.writeText(storeCode); alert("Código copiado: " + storeCode); }
+
         // --- PRODUCTOS ---
         document.getElementById('product-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('btn-save'); btn.textContent = "Guardando..."; btn.disabled = true;
+            e.preventDefault(); const btn = document.getElementById('btn-save'); btn.textContent = "Guardando..."; btn.disabled = true;
             try {
                 const file = document.getElementById('imagen-input').files[0];
                 let imageUrl = null;
@@ -501,8 +500,7 @@
         });
 
         function resetForm() {
-            document.getElementById('product-form').reset();
-            editingId = null;
+            document.getElementById('product-form').reset(); editingId = null;
             document.getElementById('btn-save').textContent = "Publicar";
             document.getElementById('btn-cancel').style.display = 'none';
             document.getElementById('form-title').innerHTML = '<i class="fas fa-plus-circle"></i> Nuevo Producto';
@@ -517,104 +515,63 @@
         }
 
         function startEdit(id) {
-            const p = productsCache.find(x => x.id === id);
-            if(!p) return;
+            const p = productsCache.find(x => x.id === id); if(!p) return;
             editingId = id;
-            document.getElementById('nombre').value = p.nombre;
-            document.getElementById('precio').value = p.precio;
-            document.getElementById('descripcion').value = p.descripcion || '';
-            document.getElementById('stock').value = p.stock;
-            document.getElementById('categoria').value = p.categoria || '';
-            document.getElementById('destacado').checked = p.destacado;
+            document.getElementById('nombre').value = p.nombre; document.getElementById('precio').value = p.precio;
+            document.getElementById('descripcion').value = p.descripcion || ''; document.getElementById('stock').value = p.stock;
+            document.getElementById('categoria').value = p.categoria || ''; document.getElementById('destacado').checked = p.destacado;
             document.getElementById('form-title').innerHTML = '<i class="fas fa-edit"></i> Editando Producto';
             document.getElementById('btn-save').textContent = "Actualizar";
             document.getElementById('btn-cancel').style.display = 'inline-block';
             document.getElementById('form-card').scrollIntoView({ behavior: 'smooth' });
         }
-        
         async function deleteProduct(id) { if(confirm('¿Eliminar?')) { await supabase.from('productos').delete().eq('id', id); loadProducts(); } }
 
         // --- PEDIDOS ---
         let showingHistory = false; 
         async function loadOrders() {
             const { data } = await supabase.from('pedidos').select('*, clientes(nombre, telefono)').order('fecha', {ascending:false});
-            ordersCache = data || [];
-            updateDashboardCounters();
-            renderOrders();
+            ordersCache = data || []; updateDashboardCounters(); renderOrders();
         }
-
         function renderOrders() {
             const list = document.getElementById('orders-list');
             const visibleOrders = showingHistory ? ordersCache : ordersCache.filter(o => o.estado === 'pendiente');
-
             let html = `<div style="margin-bottom:15px; text-align:right;"><button onclick="toggleHistory()" class="btn btn-outline" style="font-size:0.8rem; padding: 5px 10px;">${showingHistory ? '<i class="fas fa-eye-slash"></i> Ocultar Completados' : '<i class="fas fa-history"></i> Ver Historial'}</button></div>`;
-
             if(visibleOrders.length === 0) { list.innerHTML = html + `<div style="text-align:center; padding:40px; color:#94a3b8;">No hay pedidos pendientes.</div>`; return; }
-
             html += visibleOrders.map(o => {
-                let itemsArray = [];
-                if (o.productos && o.productos.items) itemsArray = o.productos.items;
-                else if (Array.isArray(o.productos)) itemsArray = o.productos;
+                let itemsArray = []; if (o.productos && o.productos.items) itemsArray = o.productos.items; else if (Array.isArray(o.productos)) itemsArray = o.productos;
                 const productsHTML = itemsArray.length > 0 ? itemsArray.map(i => i.name).join(', ') : 'Sin detalle';
-
-                const actionBtn = o.estado === 'pendiente' 
-                    ? `<button onclick="completeOrder(${o.id})" class="btn btn-primary" style="padding: 10px; margin-top:12px; background:#22c55e;"><i class="fas fa-check"></i> DESPACHAR</button>` 
-                    : `<div style="margin-top:10px; padding:8px; background:#f0fdf4; color:#15803d; border-radius:8px; text-align:center; font-size:0.85rem;"><i class="fas fa-check-double"></i> Entregado</div>`;
-
-                return `<div class="order-item" style="border-left: 4px solid ${o.estado === 'pendiente' ? '#f97316' : '#22c55e'};">
-                    <div style="display:flex; justify-content:space-between;">
-                        <div style="font-weight:600;">${o.clientes?.nombre || 'Cliente'}</div>
-                        <span class="badge-pending">${o.estado.toUpperCase()}</span>
-                    </div>
-                    <div style="font-size:0.85rem; color:#64748b; margin-top:5px;">${productsHTML}</div>
-                    <div style="display:flex; justify-content:space-between; margin-top:10px; font-weight:bold;">
-                        <span>$${o.total}</span> <small>${new Date(o.fecha).toLocaleDateString()}</small>
-                    </div>${actionBtn}</div>`;
+                const actionBtn = o.estado === 'pendiente' ? `<button onclick="completeOrder(${o.id})" class="btn btn-primary" style="padding: 10px; margin-top:12px; background:#22c55e;"><i class="fas fa-check"></i> DESPACHAR</button>` : `<div style="margin-top:10px; padding:8px; background:#f0fdf4; color:#15803d; border-radius:8px; text-align:center; font-size:0.85rem;"><i class="fas fa-check-double"></i> Entregado</div>`;
+                return `<div class="order-item" style="border-left: 4px solid ${o.estado === 'pendiente' ? '#f97316' : '#22c55e'};"><div style="display:flex; justify-content:space-between;"><div style="font-weight:600;">${o.clientes?.nombre || 'Cliente'}</div><span class="badge-pending">${o.estado.toUpperCase()}</span></div><div style="font-size:0.85rem; color:#64748b; margin-top:5px;">${productsHTML}</div><div style="display:flex; justify-content:space-between; margin-top:10px; font-weight:bold;"><span>$${o.total}</span> <small>${new Date(o.fecha).toLocaleDateString()}</small></div>${actionBtn}</div>`;
             }).join('');
             list.innerHTML = html;
         }
-
         function toggleHistory() { showingHistory = !showingHistory; renderOrders(); }
-
         async function completeOrder(orderId) {
             if (!confirm("¿Entregado? Se descontará del stock.")) return;
             const order = ordersCache.find(o => o.id === orderId);
-            let items = [];
-            if (order.productos && order.productos.items) items = order.productos.items;
-            else if (Array.isArray(order.productos)) items = order.productos;
-            
+            let items = []; if (order.productos && order.productos.items) items = order.productos.items; else if (Array.isArray(order.productos)) items = order.productos;
             try {
-                for (const item of items) {
-                    const { data: curr } = await supabase.from('productos').select('stock').eq('id', item.id).single();
-                    if (curr) await supabase.from('productos').update({ stock: curr.stock - 1 }).eq('id', item.id);
-                }
-                await supabase.from('pedidos').update({ estado: 'completado' }).eq('id', orderId);
-                loadOrders(); loadProducts();
+                for (const item of items) { const { data: curr } = await supabase.from('productos').select('stock').eq('id', item.id).single(); if (curr) await supabase.from('productos').update({ stock: curr.stock - 1 }).eq('id', item.id); }
+                await supabase.from('pedidos').update({ estado: 'completado' }).eq('id', orderId); loadOrders(); loadProducts();
             } catch (e) { alert("Error: " + e.message); }
         }
 
         // --- UI & CHATS ---
         function showToast(title, message) {
             const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = 'toast-notification';
+            const toast = document.createElement('div'); toast.className = 'toast-notification';
             toast.innerHTML = `<i class="fas fa-bell"></i><div class="toast-content"><div>${title}</div><small>${message}</small></div>`;
-            container.appendChild(toast);
-            try { notificationSound.play().catch(()=>{}); } catch(e){}
+            container.appendChild(toast); try { notificationSound.play().catch(()=>{}); } catch(e){}
             setTimeout(() => { toast.remove(); }, 4000);
         }
-
         async function updateDashboardCounters() {
             const { count: unreadMsgs } = await supabase.from('mensajes').select('*', { count: 'exact', head: true }).eq('tienda_id', currentUser.id).eq('leido', false).eq('enviado_por_rol', 'cliente');
             const { count: pendingOrders } = await supabase.from('pedidos').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente'); 
-            
-            const bChat = document.getElementById('badge-chats');
-            const bOrd = document.getElementById('badge-orders');
+            const bChat = document.getElementById('badge-chats'); const bOrd = document.getElementById('badge-orders');
             bChat.textContent = unreadMsgs; bChat.style.display = unreadMsgs > 0 ? 'block' : 'none';
             bOrd.textContent = pendingOrders; bOrd.style.display = pendingOrders > 0 ? 'block' : 'none';
         }
-
-        function copyCode() { navigator.clipboard.writeText(storeCode); alert("Código copiado: " + storeCode); }
         function switchTab(t) {
             document.querySelectorAll('.panel-section').forEach(s => s.classList.remove('active'));
             document.getElementById('tab-'+t).classList.add('active');
@@ -622,7 +579,6 @@
             const btn = event.target.closest('.tab'); if(btn) btn.classList.add('active');
             if(t === 'chats') loadChatsList(); if(t === 'pedidos') loadOrders(); if(t === 'config') loadConfig();
         }
-
         async function loadChatsList() {
             const { data } = await supabase.from('mensajes').select('*, clientes(id, nombre)').eq('tienda_id', currentUser.id).order('created_at', { ascending: false }).limit(200);
             const grouped = {};
@@ -633,36 +589,24 @@
                 return `<div class="chat-list-item ${isUnread ? 'unread' : ''}" onclick="openChat('${item.client.id}', '${item.client.nombre}')"><div class="avatar">${item.client.nombre.substring(0,2).toUpperCase()}</div><div style="flex:1;"><div style="font-weight:600;">${item.client.nombre}</div><div style="font-size:0.85rem; color:#64748b;">${item.lastMsg.contenido.substring(0, 30)}...</div></div></div>`;
             }).join('') || '<div style="padding:20px; text-align:center;">No hay chats</div>';
         }
-
         async function openChat(clientId, clientName) {
             activeChatClientId = clientId;
-            document.getElementById('chats-inbox').style.display = 'none';
-            document.getElementById('chat-interface').classList.add('active');
-            document.getElementById('current-chat-name').textContent = clientName;
-            document.getElementById('current-chat-avatar').textContent = clientName.substring(0,2).toUpperCase();
+            document.getElementById('chats-inbox').style.display = 'none'; document.getElementById('chat-interface').classList.add('active');
+            document.getElementById('current-chat-name').textContent = clientName; document.getElementById('current-chat-avatar').textContent = clientName.substring(0,2).toUpperCase();
             document.getElementById('messages-container').innerHTML = 'Cargando...';
-            
             const { data } = await supabase.from('mensajes').select('*').eq('tienda_id', currentUser.id).eq('cliente_id', clientId).order('created_at', { ascending: true });
-            document.getElementById('messages-container').innerHTML = ''; 
-            if(data) data.forEach(renderMessage);
-            
+            document.getElementById('messages-container').innerHTML = ''; if(data) data.forEach(renderMessage);
             await supabase.from('mensajes').update({ leido: true }).eq('cliente_id', clientId).eq('enviado_por_rol', 'cliente');
             updateDashboardCounters();
-            
             if (activeChannel) await supabase.removeChannel(activeChannel);
             activeChannel = supabase.channel(`typing_${currentUser.id}_${clientId}`).on('broadcast', { event: 'typing' }, () => {
                 const ind = document.getElementById('typing-indicator'); ind.textContent = `${clientName} escribe...`; setTimeout(() => ind.textContent = '', 3000);
             }).subscribe();
         }
-
         function closeChat() {
-            activeChatClientId = null; 
-            if (activeChannel) { supabase.removeChannel(activeChannel); activeChannel = null; }
-            document.getElementById('chat-interface').classList.remove('active');
-            document.getElementById('chats-inbox').style.display = 'block'; 
-            loadChatsList();
+            activeChatClientId = null; if (activeChannel) { supabase.removeChannel(activeChannel); activeChannel = null; }
+            document.getElementById('chat-interface').classList.remove('active'); document.getElementById('chats-inbox').style.display = 'block'; loadChatsList();
         }
-
         function renderMessage(msg) {
             const div = document.createElement('div'); div.className = `msg ${msg.enviado_por_rol === 'dueño' ? 'me' : 'them'}`;
             let html = msg.contenido.replace(/\n/g, '<br>');
@@ -670,7 +614,6 @@
             div.innerHTML = html;
             const c = document.getElementById('messages-container'); c.appendChild(div); c.scrollTop = c.scrollHeight;
         }
-
         async function sendMessage(e) {
             e.preventDefault(); const input = document.getElementById('msg-input'); const text = input.value.trim();
             if(!text || !activeChatClientId) return; input.value = '';
@@ -679,89 +622,60 @@
         }
         function notifyTyping() { if(activeChannel) activeChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); }
 
-        // --- LOGO, CROPPER Y CONFIGURACIÓN ---
-        
-        let cropper;
-        const logoInput = document.getElementById('logo-input');
-        const cropModal = document.getElementById('crop-modal');
-        const imageTarget = document.getElementById('crop-image-target');
-        
-        logoInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (evt) => {
-                    imageTarget.src = evt.target.result;
-                    openCropModal();
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        function openCropModal() {
-            cropModal.style.display = 'flex';
-            if(cropper) cropper.destroy();
-            cropper = new Cropper(imageTarget, { aspectRatio: 4 / 1, viewMode: 2, autoCropArea: 1 });
-        }
-
-        function cancelCrop() {
-            cropModal.style.display = 'none';
-            logoInput.value = ''; 
-            if(cropper) cropper.destroy();
-        }
-
+        // --- CROPPER Y CONFIG ---
+        let cropper; const logoInput = document.getElementById('logo-input'); const cropModal = document.getElementById('crop-modal'); const imageTarget = document.getElementById('crop-image-target');
+        logoInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (evt) => { imageTarget.src = evt.target.result; openCropModal(); }; reader.readAsDataURL(file); } });
+        function openCropModal() { cropModal.style.display = 'flex'; if(cropper) cropper.destroy(); cropper = new Cropper(imageTarget, { aspectRatio: 4 / 1, viewMode: 2, autoCropArea: 1 }); }
+        function cancelCrop() { cropModal.style.display = 'none'; logoInput.value = ''; if(cropper) cropper.destroy(); }
         async function confirmCrop() {
             if(!cropper) return;
             const canvas = cropper.getCroppedCanvas({ width: 600, height: 150 });
             canvas.toBlob(async (blob) => {
-                const btnConfirm = document.querySelector('#crop-modal .btn-primary');
-                const txtOriginal = btnConfirm.innerHTML;
+                const btnConfirm = document.querySelector('#crop-modal .btn-primary'); const txtOriginal = btnConfirm.innerHTML;
                 btnConfirm.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo...'; btnConfirm.disabled = true;
                 try {
                     const fileName = `logo_${currentUser.id}_${Date.now()}.png`;
                     const { error: uploadErr } = await supabase.storage.from('tienda-logos').upload(fileName, blob, { contentType: 'image/png', upsert: true });
                     if (uploadErr) throw uploadErr;
                     const { data: urlData } = supabase.storage.from('tienda-logos').getPublicUrl(fileName);
-                    const { error: dbErr } = await supabase.from('usuarios').update({ logo_url: urlData.publicUrl }).eq('id', currentUser.id);
-                    if (dbErr) throw dbErr;
-                    alert('¡Logo actualizado con éxito!');
-                    updateAdminLogoUI(urlData.publicUrl);
-                    cancelCrop();
-                } catch (error) {
-                    alert('Error al subir logo: ' + error.message);
-                } finally {
-                    btnConfirm.innerHTML = txtOriginal; btnConfirm.disabled = false;
-                }
+                    await supabase.from('usuarios').update({ logo_url: urlData.publicUrl }).eq('id', currentUser.id);
+                    alert('¡Logo actualizado!'); updateAdminLogoUI(urlData.publicUrl); cancelCrop();
+                } catch (error) { alert('Error: ' + error.message); } finally { btnConfirm.innerHTML = txtOriginal; btnConfirm.disabled = false; }
             }, 'image/png');
         }
-
         function updateAdminLogoUI(url) {
-            const preview = document.getElementById('logo-img-preview');
-            const placeholder = document.getElementById('logo-placeholder');
-            if(url) {
-                preview.src = url; preview.style.display = 'block'; placeholder.style.display = 'none';
-            }
+            const preview = document.getElementById('logo-img-preview'); const placeholder = document.getElementById('logo-placeholder');
+            if(url) { preview.src = url; preview.style.display = 'block'; placeholder.style.display = 'none'; }
         }
 
         document.getElementById('config-form').addEventListener('submit', async (e) => {
             e.preventDefault(); const btn = document.getElementById('btn-save-config'); btn.textContent = "Guardando..."; btn.disabled = true;
             try {
-                const file = document.getElementById('qr-input').files[0];
-                let qrUrl = document.getElementById('qr-preview').src; 
+                const file = document.getElementById('qr-input').files[0]; let qrUrl = document.getElementById('qr-preview').src; 
                 if (file) {
                     const fileName = `qr_${currentUser.id}_${Date.now()}.${file.name.split('.').pop()}`;
                     await supabase.storage.from('imagenes-pagos').upload(fileName, file, { upsert: true });
                     const { data } = supabase.storage.from('imagenes-pagos').getPublicUrl(fileName); qrUrl = data.publicUrl;
                 }
+                
+                const aliasInput = document.getElementById('conf-alias').value.trim().toLowerCase();
+                
                 const updates = {
                     banco_nombre: document.getElementById('conf-banco').value,
                     banco_titular: document.getElementById('conf-titular').value,
                     banco_ci: document.getElementById('conf-ci').value,
                     banco_numero: document.getElementById('conf-numero').value,
                     banco_tipo: document.getElementById('conf-tipo').value,
+                    slug: aliasInput || null, // Guardamos el alias
                     qr_imagen_url: qrUrl && qrUrl.startsWith('http') ? qrUrl : null
                 };
-                await supabase.from('usuarios').update(updates).eq('id', currentUser.id);
+                
+                const { error } = await supabase.from('usuarios').update(updates).eq('id', currentUser.id);
+                if (error) {
+                    if (error.code === '23505') throw new Error("¡Ese nombre de tienda ya existe!");
+                    throw error;
+                }
+
                 alert("¡Configuración guardada!");
                 if(qrUrl.startsWith('http')) { document.getElementById('qr-preview').src = qrUrl; document.getElementById('qr-preview').style.display = 'block'; }
             } catch (err) { alert("Error: " + err.message); } finally { btn.disabled = false; btn.textContent = "Guardar Configuración"; }
@@ -770,16 +684,16 @@
         async function loadConfig() {
             const { data } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
             if (!data) return;
-            // Datos Bancarios
             document.getElementById('conf-banco').value = data.banco_nombre || '';
             document.getElementById('conf-titular').value = data.banco_titular || '';
             document.getElementById('conf-ci').value = data.banco_ci || '';
             document.getElementById('conf-numero').value = data.banco_numero || '';
             if(data.banco_tipo) document.getElementById('conf-tipo').value = data.banco_tipo;
             if (data.qr_imagen_url) { document.getElementById('qr-preview').src = data.qr_imagen_url; document.getElementById('qr-preview').style.display = 'block'; }
-            
-            // Logo
             if(data.logo_url) updateAdminLogoUI(data.logo_url);
+            
+            // Cargar alias
+            if(data.slug) document.getElementById('conf-alias').value = data.slug;
         }
     </script>
 </body>
