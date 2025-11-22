@@ -86,19 +86,26 @@
 </head>
 <body>
 
-    <div id="login-overlay">
-        <div class="login-card">
-            <h1 style="margin-bottom: 10px;">Bienvenido</h1>
-            <p style="color:#6b7280; margin-bottom: 30px;">Ingresa tus datos para entrar a la tienda.</p>
-            <form id="login-form">
-                <input type="text" id="reg-code" class="login-input" placeholder="CÓDIGO DE TIENDA (Ej: TIENDA-XY12)" style="text-transform:uppercase; font-weight:bold; text-align:center; letter-spacing: 1px;" required>
-                <input type="text" id="reg-name" class="login-input" placeholder="Tu Nombre" required>
-                <input type="tel" id="reg-phone" class="login-input" placeholder="Tu WhatsApp" required>
-                <button type="submit" class="btn-add" style="padding: 15px; font-size: 1rem;">Entrar a Tienda</button>
-            </form>
-            <p id="login-error" style="color: red; margin-top: 10px; font-size: 0.9rem;"></p>
-        </div>
+   <div id="login-overlay" style="display: none;"> <div class="login-card">
+        <h1 id="login-title" style="margin-bottom: 10px;">Bienvenido</h1>
+        <p id="login-desc" style="color:#6b7280; margin-bottom: 30px;">Necesitamos algunos datos para continuar.</p>
+        
+        <form id="login-form">
+            <div id="step-store" style="display:none;">
+                <input type="text" id="reg-code" class="login-input" placeholder="CÓDIGO DE TIENDA (Ej: TIENDA-XY12)" style="text-transform:uppercase; font-weight:bold; text-align:center; letter-spacing: 1px;">
+            </div>
+
+            <div id="step-client" style="display:none;">
+                <input type="text" id="reg-name" class="login-input" placeholder="Tu Nombre">
+                <input type="tel" id="reg-phone" class="login-input" placeholder="Tu WhatsApp">
+            </div>
+
+            <button type="submit" id="btn-login-action" class="btn-add" style="padding: 15px; font-size: 1rem;">Continuar</button>
+        </form>
+        <p id="login-error" style="color: red; margin-top: 10px; font-size: 0.9rem;"></p>
+        <button id="btn-cancel-login" type="button" onclick="closeLoginModal()" style="background:none; border:none; color:#6b7280; margin-top:10px; cursor:pointer; display:none;">Cancelar</button>
     </div>
+</div>
 
     <header>
         <div id="store-branding" style="font-weight: 700; font-size: 1.2rem; display:flex; align-items:center;">
@@ -195,332 +202,436 @@
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://cirrapytmbnjlhxunkaq.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnJhcHl0bWJuamxoeHVua2FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NzAyMDAsImV4cCI6MjA3ODU0NjIwMH0.OtJiLGj1EvhPICFaA9ruL02Z9kSQ2jT0t3Smqph81C4';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const SUPABASE_URL = 'https://cirrapytmbnjlhxunkaq.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnJhcHl0bWJuamxoeHVua2FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NzAyMDAsImV4cCI6MjA3ODU0NjIwMH0.OtJiLGj1EvhPICFaA9ruL02Z9kSQ2jT0t3Smqph81C4';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let session = {
-            storeId: localStorage.getItem('storeId'),
-            clientId: localStorage.getItem('clientId'),
-            clientName: localStorage.getItem('clientName')
-        };
-        
-        let chatChannel = null;
-        let cart = [];
-        let productsCache = []; 
-        let storePaymentInfo = null;
-        
-        // VARIABLES PARA NOTIFICACIONES
-        let unreadCount = 0;
-        const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    // Estado de la sesión
+    let session = {
+        storeId: localStorage.getItem('storeId'),
+        storeCode: localStorage.getItem('storeCode'), // Guardamos el código visible también
+        clientId: localStorage.getItem('clientId'),
+        clientName: localStorage.getItem('clientName')
+    };
+    
+    let chatChannel = null;
+    let cart = [];
+    let productsCache = []; 
+    let storePaymentInfo = null;
+    let unreadCount = 0;
+    const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
-        if (session.storeId && session.clientId) {
+    // --- INICIO: LÓGICA DE ARRANQUE ---
+    window.addEventListener('DOMContentLoaded', async () => {
+        // 1. Buscamos si hay un código de tienda en la URL (Ej: index.html?tienda=TIENDA-123)
+        const params = new URLSearchParams(window.location.search);
+        const urlStoreCode = params.get('tienda');
+
+        if (urlStoreCode) {
+            // Si viene por URL, intentamos cargar esa tienda directamente
+            await resolveStore(urlStoreCode.toUpperCase());
+        } else if (session.storeId) {
+            // Si ya visitó antes, cargamos la tienda guardada
             initApp();
+        } else {
+            // Si no hay URL ni historial, pedimos el código de tienda
+            promptStoreCode();
         }
+    });
 
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const code = document.getElementById('reg-code').value.trim().toUpperCase();
-            const name = document.getElementById('reg-name').value.trim();
-            const phone = document.getElementById('reg-phone').value.trim();
-            const btn = e.target.querySelector('button');
-            const err = document.getElementById('login-error');
+    async function resolveStore(code) {
+        try {
+            const { data: store, error } = await supabase.from('usuarios').select('id, codigo_tienda').eq('codigo_tienda', code).single();
+            if (error || !store) throw new Error("Tienda no encontrada");
 
-            btn.disabled = true; btn.textContent = "Verificando...";
-            err.textContent = "";
+            // Guardamos la tienda en local, pero NO requerimos cliente aún
+            localStorage.setItem('storeId', store.id);
+            localStorage.setItem('storeCode', store.codigo_tienda);
+            session.storeId = store.id;
+            session.storeCode = store.codigo_tienda;
 
-            try {
-                const { data: store, error: storeErr } = await supabase.from('usuarios').select('id').eq('codigo_tienda', code).single();
-                if (storeErr || !store) throw new Error("Código de tienda inválido.");
+            initApp(); // Arranca la app (carga catálogo)
+        } catch (e) {
+            alert("El código de tienda del enlace es inválido.");
+            promptStoreCode();
+        }
+    }
 
+    function promptStoreCode() {
+        document.getElementById('login-overlay').style.display = 'flex';
+        document.getElementById('step-store').style.display = 'block';
+        document.getElementById('step-client').style.display = 'none';
+        document.getElementById('login-title').textContent = "Ingresar a Tienda";
+        document.getElementById('login-desc').textContent = "Introduce el código de la tienda para ver el catálogo.";
+        document.getElementById('btn-cancel-login').style.display = 'none'; // No se puede cancelar si no hay tienda
+    }
+
+    function promptClientRegister() {
+        return new Promise((resolve) => {
+            const overlay = document.getElementById('login-overlay');
+            overlay.style.display = 'flex';
+            document.getElementById('step-store').style.display = 'none';
+            document.getElementById('step-client').style.display = 'block';
+            document.getElementById('login-title').textContent = "Finalizar Compra";
+            document.getElementById('login-desc').textContent = "Dinos tu nombre y WhatsApp para contactarte sobre tu pedido.";
+            document.getElementById('btn-cancel-login').style.display = 'block';
+            
+            // Hack simple para saber que estamos en modo registro de cliente
+            overlay.dataset.mode = 'register_client';
+        });
+    }
+
+    function closeLoginModal() {
+        document.getElementById('login-overlay').style.display = 'none';
+    }
+
+    // Manejo unificado del formulario de Login
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-login-action');
+        const err = document.getElementById('login-error');
+        const overlay = document.getElementById('login-overlay');
+        
+        btn.disabled = true; 
+        err.textContent = "";
+
+        try {
+            // CASO 1: Estamos ingresando solo el CÓDIGO DE TIENDA
+            if (document.getElementById('step-store').style.display === 'block') {
+                const code = document.getElementById('reg-code').value.trim().toUpperCase();
+                if (!code) throw new Error("Ingresa un código.");
+                await resolveStore(code);
+                closeLoginModal();
+            } 
+            // CASO 2: Estamos registrando al CLIENTE (Nombre/Tel)
+            else if (document.getElementById('step-client').style.display === 'block') {
+                const name = document.getElementById('reg-name').value.trim();
+                const phone = document.getElementById('reg-phone').value.trim();
+                
+                if(!name || !phone) throw new Error("Todos los campos son obligatorios.");
+
+                // Verificar o crear cliente
                 let { data: client } = await supabase.from('clientes').select('id').eq('telefono', phone).single();
+                
                 if (!client) {
-                    const { data: newClient, error: createErr } = await supabase.from('clientes').insert({ nombre: name, telefono: phone, ultima_tienda_visitada: code }).select().single();
+                    const { data: newClient, error: createErr } = await supabase.from('clientes').insert({ 
+                        nombre: name, 
+                        telefono: phone, 
+                        ultima_tienda_visitada: session.storeCode 
+                    }).select().single();
                     if (createErr) throw createErr;
                     client = newClient;
+                } else {
+                    // Actualizar última visita
+                    await supabase.from('clientes').update({ nombre: name, ultima_tienda_visitada: session.storeCode }).eq('id', client.id);
                 }
 
-                localStorage.setItem('storeId', store.id);
+                // Guardar sesión persistente
                 localStorage.setItem('clientId', client.id);
                 localStorage.setItem('clientName', name);
+                session.clientId = client.id;
+                session.clientName = name;
+
+                // Actualizar UI
+                document.getElementById('client-info').textContent = `Hola, ${name}`;
+                closeLoginModal();
                 
-                session = { storeId: store.id, clientId: client.id, clientName: name };
-                initApp();
-
-            } catch (error) {
-                err.textContent = error.message;
-                btn.disabled = false; btn.textContent = "Entrar a Tienda";
+                // Si estábamos intentando hacer checkout o chat, relanzamos initChat
+                initChat();
+                alert("¡Registro exitoso! Ya puedes confirmar tu pedido.");
             }
-        });
 
-        function initApp() {
-            document.getElementById('login-overlay').style.display = 'none';
+        } catch (error) {
+            err.textContent = error.message;
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    // --- FIN LÓGICA ARRANQUE ---
+
+    function initApp() {
+        document.getElementById('login-overlay').style.display = 'none';
+        // Mostrar nombre si ya lo tenemos, sino mostrar genérico
+        if(session.clientName) {
             document.getElementById('client-info').textContent = `Hola, ${session.clientName}`;
-            loadCatalog();
-            initChat();
+            initChat(); // Solo iniciamos chat si hay cliente
+        } else {
+            document.getElementById('client-info').textContent = "Bienvenido a la tienda";
         }
-
-        async function loadCatalog() {
-            const { data } = await supabase.from('productos').select('*').eq('creado_por', session.storeId).order('id', { ascending: false });
-            productsCache = data || [];
-            const grid = document.getElementById('products-grid');
-            
-            if(!data || data.length === 0) { 
-                grid.innerHTML = '<p style="grid-column:1/-1; text-align:center;">Esta tienda aún no tiene productos.</p>'; 
-            } else {
-                grid.innerHTML = data.map(p => `
-                    <div class="card">
-                        <img src="${p.imagen_url || 'https://via.placeholder.com/300'}" class="card-img">
-                        <div class="card-body">
-                            <div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div>
-                            <div style="color:var(--accent); font-weight:bold; margin-bottom:5px;">$${p.precio}</div>
-                            <div style="font-size:0.75rem; color:#64748b; margin-bottom:10px;">${p.descripcion || ''}</div>
-                            <button class="btn-add" onclick="addToCart(${p.id})">Agregar +</button>
-                        </div>
-                    </div>`).join('');
-            }
-
-            // CARGAR DATOS DE LA TIENDA (PAGOS + LOGO)
-            const { data: storeData } = await supabase.from('usuarios').select('*').eq('id', session.storeId).single();
-            if(storeData) {
-                storePaymentInfo = storeData;
-                renderPaymentInfo();
-
-                // LÓGICA PARA MOSTRAR LOGO SI EXISTE
-                if (storeData.logo_url) {
-                    const brandingDiv = document.getElementById('store-branding');
-                    // Reemplazamos el texto/icono por la imagen
-                    brandingDiv.innerHTML = `<img src="${storeData.logo_url}" alt="Logo Tienda" style="height: 40px; max-width: 180px; object-fit: contain;">`;
-                }
-            }
-        }
-
-        function renderPaymentInfo() {
-            if(!storePaymentInfo || !storePaymentInfo.banco_numero) return; 
-            document.getElementById('payment-details').style.display = 'block'; 
-            document.getElementById('pay-data-content').innerHTML = `
-                <div class="payment-row"><span class="payment-label">Banco:</span> <span>${storePaymentInfo.banco_nombre || ''}</span></div>
-                <div class="payment-row"><span class="payment-label">Titular:</span> <span>${storePaymentInfo.banco_titular || ''}</span></div>
-                <div class="payment-row"><span class="payment-label">C.I./RIF:</span> <span>${storePaymentInfo.banco_ci || ''}</span></div>
-                <div class="payment-row"><span class="payment-label">Tipo:</span> <span>${storePaymentInfo.banco_tipo || ''}</span></div>
-                <div style="margin-top:5px;">
-                    <span class="payment-label">Cuenta / Teléfono:</span><br>
-                    <span class="payment-val">${storePaymentInfo.banco_numero}</span>
-                    <i class="fas fa-copy" onclick="navigator.clipboard.writeText('${storePaymentInfo.banco_numero}'); alert('Copiado!')" style="cursor:pointer; color:var(--accent); margin-left:5px;"></i>
-                </div>
-            `;
-            const qrContainer = document.getElementById('pay-qr-container');
-            if(storePaymentInfo.qr_imagen_url) {
-                qrContainer.style.display = 'block';
-                qrContainer.innerHTML = `<button type="button" class="btn-open-qr" onclick="openQRModal('${storePaymentInfo.qr_imagen_url}')"><i class="fas fa-qrcode"></i> Pagar por QR</button>`;
-            } else {
-                qrContainer.style.display = 'none';
-            }
-        }
-
-        function openQRModal(url) { document.getElementById('modal-qr-img').src = url; document.getElementById('qr-modal').classList.add('open'); }
-        function closeQRModal() { document.getElementById('qr-modal').classList.remove('open'); }
-
-        function addToCart(id) {
-            const product = productsCache.find(p => p.id === id);
-            if(!product) return;
-            cart.push(product);
-            updateCartUI();
-            if(navigator.vibrate) navigator.vibrate(50);
-        }
-
-        function removeFromCart(index) { cart.splice(index, 1); updateCartUI(); }
-
-        function updateCartUI() {
-            const total = cart.reduce((sum, item) => sum + item.precio, 0);
-            document.getElementById('cart-total-badge').textContent = `$${total.toFixed(2)}`;
-            document.getElementById('cart-final-total').textContent = `$${total.toFixed(2)}`;
-
-            const container = document.getElementById('cart-items-container');
-            if (cart.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:20px;">Tu carrito está vacío.</p>';
-            } else {
-                container.innerHTML = cart.map((item, index) => `
-                    <div class="cart-item">
-                        <div class="cart-item-info">
-                            <div>${item.nombre}</div>
-                            <small style="color:#64748b;">$${item.precio}</small>
-                        </div>
-                        <button class="btn-remove" onclick="removeFromCart(${index})"><i class="fas fa-trash"></i></button>
-                    </div>`).join('');
-            }
-        }
-
-        function toggleDeliveryFields() {
-            const method = document.getElementById('delivery-method').value;
-            document.getElementById('delivery-info').style.display = method === 'delivery' ? 'block' : 'none';
-        }
-
-        function getGeoLocation() {
-            const btn = document.querySelector('.btn-geo');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando satélites...';
-            if (!navigator.geolocation) return alert("Geolocalización no soportada.");
-
-            navigator.geolocation.getCurrentPosition((position) => {
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-                const link = `https://www.google.com/maps?q=${lat},${lng}`;
-                const textArea = document.getElementById('delivery-address');
-                textArea.value = `📍 Ubicación GPS Exacta: ${link}\n\n` + textArea.value;
-                btn.innerHTML = '<i class="fas fa-check"></i> ¡Ubicación Precisa Agregada!';
-                setTimeout(() => btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Actualizar ubicación', 3000);
-            }, () => {
-                alert("No se pudo obtener la ubicación.");
-                btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Intentar de nuevo';
-            }, { enableHighAccuracy: true, timeout: 10000 });
-        }
-
-        // --- ENVÍO DE PEDIDO ---
-
-        async function checkout() {
-            if (cart.length === 0) return alert("Agrega productos primero.");
-            const method = document.getElementById('delivery-method').value;
-            const address = document.getElementById('delivery-address').value.trim();
-            if (method === 'delivery' && !address) return alert("Ingresa dirección para Delivery.");
-
-            const btn = document.querySelector('.btn-checkout');
-            const originalText = btn.textContent;
-            btn.disabled = true; btn.textContent = "Enviando...";
-
-            const total = cart.reduce((sum, item) => sum + item.precio, 0);
-            const orderMetadata = { items: cart.map(p => ({ id: p.id, name: p.nombre, price: p.precio })), delivery: { method, address: method === 'delivery' ? address : 'N/A' } };
-
-            try {
-                await supabase.from('pedidos').insert({ cliente_id: session.clientId, total: total, productos: orderMetadata, estado: 'pendiente' });
-                
-                let autoMsg = `✅ ¡Nuevo pedido! Total: $${total.toFixed(2)} (${cart.length} items).\n${method === 'delivery' ? '🛵 Delivery: ' + address : '📍 Retiro en Tienda.'}`;
-                if(storePaymentInfo && storePaymentInfo.banco_numero) autoMsg += `\n\n💳 He visto los datos. Enviaré comprobante por aquí.`;
-
-                await supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: autoMsg });
-                renderMsg({ contenido: autoMsg, enviado_por_rol: 'cliente' });
-                
-                cart = []; updateCartUI(); toggleCart();
-                alert("¡Pedido enviado correctamente!");
-                toggleChat(); // Abrir chat automáticamente
-            } catch (err) {
-                alert("Error: " + err.message);
-            } finally {
-                btn.disabled = false; btn.textContent = originalText;
-            }
-        }
-
-        // --- CHAT CON NOTIFICACIONES ---
-        async function initChat() {
-            const { data } = await supabase.from('mensajes').select('*').eq('tienda_id', session.storeId).eq('cliente_id', session.clientId).order('created_at', { ascending: true });
-            if(data) data.forEach(renderMsg);
-            scrollToBottom();
-
-            chatChannel = supabase.channel(`chat_room_${session.storeId}_${session.clientId}`)
-                .on('broadcast', { event: 'typing' }, () => {
-                    document.getElementById('typing-ind').textContent = "La tienda está escribiendo...";
-                    setTimeout(() => document.getElementById('typing-ind').textContent = '', 3000);
-                }).subscribe();
-
-            // ESCUCHAR MENSAJES NUEVOS Y NOTIFICAR
-            supabase.channel('client-inbox-' + session.clientId).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `cliente_id=eq.${session.clientId}` }, payload => {
-                
-                // Si el mensaje NO lo envié yo (lo envió la tienda)
-                if (payload.new.enviado_por_rol !== 'cliente') {
-                    renderMsg(payload.new);
-                    
-                    const chatBox = document.getElementById('chat-box');
-                    // Si la ventana de chat está CERRADA, aumentamos badge y sonido
-                    if (!chatBox.classList.contains('open')) {
-                        unreadCount++;
-                        updateBadgeUI();
-                        try { msgSound.play().catch(e=>{}); } catch(e){}
-                    }
-                }
-            }).subscribe();
-        }
-
-        function updateBadgeUI() {
-            const badge = document.getElementById('unread-badge');
-            if (unreadCount > 0) {
-                badge.style.display = 'flex';
-                badge.textContent = unreadCount;
-            } else {
-                badge.style.display = 'none';
-            }
-        }
-
-        function renderMsg(msg) {
-            const div = document.createElement('div');
-            div.className = `msg ${msg.enviado_por_rol === 'cliente' ? 'me' : 'store'}`;
-            div.innerHTML = msg.contenido.replace(/\n/g, '<br>');
-            document.getElementById('chat-msgs').appendChild(div);
-            scrollToBottom();
-        }
-
-        // Subida de imágenes en chat
-        async function uploadChatImage(inputElement) {
-            const file = inputElement.files[0];
-            if (!file) return;
-
-            const btnIcon = document.querySelector('label[for="chat-file"] i');
-            const originalClass = btnIcon.className;
-            btnIcon.className = "fas fa-spinner fa-spin"; 
-
-            try {
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${session.storeId}/${session.clientId}_${Date.now()}.${fileExt}`;
-
-                const { error: uploadErr } = await supabase.storage.from('chat-adjuntos').upload(fileName, file);
-                if (uploadErr) throw uploadErr;
-
-                const { data } = supabase.storage.from('chat-adjuntos').getPublicUrl(fileName);
-                const imgContent = `Comprobante de pago:<br><img src="${data.publicUrl}" class="chat-img" onclick="window.open(this.src, '_blank')">`;
-
-                await supabase.from('mensajes').insert({
-                    tienda_id: session.storeId,
-                    cliente_id: session.clientId,
-                    enviado_por_rol: 'cliente',
-                    contenido: imgContent
-                });
-
-                renderMsg({ contenido: imgContent, enviado_por_rol: 'cliente' });
-
-            } catch (error) {
-                alert("Error al subir imagen: " + error.message);
-            } finally {
-                btnIcon.className = originalClass;
-                inputElement.value = ''; 
-            }
-        }
-
-        async function sendChatMsg(e) {
-            e.preventDefault();
-            const input = document.getElementById('chat-input');
-            const text = input.value.trim();
-            if(!text) return;
-
-            input.value = '';
-            renderMsg({ contenido: text, enviado_por_rol: 'cliente' });
-            await supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: text });
-        }
-
-        function notifyTyping() { if(chatChannel) chatChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); }
         
-        function toggleChat() { 
-            const chatBox = document.getElementById('chat-box');
-            chatBox.classList.toggle('open'); 
-            
-            // Al abrir, limpiamos notificaciones
-            if (chatBox.classList.contains('open')) {
-                unreadCount = 0;
-                updateBadgeUI();
-                scrollToBottom();
-            }
+        loadCatalog();
+    }
+
+    async function loadCatalog() {
+        const { data } = await supabase.from('productos').select('*').eq('creado_por', session.storeId).order('id', { ascending: false });
+        productsCache = data || [];
+        const grid = document.getElementById('products-grid');
+        
+        if(!data || data.length === 0) { 
+            grid.innerHTML = '<p style="grid-column:1/-1; text-align:center;">Esta tienda aún no tiene productos.</p>'; 
+        } else {
+            grid.innerHTML = data.map(p => `
+                <div class="card">
+                    <img src="${p.imagen_url || 'https://via.placeholder.com/300'}" class="card-img">
+                    <div class="card-body">
+                        <div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div>
+                        <div style="color:var(--accent); font-weight:bold; margin-bottom:5px;">$${p.precio}</div>
+                        <div style="font-size:0.75rem; color:#64748b; margin-bottom:10px;">${p.descripcion || ''}</div>
+                        <button class="btn-add" onclick="addToCart(${p.id})">Agregar +</button>
+                    </div>
+                </div>`).join('');
         }
 
-        function toggleCart() { document.getElementById('cart-overlay').classList.toggle('open'); }
+        // Cargar datos de tienda
+        const { data: storeData } = await supabase.from('usuarios').select('*').eq('id', session.storeId).single();
+        if(storeData) {
+            storePaymentInfo = storeData;
+            renderPaymentInfo();
+            if (storeData.logo_url) {
+                document.getElementById('store-branding').innerHTML = `<img src="${storeData.logo_url}" alt="Logo" style="height: 40px; max-width: 180px; object-fit: contain;">`;
+            }
+        }
+    }
 
-        function scrollToBottom() { const d = document.getElementById('chat-msgs'); d.scrollTop = d.scrollHeight; }
-    </script>
+    // ... FUNCIONES DE PAGO IGUAL QUE ANTES ...
+    function renderPaymentInfo() {
+        if(!storePaymentInfo || !storePaymentInfo.banco_numero) return; 
+        document.getElementById('payment-details').style.display = 'block'; 
+        document.getElementById('pay-data-content').innerHTML = `
+            <div class="payment-row"><span class="payment-label">Banco:</span> <span>${storePaymentInfo.banco_nombre || ''}</span></div>
+            <div class="payment-row"><span class="payment-label">Titular:</span> <span>${storePaymentInfo.banco_titular || ''}</span></div>
+            <div class="payment-row"><span class="payment-label">C.I./RIF:</span> <span>${storePaymentInfo.banco_ci || ''}</span></div>
+            <div class="payment-row"><span class="payment-label">Tipo:</span> <span>${storePaymentInfo.banco_tipo || ''}</span></div>
+            <div style="margin-top:5px;">
+                <span class="payment-label">Cuenta / Teléfono:</span><br>
+                <span class="payment-val">${storePaymentInfo.banco_numero}</span>
+                <i class="fas fa-copy" onclick="navigator.clipboard.writeText('${storePaymentInfo.banco_numero}'); alert('Copiado!')" style="cursor:pointer; color:var(--accent); margin-left:5px;"></i>
+            </div>
+        `;
+        const qrContainer = document.getElementById('pay-qr-container');
+        if(storePaymentInfo.qr_imagen_url) {
+            qrContainer.style.display = 'block';
+            qrContainer.innerHTML = `<button type="button" class="btn-open-qr" onclick="openQRModal('${storePaymentInfo.qr_imagen_url}')"><i class="fas fa-qrcode"></i> Pagar por QR</button>`;
+        }
+    }
+    function openQRModal(url) { document.getElementById('modal-qr-img').src = url; document.getElementById('qr-modal').classList.add('open'); }
+    function closeQRModal() { document.getElementById('qr-modal').classList.remove('open'); }
+
+    // ... CARRITO Y UI IGUAL QUE ANTES ...
+    function addToCart(id) {
+        const product = productsCache.find(p => p.id === id);
+        if(!product) return;
+        cart.push(product);
+        updateCartUI();
+        if(navigator.vibrate) navigator.vibrate(50);
+        
+        // Feedback visual
+        const floatBtn = document.querySelector('.cart-float');
+        floatBtn.style.transform = 'scale(1.1)';
+        setTimeout(()=> floatBtn.style.transform = 'scale(1)', 200);
+    }
+
+    function removeFromCart(index) { cart.splice(index, 1); updateCartUI(); }
+
+    function updateCartUI() {
+        const total = cart.reduce((sum, item) => sum + item.precio, 0);
+        document.getElementById('cart-total-badge').textContent = `$${total.toFixed(2)}`;
+        document.getElementById('cart-final-total').textContent = `$${total.toFixed(2)}`;
+
+        const container = document.getElementById('cart-items-container');
+        if (cart.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:20px;">Tu carrito está vacío.</p>';
+        } else {
+            container.innerHTML = cart.map((item, index) => `
+                <div class="cart-item">
+                    <div class="cart-item-info">
+                        <div>${item.nombre}</div>
+                        <small style="color:#64748b;">$${item.precio}</small>
+                    </div>
+                    <button class="btn-remove" onclick="removeFromCart(${index})"><i class="fas fa-trash"></i></button>
+                </div>`).join('');
+        }
+    }
+
+    function toggleDeliveryFields() {
+        const method = document.getElementById('delivery-method').value;
+        document.getElementById('delivery-info').style.display = method === 'delivery' ? 'block' : 'none';
+    }
+
+    function getGeoLocation() {
+        const btn = document.querySelector('.btn-geo');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando...';
+        if (!navigator.geolocation) return alert("Geolocalización no soportada.");
+        navigator.geolocation.getCurrentPosition((position) => {
+            const link = `http://maps.google.com/?q=${position.coords.latitude},${position.coords.longitude}`;
+            const textArea = document.getElementById('delivery-address');
+            textArea.value = `📍 GPS: ${link}\n` + textArea.value;
+            btn.innerHTML = '<i class="fas fa-check"></i> Listo';
+        }, () => { alert("Error al obtener ubicación"); btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Intentar de nuevo'; });
+    }
+
+    // --- MODIFICACIÓN CRÍTICA: CHECKOUT CON PROTECCIÓN ---
+    async function checkout() {
+        if (cart.length === 0) return alert("Agrega productos primero.");
+
+        // AQUÍ ESTÁ LA MAGIA: Si no hay cliente, detenemos y pedimos registro
+        if (!session.clientId) {
+            toggleCart(); // Cerramos carrito para que se vea bien el modal
+            promptClientRegister();
+            return;
+        }
+
+        const method = document.getElementById('delivery-method').value;
+        const address = document.getElementById('delivery-address').value.trim();
+        if (method === 'delivery' && !address) return alert("Ingresa dirección para Delivery.");
+
+        const btn = document.querySelector('.btn-checkout');
+        const originalText = btn.textContent;
+        btn.disabled = true; btn.textContent = "Enviando...";
+
+        const total = cart.reduce((sum, item) => sum + item.precio, 0);
+        const orderMetadata = { items: cart.map(p => ({ id: p.id, name: p.nombre, price: p.precio })), delivery: { method, address: method === 'delivery' ? address : 'N/A' } };
+
+        try {
+            await supabase.from('pedidos').insert({ cliente_id: session.clientId, total: total, productos: orderMetadata, estado: 'pendiente' });
+            
+            let autoMsg = `✅ ¡Nuevo pedido! Total: $${total.toFixed(2)} (${cart.length} items).\n${method === 'delivery' ? '🛵 Delivery: ' + address : '📍 Retiro en Tienda.'}`;
+            if(storePaymentInfo && storePaymentInfo.banco_numero) autoMsg += `\n\n💳 Envíame el comprobante por aquí.`;
+
+            await supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: autoMsg });
+            renderMsg({ contenido: autoMsg, enviado_por_rol: 'cliente' });
+            
+            cart = []; updateCartUI(); toggleCart();
+            alert("¡Pedido enviado correctamente!");
+            
+            // Asegurar que el chat esté abierto
+            const chatBox = document.getElementById('chat-box');
+            if(!chatBox.classList.contains('open')) toggleChat();
+
+        } catch (err) {
+            alert("Error: " + err.message);
+        } finally {
+            btn.disabled = false; btn.textContent = originalText;
+        }
+    }
+
+    // --- CHAT (Modificado para requerir login si intenta abrirlo) ---
+    function toggleChat() { 
+        // Si intentan abrir el chat y no son clientes, pedimos registro
+        if (!session.clientId && !document.getElementById('chat-box').classList.contains('open')) {
+            promptClientRegister();
+            return;
+        }
+
+        const chatBox = document.getElementById('chat-box');
+        chatBox.classList.toggle('open'); 
+        
+        if (chatBox.classList.contains('open')) {
+            unreadCount = 0;
+            updateBadgeUI();
+            scrollToBottom();
+            if(!chatChannel) initChat(); // Iniciar listener si no existía
+        }
+    }
+
+    async function initChat() {
+        if(!session.clientId) return; // No iniciar si no hay usuario
+
+        // Cargar historial
+        const { data } = await supabase.from('mensajes').select('*').eq('tienda_id', session.storeId).eq('cliente_id', session.clientId).order('created_at', { ascending: true });
+        const msgContainer = document.getElementById('chat-msgs');
+        msgContainer.innerHTML = '';
+        if(data) data.forEach(renderMsg);
+        scrollToBottom();
+
+        // Evitar duplicar suscripciones
+        if(chatChannel) return;
+
+        chatChannel = supabase.channel(`chat_room_${session.storeId}_${session.clientId}`)
+            .on('broadcast', { event: 'typing' }, () => {
+                document.getElementById('typing-ind').textContent = "La tienda está escribiendo...";
+                setTimeout(() => document.getElementById('typing-ind').textContent = '', 3000);
+            }).subscribe();
+
+        supabase.channel('client-inbox-' + session.clientId).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `cliente_id=eq.${session.clientId}` }, payload => {
+            if (payload.new.enviado_por_rol !== 'cliente') {
+                renderMsg(payload.new);
+                const chatBox = document.getElementById('chat-box');
+                if (!chatBox.classList.contains('open')) {
+                    unreadCount++;
+                    updateBadgeUI();
+                    try { msgSound.play().catch(e=>{}); } catch(e){}
+                }
+            }
+        }).subscribe();
+    }
+
+    function updateBadgeUI() {
+        const badge = document.getElementById('unread-badge');
+        if (unreadCount > 0) {
+            badge.style.display = 'flex';
+            badge.textContent = unreadCount;
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    function renderMsg(msg) {
+        const div = document.createElement('div');
+        div.className = `msg ${msg.enviado_por_rol === 'cliente' ? 'me' : 'store'}`;
+        div.innerHTML = msg.contenido.replace(/\n/g, '<br>');
+        document.getElementById('chat-msgs').appendChild(div);
+        scrollToBottom();
+    }
+
+    async function uploadChatImage(inputElement) {
+        if(!session.clientId) return; // Seguridad extra
+        const file = inputElement.files[0];
+        if (!file) return;
+        const btnIcon = document.querySelector('label[for="chat-file"] i');
+        const originalClass = btnIcon.className;
+        btnIcon.className = "fas fa-spinner fa-spin"; 
+
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${session.storeId}/${session.clientId}_${Date.now()}.${fileExt}`;
+            const { error: uploadErr } = await supabase.storage.from('chat-adjuntos').upload(fileName, file);
+            if (uploadErr) throw uploadErr;
+            const { data } = supabase.storage.from('chat-adjuntos').getPublicUrl(fileName);
+            const imgContent = `Comprobante:<br><img src="${data.publicUrl}" class="chat-img" onclick="window.open(this.src, '_blank')">`;
+
+            await supabase.from('mensajes').insert({
+                tienda_id: session.storeId,
+                cliente_id: session.clientId,
+                enviado_por_rol: 'cliente',
+                contenido: imgContent
+            });
+            renderMsg({ contenido: imgContent, enviado_por_rol: 'cliente' });
+        } catch (error) {
+            alert("Error al subir: " + error.message);
+        } finally {
+            btnIcon.className = originalClass;
+            inputElement.value = ''; 
+        }
+    }
+
+    async function sendChatMsg(e) {
+        e.preventDefault();
+        if(!session.clientId) { promptClientRegister(); return; } // Seguridad
+
+        const input = document.getElementById('chat-input');
+        const text = input.value.trim();
+        if(!text) return;
+
+        input.value = '';
+        renderMsg({ contenido: text, enviado_por_rol: 'cliente' });
+        await supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: text });
+    }
+
+    function notifyTyping() { if(chatChannel) chatChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); }
+    function toggleCart() { document.getElementById('cart-overlay').classList.toggle('open'); }
+    function scrollToBottom() { const d = document.getElementById('chat-msgs'); d.scrollTop = d.scrollHeight; }
+</script>
 </body>
 </html>
