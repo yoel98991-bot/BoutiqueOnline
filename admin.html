@@ -440,31 +440,38 @@
             setTimeout(() => { if (currentUser) setupGlobalRealtime(); }, 5000);
         }
 
-        // --- COMPARTIR / PROMOCIONAR ---
-        async function shareStoreLink() {
-            // Buscamos si hay un alias en el input de configuración o cargamos la url por defecto
-            const aliasInput = document.getElementById('conf-alias').value.trim();
-            const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-            
-            // Preferencia: Alias > Código
-            const finalParam = aliasInput ? `?u=${aliasInput}` : `?tienda=${storeCode}`;
-            const promoUrl = `${baseUrl}/index.html${finalParam}`;
+// --- REEMPLAZA LA FUNCIÓN shareStoreLink ENTERA POR ESTA ---
 
-            const shareData = {
-                title: 'Mi Boutique Online',
-                text: '¡Hola! Te invito a visitar mi catálogo online y realizar tus pedidos aquí:',
-                url: promoUrl
-            };
+async function shareStoreLink() {
+    // 1. Buscamos si hay un alias configurado
+    const aliasInput = document.getElementById('conf-alias').value.trim();
+    
+    // 2. Obtenemos la URL base (quitamos 'admin.html' de la ruta actual)
+    // Si estás en https://mi-sitio.vercel.app/admin.html -> queda https://mi-sitio.vercel.app
+    let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
 
-            if (navigator.share) {
-                try { await navigator.share(shareData); } catch (err) {}
-            } else {
-                try {
-                    await navigator.clipboard.writeText(promoUrl);
-                    showToast("¡Enlace Copiado!", "Pégalo en tus redes.");
-                } catch (err) { alert("Tu enlace es: " + promoUrl); }
-            }
-        }
+    // 3. Definimos el parámetro
+    const finalParam = aliasInput ? `?u=${aliasInput}` : `?tienda=${storeCode}`;
+
+    // 4. CORRECCIÓN: Quitamos "/index.html". Ahora queda limpio.
+    // Generará: https://mi-sitio.vercel.app/?u=noe-joyeria
+    const promoUrl = `${baseUrl}/${finalParam}`;
+
+    const shareData = {
+        title: 'Mi Boutique Online',
+        text: '¡Hola! Te invito a visitar mi catálogo online y realizar tus pedidos aquí:',
+        url: promoUrl
+    };
+
+    if (navigator.share) {
+        try { await navigator.share(shareData); } catch (err) {}
+    } else {
+        try {
+            await navigator.clipboard.writeText(promoUrl);
+            showToast("¡Enlace Copiado!", "Link: " + promoUrl);
+        } catch (err) { alert("Tu enlace es: " + promoUrl); }
+    }
+}
 
         function copyCode() { navigator.clipboard.writeText(storeCode); alert("Código copiado: " + storeCode); }
 
