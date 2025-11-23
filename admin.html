@@ -232,125 +232,123 @@
             <button onclick="document.getElementById('crop-modal').style.display='none'" class="btn btn-outline" style="margin-top:10px;">Cancelar</button>
         </div>
     </div>
-
-    <script>
+<script>
         const SUPABASE_URL = 'https://cirrapytmbnjlhxunkaq.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnJhcHl0bWJuamxoeHVua2FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NzAyMDAsImV4cCI6MjA3ODU0NjIwMH0.OtJiLGj1EvhPICFaA9ruL02Z9kSQ2jT0t3Smqph81C4';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let currentUser = null;
         let products = [];
-        let cropper = null;
         let editingProdId = null;
         let activeChatId = null;
+        let cropper = null;
 
-        // --- AUTH ---
-        supabase.auth.onAuthStateChange(async (e, session) => {
-            if(session) {
+        // --- 1. GESTIÓN DE SESIÓN (El Corazón del Sistema) ---
+        // Este "vigilante" se activa solo y detecta si ya estabas logueado al recargar
+        supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log("Evento Auth:", event); // Para ver en consola qué pasa
+
+            if (session) {
+                // ¡SESIÓN ENCONTRADA! (Al recargar o al loguear)
                 currentUser = session.user;
-                document.getElementById('login-container').style.display = 'none';
-                document.getElementById('dashboard').style.display = 'block';
-                await initData();
+                showDashboard();
+                
+                // Solo cargamos datos si la tabla está vacía (evita doble carga)
+                const tablaVacia = document.getElementById('products-table').innerHTML === "";
+                if (tablaVacia) {
+                    await initData();
+                }
             } else {
-                document.getElementById('login-container').style.display = 'block';
-                document.getElementById('dashboard').style.display = 'none';
+                // NO HAY SESIÓN
+                currentUser = null;
+                showLogin();
             }
         });
 
+        // Funciones visuales simples
+        function showLogin() {
+            document.getElementById('login-container').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+        }
+        function showDashboard() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+        }
+
+        // --- 2. LOGIN Y LOGOUT ---
         document.getElementById('auth-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = e.target.querySelector('button'); btn.disabled = true; btn.textContent = '...';
+            const btn = e.target.querySelector('button');
+            const originalText = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Entrando...';
+            
+            // Intentamos loguear
             const { error } = await supabase.auth.signInWithPassword({
                 email: document.getElementById('email').value,
                 password: document.getElementById('password').value
             });
-            if(error) { document.getElementById('auth-msg').textContent = error.message; btn.disabled=false; btn.textContent='Ingresar'; }
-        });
-        async function logout() { await supabase.auth.signOut(); }
 
-        // --- INIT DATA & CONFIG ---
+            if(error) { 
+                document.getElementById('auth-msg').textContent = "Credenciales incorrectas"; 
+                btn.disabled = false; 
+                btn.textContent = originalText;
+            }
+            // Si sale bien, el 'onAuthStateChange' de arriba hará el resto mágicamente
+        });
+
+        async function logout() {
+            if(confirm("¿Cerrar sesión?")) {
+                await supabase.auth.signOut();
+                localStorage.clear(); // Limpieza extra por seguridad
+                window.location.reload();
+            }
+        }
+
+        // --- 3. CARGA DE DATOS ---
         function previewColor(color) {
             document.documentElement.style.setProperty('--brand', color);
             document.getElementById('color-hex-val').textContent = color;
         }
 
         async function initData() {
-            // Cargar Usuario
-            const { data: user } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
-            if(user) {
-                document.getElementById('store-code-display').innerHTML = `<i class="fas fa-store"></i> ${user.codigo_tienda}`;
-                // Color
-                if(user.color_tema) {
-                    previewColor(user.color_tema);
-                    document.getElementById('conf-color').value = user.color_tema;
+            console.log("Cargando datos...");
+            try {
+                // Cargar perfil
+                const { data: user } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
+                
+                if (user) {
+                    document.getElementById('store-code-display').innerHTML = `<i class="fas fa-store"></i> ${user.codigo_tienda || 'Sin Código'}`;
+                    if(user.color_tema) { previewColor(user.color_tema); document.getElementById('conf-color').value = user.color_tema; }
+                    
+                    document.getElementById('conf-alias').value = user.slug || '';
+                    document.getElementById('conf-banco').value = user.banco_nombre || '';
+                    document.getElementById('conf-titular').value = user.banco_titular || '';
+                    document.getElementById('conf-ci').value = user.banco_ci || '';
+                    document.getElementById('conf-tipo').value = user.banco_tipo || '';
+                    document.getElementById('conf-numero').value = user.banco_numero || '';
+                    
+                    if(user.logo_url) { document.getElementById('logo-preview').src = user.logo_url; document.getElementById('logo-preview').style.display = 'block'; }
+                    if(user.qr_imagen_url) { document.getElementById('qr-preview').src = user.qr_imagen_url; document.getElementById('qr-preview').style.display = 'block'; }
                 }
-                // Datos Config
-                document.getElementById('conf-alias').value = user.slug || '';
-                document.getElementById('conf-banco').value = user.banco_nombre || '';
-                document.getElementById('conf-titular').value = user.banco_titular || '';
-                document.getElementById('conf-ci').value = user.banco_ci || '';
-                document.getElementById('conf-tipo').value = user.banco_tipo || '';
-                document.getElementById('conf-numero').value = user.banco_numero || '';
 
-                // Imágenes (Logo y QR)
-                if(user.logo_url) {
-                    document.getElementById('logo-preview').src = user.logo_url;
-                    document.getElementById('logo-preview').style.display = 'block';
-                }
-                if(user.qr_imagen_url) {
-                    document.getElementById('qr-preview').src = user.qr_imagen_url;
-                    document.getElementById('qr-preview').style.display = 'block';
-                }
+                await loadProducts();
+                await loadOrders();
+
+            } catch (err) {
+                console.error("Error iniciando datos:", err);
             }
-            loadProducts();
-            loadOrders();
         }
 
-        // GUARDAR CONFIGURACIÓN (Con lógica de QR)
-        document.getElementById('config-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('btn-save-config');
-            btn.textContent = "Guardando..."; btn.disabled = true;
-            
-            // Subir QR si existe uno nuevo seleccionado
-            const qrFile = document.getElementById('qr-input').files[0];
-            let newQrUrl = null;
-            if(qrFile) {
-                const name = `qr_${currentUser.id}_${Date.now()}`;
-                await supabase.storage.from('tienda-logos').upload(name, qrFile);
-                const { data } = supabase.storage.from('tienda-logos').getPublicUrl(name);
-                newQrUrl = data.publicUrl;
-            }
-
-            const updates = {
-                color_tema: document.getElementById('conf-color').value,
-                slug: document.getElementById('conf-alias').value.trim().toLowerCase(),
-                banco_nombre: document.getElementById('conf-banco').value,
-                banco_titular: document.getElementById('conf-titular').value,
-                banco_ci: document.getElementById('conf-ci').value,
-                banco_tipo: document.getElementById('conf-tipo').value,
-                banco_numero: document.getElementById('conf-numero').value,
-                // Solo actualizamos la URL si se subió una nueva
-                ...(newQrUrl && { qr_imagen_url: newQrUrl })
-            };
-
-            const { error } = await supabase.from('usuarios').update(updates).eq('id', currentUser.id);
-            btn.disabled = false; btn.textContent = "Guardar Todo";
-            
-            if(error) alert("Error: " + error.message);
-            else {
-                alert("¡Configuración actualizada!");
-                if(newQrUrl) {
-                     document.getElementById('qr-preview').src = newQrUrl;
-                     document.getElementById('qr-preview').style.display = 'block';
-                }
-            }
-        });
-
-        // --- PRODUCTOS ---
+        // --- 4. FUNCIONES DE PRODUCTOS ---
         async function loadProducts() {
-            const { data } = await supabase.from('productos').select('*').eq('creado_por', currentUser.id).order('id', {ascending:false});
+            const { data, error } = await supabase.from('productos')
+                .select('*')
+                .eq('creado_por', currentUser.id)
+                .order('id', {ascending:false});
+
+            if(error) console.error("Error productos:", error);
             products = data || [];
+            
             const table = document.getElementById('products-table');
             table.innerHTML = products.length ? products.map(p => `
                 <tr>
@@ -366,108 +364,121 @@
 
         document.getElementById('product-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('btn-save-prod'); btn.textContent="..."; btn.disabled=true;
+            const btn = document.getElementById('btn-save-prod'); btn.textContent="Guardando..."; btn.disabled=true;
             
-            const file = document.getElementById('imagen-input').files[0];
-            let url = null;
-            if(file) {
-                const name = `${currentUser.id}/${Date.now()}`;
-                await supabase.storage.from('imagenes-productos').upload(name, file);
-                const { data } = supabase.storage.from('imagenes-productos').getPublicUrl(name);
-                url = data.publicUrl;
-            } else if(editingProdId) {
-                url = products.find(p => p.id === editingProdId).imagen_url;
-            }
+            try {
+                const file = document.getElementById('imagen-input').files[0];
+                let url = null;
+                if(file) {
+                    const name = `${currentUser.id}/${Date.now()}`;
+                    await supabase.storage.from('imagenes-productos').upload(name, file);
+                    const { data } = supabase.storage.from('imagenes-productos').getPublicUrl(name);
+                    url = data.publicUrl;
+                } else if(editingProdId) {
+                    url = products.find(p => p.id === editingProdId).imagen_url;
+                }
 
-            const payload = {
-                nombre: document.getElementById('nombre').value,
-                precio: document.getElementById('precio').value,
-                descripcion: document.getElementById('descripcion').value,
-                creado_por: currentUser.id,
-                ...(url && {imagen_url: url})
-            };
+                const payload = {
+                    nombre: document.getElementById('nombre').value,
+                    precio: document.getElementById('precio').value,
+                    descripcion: document.getElementById('descripcion').value,
+                    creado_por: currentUser.id,
+                    ...(url && {imagen_url: url})
+                };
 
-            if(editingProdId) await supabase.from('productos').update(payload).eq('id', editingProdId);
-            else await supabase.from('productos').insert(payload);
+                if(editingProdId) await supabase.from('productos').update(payload).eq('id', editingProdId);
+                else await supabase.from('productos').insert(payload);
 
-            resetProdForm(); loadProducts();
+                resetProdForm(); loadProducts();
+            } catch (err) { alert("Error: " + err.message); } 
+            finally { btn.textContent="Guardar"; btn.disabled=false; }
         });
 
         function openProdForm() { document.getElementById('product-form-container').style.display = 'block'; }
+        function resetProdForm() {
+            document.getElementById('product-form').reset(); editingProdId = null;
+            document.getElementById('product-form-container').style.display = 'none';
+        }
         function editProd(id) {
-            const p = products.find(x => x.id === id);
-            editingProdId = id;
+            const p = products.find(x => x.id === id); editingProdId = id;
             document.getElementById('nombre').value = p.nombre;
             document.getElementById('precio').value = p.precio;
             document.getElementById('descripcion').value = p.descripcion || '';
             openProdForm();
-            document.getElementById('img-text-status').textContent = "📸 Cambiar foto";
         }
-        function resetProdForm() {
-            document.getElementById('product-form').reset();
-            editingProdId = null;
-            document.getElementById('product-form-container').style.display = 'none';
-        }
-        async function delProd(id) { if(confirm('¿Borrar?')) { await supabase.from('productos').delete().eq('id', id); loadProducts(); } }
+        async function delProd(id) { if(confirm('¿Eliminar?')) { await supabase.from('productos').delete().eq('id', id); loadProducts(); } }
 
-        // --- CROPPER LOGO ---
-        document.getElementById('logo-input').addEventListener('change', function(e) {
-            if(e.target.files && e.target.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (evt) => {
-                    document.getElementById('crop-target').src = evt.target.result;
-                    document.getElementById('crop-modal').style.display = 'flex';
-                    if(cropper) cropper.destroy();
-                    cropper = new Cropper(document.getElementById('crop-target'), { aspectRatio: 4/1, viewMode: 1 });
-                };
-                reader.readAsDataURL(e.target.files[0]);
+        // --- 5. OTRAS FUNCIONES (Config, Pedidos, Chat) ---
+        
+        // CONFIG SAVE
+        document.getElementById('config-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-config'); btn.textContent = "Guardando..."; btn.disabled = true;
+
+            const qrFile = document.getElementById('qr-input').files[0];
+            const logoFile = document.getElementById('logo-input').files[0];
+            let qrUrl = null; let logoUrl = null;
+
+            // Subir QR
+            if(qrFile) {
+                const name = `qr_${currentUser.id}_${Date.now()}`;
+                await supabase.storage.from('tienda-logos').upload(name, qrFile);
+                const {data} = supabase.storage.from('tienda-logos').getPublicUrl(name);
+                qrUrl = data.publicUrl;
+            }
+             // Subir Logo Directo
+            if(logoFile) {
+                const name = `logo_${currentUser.id}_${Date.now()}`;
+                await supabase.storage.from('tienda-logos').upload(name, logoFile);
+                const {data} = supabase.storage.from('tienda-logos').getPublicUrl(name);
+                logoUrl = data.publicUrl;
+            }
+
+            const updates = {
+                color_tema: document.getElementById('conf-color').value,
+                slug: document.getElementById('conf-alias').value.trim().toLowerCase(),
+                banco_nombre: document.getElementById('conf-banco').value,
+                banco_titular: document.getElementById('conf-titular').value,
+                banco_ci: document.getElementById('conf-ci').value,
+                banco_tipo: document.getElementById('conf-tipo').value,
+                banco_numero: document.getElementById('conf-numero').value,
+                ...(qrUrl && {qr_imagen_url: qrUrl}),
+                ...(logoUrl && {logo_url: logoUrl})
+            };
+
+            const { error } = await supabase.from('usuarios').update(updates).eq('id', currentUser.id);
+            btn.disabled = false; btn.textContent = "Guardar Todo";
+            if(error) alert(error.message);
+            else {
+                alert("¡Guardado!");
+                if(qrUrl) { document.getElementById('qr-preview').src = qrUrl; document.getElementById('qr-preview').style.display='block'; }
+                if(logoUrl) { document.getElementById('logo-preview').src = logoUrl; document.getElementById('logo-preview').style.display='block'; }
             }
         });
-        async function performCrop() {
-            const canvas = cropper.getCroppedCanvas({ width: 600 });
-            canvas.toBlob(async blob => {
-                const name = `logo_${currentUser.id}_${Date.now()}.png`;
-                await supabase.storage.from('tienda-logos').upload(name, blob, { upsert:true });
-                const { data } = supabase.storage.from('tienda-logos').getPublicUrl(name);
-                await supabase.from('usuarios').update({logo_url: data.publicUrl}).eq('id', currentUser.id);
-                document.getElementById('logo-preview').src = data.publicUrl;
-                document.getElementById('logo-preview').style.display = 'block';
-                document.getElementById('crop-modal').style.display = 'none';
-            });
-        }
 
-     async function loadOrders() {
-    console.log("Cargando pedidos...");
-    
-    const { data, error } = await supabase.from('pedidos')
-        .select('*, clientes(nombre)')
-        .eq('tienda_id', currentUser.id) // <--- ESTA LÍNEA ES CRUCIAL PARA VENDER EL SOFTWARE
-        .eq('estado','pendiente')
-        .order('fecha',{ascending:false});
-    
-    if(error) {
-        console.error("Error:", error);
-        return;
-    }
-    
-    // ... (el resto del código de renderizado sigue igual) ...
-    document.getElementById('orders-list').innerHTML = data && data.length ? data.map(o => `
-        <div style="border:1px solid var(--border); padding:15px; border-radius:12px; margin-bottom:10px;">
-            <div style="font-weight:bold;">${o.clientes?.nombre || 'Cliente'} - $${o.total}</div>
-            <div style="font-size:0.85rem; color:#64748b;">${new Date(o.fecha).toLocaleDateString()}</div>
-            <button class="btn btn-primary" style="margin-top:10px; padding:8px;" onclick="finishOrder(${o.id})">Marcar Entregado</button>
-        </div>
-    `).join('') : '<p style="text-align:center; color:#94a3b8;">No hay pedidos pendientes.</p>';
-}
+        // PEDIDOS (¡OJO! Con el filtro tienda_id para que sea seguro)
+        async function loadOrders() {
+            const { data } = await supabase.from('pedidos')
+                .select('*, clientes(nombre)')
+                .eq('tienda_id', currentUser.id) // <--- ESTO FILTRA TUS VENTAS
+                .eq('estado','pendiente')
+                .order('fecha',{ascending:false});
+
+            document.getElementById('orders-list').innerHTML = data && data.length ? data.map(o => `
+                <div style="border:1px solid var(--border); padding:15px; border-radius:12px; margin-bottom:10px;">
+                    <div style="font-weight:bold;">${o.clientes?.nombre || 'Cliente'} - $${o.total}</div>
+                    <div style="font-size:0.85rem; color:#64748b;">${new Date(o.fecha).toLocaleDateString()}</div>
+                    <button class="btn btn-primary" style="margin-top:10px; padding:8px;" onclick="finishOrder(${o.id})">Marcar Entregado</button>
+                </div>
+            `).join('') : '<p style="text-align:center; color:#94a3b8;">No hay pedidos pendientes.</p>';
+        }
         async function finishOrder(id) { await supabase.from('pedidos').update({estado:'completado'}).eq('id', id); loadOrders(); }
 
-        // --- CHAT (Lógica recuperada) ---
+        // CHAT
         async function loadChatsList() {
              const { data } = await supabase.from('mensajes').select('*, clientes(nombre)').eq('tienda_id', currentUser.id).order('created_at', {ascending:false});
-             // Agrupar simple
              const grouped = {};
-             data.forEach(m => { if(!grouped[m.cliente_id]) grouped[m.cliente_id] = m; });
-             
+             if(data) data.forEach(m => { if(!grouped[m.cliente_id]) grouped[m.cliente_id] = m; });
              document.getElementById('chats-list').innerHTML = Object.values(grouped).map(m => `
                 <div onclick="openChat('${m.cliente_id}', '${m.clientes?.nombre}')" style="padding:15px; border-bottom:1px solid var(--border); cursor:pointer;">
                     <div style="font-weight:bold;">${m.clientes?.nombre || 'Cliente'}</div>
@@ -475,47 +486,23 @@
                 </div>
              `).join('');
         }
-
         async function openChat(clientId, name) {
             activeChatId = clientId;
             document.getElementById('chat-client-name').textContent = name;
-            document.getElementById('chats-inbox').style.display = 'none';
-            document.getElementById('chat-interface').style.display = 'flex';
-            
+            document.getElementById('chats-inbox').style.display = 'none'; document.getElementById('chat-interface').style.display = 'flex';
             const { data } = await supabase.from('mensajes').select('*').eq('tienda_id', currentUser.id).eq('cliente_id', clientId).order('created_at');
             const div = document.getElementById('messages-container');
-            div.innerHTML = data.map(m => `
-                <div style="margin:5px; padding:8px 12px; border-radius:12px; max-width:80%; font-size:0.9rem; 
-                    background: ${m.enviado_por_rol==='dueño' ? 'var(--brand)' : 'white'}; 
-                    color: ${m.enviado_por_rol==='dueño' ? 'white' : 'black'}; 
-                    align-self: ${m.enviado_por_rol==='dueño' ? 'flex-end' : 'flex-start'};
-                    margin-left: ${m.enviado_por_rol==='dueño' ? 'auto' : '0'};">
-                    ${m.contenido}
-                </div>
-            `).join('');
+            div.innerHTML = data.map(m => `<div style="margin:5px; padding:8px 12px; border-radius:12px; max-width:80%; font-size:0.9rem; background: ${m.enviado_por_rol==='dueño' ? 'var(--brand)' : 'white'}; color: ${m.enviado_por_rol==='dueño' ? 'white' : 'black'}; align-self: ${m.enviado_por_rol==='dueño' ? 'flex-end' : 'flex-start'}; margin-left: ${m.enviado_por_rol==='dueño' ? 'auto' : '0'};">${m.contenido}</div>`).join('');
             div.scrollTop = div.scrollHeight;
         }
-
         async function sendMessage(e) {
-            e.preventDefault();
-            const txt = document.getElementById('msg-input').value;
-            if(!txt || !activeChatId) return;
-            await supabase.from('mensajes').insert({
-                tienda_id: currentUser.id, cliente_id: activeChatId, enviado_por_rol: 'dueño', contenido: txt
-            });
-            document.getElementById('msg-input').value = '';
-            // Recargar chat (idealmente usar realtime, pero simplificado por ahora)
-            openChat(activeChatId, document.getElementById('chat-client-name').textContent);
+            e.preventDefault(); const txt = document.getElementById('msg-input').value; if(!txt || !activeChatId) return;
+            await supabase.from('mensajes').insert({ tienda_id: currentUser.id, cliente_id: activeChatId, enviado_por_rol: 'dueño', contenido: txt });
+            document.getElementById('msg-input').value = ''; openChat(activeChatId, document.getElementById('chat-client-name').textContent);
         }
+        function closeChat() { activeChatId = null; document.getElementById('chat-interface').style.display = 'none'; document.getElementById('chats-inbox').style.display = 'block'; loadChatsList(); }
 
-        function closeChat() {
-            activeChatId = null;
-            document.getElementById('chat-interface').style.display = 'none';
-            document.getElementById('chats-inbox').style.display = 'block';
-            loadChatsList();
-        }
-
-        // UTILS
+        // TABS Y UTILS
         function switchTab(id) {
             document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
             document.getElementById('tab-'+id).classList.add('active');
@@ -528,9 +515,9 @@
              const alias = document.getElementById('conf-alias').value;
              const code = document.getElementById('store-code-display').textContent.replace(/[^a-zA-Z0-9-]/g, '');
              const url = window.location.href.replace('admin.html', '') + (alias ? '?u='+alias : '?tienda='+code);
-             navigator.clipboard.writeText(url);
-             alert("Enlace copiado: " + url);
+             navigator.clipboard.writeText(url); alert("Enlace: " + url);
         }
     </script>
+   
 </body>
 </html>
