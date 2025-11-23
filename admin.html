@@ -13,7 +13,7 @@
     <style>
         /* --- DISEÑO ELEGANTE Y SUAVE --- */
         :root { 
-            --brand: #2563eb; /* Color dinámico inicial */
+            --brand: #2563eb; 
             --bg: #fdfdfd; 
             --surface: #ffffff; 
             --text-main: #1e293b; 
@@ -21,100 +21,65 @@
             --border: #f1f5f9;
             --radius: 20px; 
             --shadow: 0 10px 40px -10px rgba(0,0,0,0.05);
-            --shadow-hover: 0 20px 40px -10px rgba(0,0,0,0.1);
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         body { font-family: 'Outfit', sans-serif; background-color: var(--bg); color: var(--text-main); margin: 0; padding-bottom: 80px; transition: background 0.3s; }
         
-        /* UI Components */
         .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
-        
-        .card { 
-            background: var(--surface); 
-            padding: 25px; 
-            border-radius: var(--radius); 
-            box-shadow: var(--shadow); 
-            border: 1px solid rgba(0,0,0,0.02);
-            margin-bottom: 25px; 
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
+        .card { background: var(--surface); padding: 25px; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid rgba(0,0,0,0.02); margin-bottom: 25px; }
         
         h2, h3 { font-weight: 600; letter-spacing: -0.5px; margin-top: 0; }
+        
         input, select, textarea { 
             width: 100%; padding: 16px; margin-bottom: 15px; 
             border: 1px solid var(--border); border-radius: 12px; 
             background: #fcfcfc; font-family: inherit; font-size: 0.95rem; 
             transition: all 0.2s; color: var(--text-main);
         }
-        input:focus, select:focus, textarea:focus { border-color: var(--brand); box-shadow: 0 0 0 4px rgba(0,0,0,0.03); background: white; }
+        input:focus { border-color: var(--brand); background: white; }
 
-        /* Botones dinámicos */
-        .btn { 
-            padding: 16px 24px; border: none; border-radius: 14px; 
-            font-weight: 600; cursor: pointer; font-size: 1rem; 
-            display: inline-flex; align-items: center; justify-content: center; gap: 8px; 
-            transition: all 0.2s; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-        .btn-primary { background: var(--brand); color: white; }
-        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
-        
+        .btn { padding: 16px 24px; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; transition: 0.2s; }
+        .btn-primary { background: var(--brand); color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .btn-outline { background: white; border: 1px solid var(--border); color: var(--text-main); width: auto; padding: 10px 18px; font-size: 0.9rem; }
-        .btn-icon { width: 40px; height: 40px; border-radius: 50%; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: none; cursor: pointer; margin-left: 5px; background: #f1f5f9; color: var(--text-light); transition: 0.2s; }
-        .btn-icon:hover { background: var(--brand); color: white; }
+        .btn-icon { width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer; background: #f1f5f9; color: var(--text-light); display: inline-flex; align-items: center; justify-content: center; }
 
-        /* Login Elegante */
-        #login-container { max-width: 400px; margin: 10vh auto; text-align: center; }
-        #login-container .card { padding: 40px; }
-
-        /* Tabs Minimalistas */
-        .nav-tabs { display: flex; gap: 10px; margin-bottom: 25px; overflow-x: auto; padding: 5px; margin-left: -5px; }
-        .tab { 
-            padding: 10px 20px; border: none; background: transparent; 
-            color: var(--text-light); font-weight: 500; border-radius: 30px; 
-            font-size: 0.95rem; white-space: nowrap; cursor: pointer; transition: 0.3s; 
-        }
+        /* Tabs */
+        .nav-tabs { display: flex; gap: 10px; margin-bottom: 25px; overflow-x: auto; padding: 5px; }
+        .tab { padding: 10px 20px; border: none; background: transparent; color: var(--text-light); font-weight: 500; border-radius: 30px; cursor: pointer; transition: 0.3s; white-space: nowrap; }
         .tab.active { background: white; color: var(--brand); box-shadow: 0 4px 15px rgba(0,0,0,0.05); font-weight: 600; }
-        .tab i { margin-right: 5px; }
 
-        /* Color Picker Personalizado */
-        .color-picker-wrapper {
-            display: flex; align-items: center; gap: 15px; 
-            padding: 15px; border: 1px solid var(--border); 
-            border-radius: 12px; background: #fafafa; cursor: pointer;
-        }
-        input[type="color"] {
-            -webkit-appearance: none; border: none; width: 40px; height: 40px; 
-            border-radius: 50%; padding: 0; overflow: hidden; margin: 0; cursor: pointer;
-        }
-        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
-        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; border: 2px solid rgba(0,0,0,0.1); }
-
-        /* Elementos específicos */
-        .panel-section { display: none; animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .panel-section { display: none; animation: fadeIn 0.4s ease; }
         .panel-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .table-container { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
-        table { width: 100%; border-collapse: collapse; white-space: nowrap; }
-        td, th { padding: 15px; text-align: left; border-bottom: 1px solid var(--border); color: var(--text-main); }
-        th { background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: var(--text-light); font-weight: 600; letter-spacing: 0.5px; }
-        
-        .upload-zone { border: 2px dashed var(--border); border-radius: 16px; padding: 40px 20px; text-align: center; color: var(--text-light); transition: 0.3s; background: #fafafa; cursor: pointer; }
+        /* Upload Zone Mejorada */
+        .upload-zone { border: 2px dashed var(--border); border-radius: 16px; padding: 30px; text-align: center; color: var(--text-light); transition: 0.3s; background: #fafafa; cursor: pointer; position: relative; overflow: hidden; }
         .upload-zone:hover { border-color: var(--brand); color: var(--brand); background: #eff6ff; }
-        
-        /* HEADER */
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; margin-bottom: 10px; }
-        .store-pill { background: white; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); font-size: 0.85rem; color: var(--brand); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+        .preview-img { max-width: 100%; max-height: 200px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: none; }
+
+        /* Color Picker */
+        .color-picker-wrapper { display: flex; align-items: center; gap: 15px; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: #fafafa; cursor: pointer; }
+        input[type="color"] { width: 40px; height: 40px; padding: 0; border: none; border-radius: 50%; cursor: pointer; background: none; }
+
+        /* Header */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
+        .store-pill { background: white; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); font-size: 0.85rem; color: var(--brand); font-weight: 600; display: inline-flex; gap: 6px; align-items: center;}
 
         /* Modal Crop */
         #crop-modal { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index: 9999; display:none; justify-content:center; align-items:center; flex-direction:column; }
-        .crop-card { background: white; padding: 20px; border-radius: 20px; max-width: 90%; width: 500px; text-align: center; }
+        .crop-card { background: white; padding: 20px; border-radius: 20px; width: 90%; max-width: 500px; text-align: center; }
+        
+        /* Table */
+        .table-container { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+        td, th { padding: 15px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: var(--text-light); font-weight: 600; }
     </style>
 </head>
 <body>
 
-    <div id="login-container">
+    <div id="login-container" style="max-width: 400px; margin: 10vh auto; text-align: center;">
         <div class="card">
             <h2 style="color: var(--brand);">Studio Admin</h2>
             <p style="color: var(--text-light); margin-bottom: 30px;">Accede a tu panel de control</p>
@@ -131,83 +96,91 @@
         <div class="header">
             <div>
                 <h2 style="margin:0;">Panel de Control</h2>
-                <div style="margin-top: 8px; display:flex; gap:10px;">
-                    <div class="store-pill" id="store-code-display"><i class="fas fa-store"></i> ...</div>
-                    <button onclick="shareStoreLink()" class="btn-outline" style="border-radius:20px; padding:6px 12px; font-size:0.8rem; cursor:pointer;"><i class="fas fa-share"></i> Ver Tienda</button>
+                <div style="margin-top:8px; display:flex; gap:10px;">
+                    <div class="store-pill" id="store-code-display">...</div>
+                    <button onclick="shareStoreLink()" class="btn-outline" style="border-radius:20px; cursor:pointer;"><i class="fas fa-share"></i> Ver Tienda</button>
                 </div>
             </div>
-            <button onclick="logout()" class="btn-icon" title="Salir"><i class="fas fa-sign-out-alt"></i></button>
+            <button onclick="logout()" class="btn-icon"><i class="fas fa-sign-out-alt"></i></button>
         </div>
 
         <div class="nav-tabs">
             <button class="tab active" onclick="switchTab('productos')">Productos</button>
-            <button class="tab" onclick="switchTab('pedidos')">Pedidos <span id="badge-orders" style="display:none; background:red; color:white; padding:2px 6px; border-radius:10px; font-size:0.7rem;">0</span></button>
-            <button class="tab" onclick="switchTab('chats')">Chats <span id="badge-chats" style="display:none; background:red; color:white; padding:2px 6px; border-radius:10px; font-size:0.7rem;">0</span></button>
+            <button class="tab" onclick="switchTab('pedidos')">Pedidos</button>
+            <button class="tab" onclick="switchTab('chats')">Mensajes</button>
             <button class="tab" onclick="switchTab('config')">Diseño & Config</button>
         </div>
 
         <div id="tab-config" class="panel-section">
-            <div class="card">
-                <h3 style="color:var(--brand);"><i class="fas fa-paint-brush"></i> Personalización</h3>
-                <p style="color:var(--text-light); font-size:0.9rem;">Define el color principal de tu marca. Esto cambiará el botón de compra y los detalles en tu tienda.</p>
-                
-                <form id="config-form">
-                    <label style="font-weight:600; font-size:0.85rem; margin-bottom:8px; display:block;">COLOR DE LA MARCA</label>
+            <form id="config-form">
+                <div class="card">
+                    <h3 style="color:var(--brand);"><i class="fas fa-palette"></i> Personalización</h3>
+                    <label style="font-size:0.85rem; font-weight:600; color:var(--text-light);">COLOR DE MARCA</label>
                     <div class="color-picker-wrapper" onclick="document.getElementById('conf-color').click()">
                         <input type="color" id="conf-color" value="#2563eb" oninput="previewColor(this.value)">
                         <div style="flex:1;">
-                            <span id="color-hex-val" style="font-weight:bold; font-family:monospace;">#2563eb</span>
-                            <div style="font-size:0.8rem; color:var(--text-light);">Toca el círculo para cambiar</div>
+                            <span id="color-hex-val" style="font-weight:bold;">#2563eb</span>
+                            <div style="font-size:0.8rem; color:var(--text-light);">Toca para cambiar</div>
                         </div>
                     </div>
 
-                    <div style="margin-top:25px;">
-                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:8px; display:block;">ENLACE PERSONALIZADO</label>
+                    <div style="margin-top:20px;">
+                        <label style="font-size:0.85rem; font-weight:600; color:var(--text-light);">ENLACE PERSONALIZADO</label>
                         <div style="display: flex; align-items: center; border: 1px solid var(--border); border-radius: 12px; overflow: hidden;">
-                            <span style="background: #f8fafc; padding: 15px; color: var(--text-light); border-right:1px solid var(--border);">tutienda.com/?u=</span>
-                            <input type="text" id="conf-alias" placeholder="ej: mi-boutique" style="border:none; margin:0; box-shadow:none;">
+                            <span style="background: #f8fafc; padding: 16px; color: var(--text-light); border-right:1px solid var(--border);">tutienda.com/?u=</span>
+                            <input type="text" id="conf-alias" placeholder="mi-marca" style="border:none; margin:0; box-shadow:none;">
                         </div>
                     </div>
+                </div>
 
-                    <h3 style="margin-top:30px; font-size:1.1rem;">Datos Bancarios</h3>
+                <div class="card">
+                    <h3 style="color:var(--brand);"><i class="fas fa-wallet"></i> Datos de Pago</h3>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
                         <input type="text" id="conf-banco" placeholder="Banco">
                         <input type="text" id="conf-titular" placeholder="Titular">
                     </div>
-                    <input type="text" id="conf-ci" placeholder="C.I. / RIF">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                        <input type="text" id="conf-ci" placeholder="C.I. / RIF">
+                        <input type="text" id="conf-tipo" placeholder="Tipo (Corr/Ahorro/Pago Móvil)">
+                    </div>
                     <input type="text" id="conf-numero" placeholder="Número de Cuenta / Teléfono">
-                    
-                    <button type="submit" id="btn-save-config" class="btn btn-primary" style="margin-top:20px;">Guardar Cambios</button>
-                </form>
-            </div>
-            
-             <div class="card">
-                <h3>Logo de la Tienda</h3>
-                <div class="upload-zone" onclick="document.getElementById('logo-input').click()">
-                    <img id="logo-preview" style="max-height:80px; margin-bottom:10px; display:none;">
-                    <p style="margin:0;"><i class="fas fa-cloud-upload-alt"></i> Subir Logo</p>
-                    <input type="file" id="logo-input" accept="image/*" style="display:none;">
+
+                    <label style="font-size:0.85rem; font-weight:600; color:var(--text-light); margin-top:10px; display:block;">IMAGEN CÓDIGO QR</label>
+                    <div class="upload-zone" onclick="document.getElementById('qr-input').click()">
+                        <img id="qr-preview" class="preview-img">
+                        <p style="margin:0;"><i class="fas fa-qrcode"></i> Toca para subir QR</p>
+                        <input type="file" id="qr-input" accept="image/*" style="display:none;">
+                    </div>
                 </div>
-            </div>
+                
+                <div class="card">
+                     <h3>Logo de la Tienda</h3>
+                    <div class="upload-zone" onclick="document.getElementById('logo-input').click()">
+                        <img id="logo-preview" class="preview-img">
+                        <p style="margin:0;"><i class="fas fa-cloud-upload-alt"></i> Subir Logo</p>
+                        <input type="file" id="logo-input" accept="image/*" style="display:none;">
+                    </div>
+                    <button type="submit" id="btn-save-config" class="btn btn-primary" style="margin-top:20px;">Guardar Todo</button>
+                </div>
+            </form>
         </div>
 
         <div id="tab-productos" class="panel-section active">
             <div class="card">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                     <h3>Inventario</h3>
-                    <button onclick="document.getElementById('product-form-container').style.display = 'block'; this.style.display='none'" class="btn btn-primary" style="width:auto; padding: 8px 16px; font-size:0.9rem;"><i class="fas fa-plus"></i> Nuevo</button>
+                    <button onclick="openProdForm()" class="btn btn-primary" style="width:auto; padding: 8px 16px;"><i class="fas fa-plus"></i> Nuevo</button>
                 </div>
 
                 <div id="product-form-container" style="display:none; background:#f8fafc; padding:20px; border-radius:12px; margin-bottom:20px; border:1px solid var(--brand);">
-                    <h4 style="margin-top:0;">Crear / Editar Producto</h4>
                     <form id="product-form">
                         <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px;">
-                            <input type="text" id="nombre" placeholder="Nombre del producto" required>
-                            <input type="number" step="0.01" id="precio" placeholder="Precio ($)" required>
+                            <input type="text" id="nombre" placeholder="Nombre" required>
+                            <input type="number" step="0.01" id="precio" placeholder="$" required>
                         </div>
-                        <textarea id="descripcion" rows="2" placeholder="Descripción breve..."></textarea>
-                        <div class="upload-zone" style="padding: 15px;" onclick="document.getElementById('imagen-input').click()">
-                            <span id="img-text-status">📸 Toca para subir foto</span>
+                        <textarea id="descripcion" rows="2" placeholder="Descripción..."></textarea>
+                        <div class="upload-zone" style="padding:15px;" onclick="document.getElementById('imagen-input').click()">
+                            <span id="img-text-status">📸 Subir Foto</span>
                             <input type="file" id="imagen-input" accept="image/*" style="display:none;">
                         </div>
                         <div style="display:flex; gap:10px; margin-top:15px;">
@@ -216,7 +189,6 @@
                         </div>
                     </form>
                 </div>
-
                 <div class="table-container"><table id="products-table"></table></div>
             </div>
         </div>
@@ -230,7 +202,7 @@
                 <div id="orders-list"></div>
             </div>
         </div>
-        
+
         <div id="tab-chats" class="panel-section">
             <div class="card" id="chats-inbox">
                  <h3>Mensajes</h3>
@@ -239,7 +211,7 @@
             <div id="chat-interface" class="card" style="display:none; height:70vh; flex-direction:column; padding:0; overflow:hidden;">
                 <div style="background:var(--brand); color:white; padding:15px; display:flex; justify-content:space-between; align-items:center;">
                     <span id="chat-client-name" style="font-weight:600;">Cliente</span>
-                    <button onclick="closeChat()" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;"><i class="fas fa-times"></i></button>
+                    <button onclick="closeChat()" style="background:none; border:none; color:white; font-size:1.2rem;"><i class="fas fa-times"></i></button>
                 </div>
                 <div id="messages-container" style="flex:1; padding:15px; overflow-y:auto; background:#f1f5f9;"></div>
                 <form onsubmit="sendMessage(event)" style="padding:10px; background:white; display:flex; gap:10px; border-top:1px solid #eee;">
@@ -248,12 +220,11 @@
                 </form>
             </div>
         </div>
-
     </div>
 
     <div id="crop-modal">
         <div class="crop-card">
-            <h3>Ajustar Imagen</h3>
+            <h3>Ajustar Logo</h3>
             <div style="max-height: 50vh; overflow:hidden; background:#333; margin-bottom:15px;">
                 <img id="crop-target" style="max-width:100%;">
             </div>
@@ -297,52 +268,83 @@
         });
         async function logout() { await supabase.auth.signOut(); }
 
-        // --- COLOR & CONFIG ---
+        // --- INIT DATA & CONFIG ---
         function previewColor(color) {
             document.documentElement.style.setProperty('--brand', color);
             document.getElementById('color-hex-val').textContent = color;
         }
 
         async function initData() {
-            // 1. Cargar Usuario y COLOR
+            // Cargar Usuario
             const { data: user } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
             if(user) {
                 document.getElementById('store-code-display').innerHTML = `<i class="fas fa-store"></i> ${user.codigo_tienda}`;
-                // Cargar color
+                // Color
                 if(user.color_tema) {
                     previewColor(user.color_tema);
                     document.getElementById('conf-color').value = user.color_tema;
                 }
-                // Cargar config form
+                // Datos Config
                 document.getElementById('conf-alias').value = user.slug || '';
                 document.getElementById('conf-banco').value = user.banco_nombre || '';
                 document.getElementById('conf-titular').value = user.banco_titular || '';
                 document.getElementById('conf-ci').value = user.banco_ci || '';
+                document.getElementById('conf-tipo').value = user.banco_tipo || '';
                 document.getElementById('conf-numero').value = user.banco_numero || '';
-                if(user.logo_url) document.getElementById('logo-preview').src = user.logo_url; document.getElementById('logo-preview').style.display = user.logo_url ? 'block' : 'none';
+
+                // Imágenes (Logo y QR)
+                if(user.logo_url) {
+                    document.getElementById('logo-preview').src = user.logo_url;
+                    document.getElementById('logo-preview').style.display = 'block';
+                }
+                if(user.qr_imagen_url) {
+                    document.getElementById('qr-preview').src = user.qr_imagen_url;
+                    document.getElementById('qr-preview').style.display = 'block';
+                }
             }
             loadProducts();
             loadOrders();
         }
 
+        // GUARDAR CONFIGURACIÓN (Con lógica de QR)
         document.getElementById('config-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-save-config');
             btn.textContent = "Guardando..."; btn.disabled = true;
             
+            // Subir QR si existe uno nuevo seleccionado
+            const qrFile = document.getElementById('qr-input').files[0];
+            let newQrUrl = null;
+            if(qrFile) {
+                const name = `qr_${currentUser.id}_${Date.now()}`;
+                await supabase.storage.from('tienda-logos').upload(name, qrFile);
+                const { data } = supabase.storage.from('tienda-logos').getPublicUrl(name);
+                newQrUrl = data.publicUrl;
+            }
+
             const updates = {
                 color_tema: document.getElementById('conf-color').value,
                 slug: document.getElementById('conf-alias').value.trim().toLowerCase(),
                 banco_nombre: document.getElementById('conf-banco').value,
                 banco_titular: document.getElementById('conf-titular').value,
                 banco_ci: document.getElementById('conf-ci').value,
-                banco_numero: document.getElementById('conf-numero').value
+                banco_tipo: document.getElementById('conf-tipo').value,
+                banco_numero: document.getElementById('conf-numero').value,
+                // Solo actualizamos la URL si se subió una nueva
+                ...(newQrUrl && { qr_imagen_url: newQrUrl })
             };
 
             const { error } = await supabase.from('usuarios').update(updates).eq('id', currentUser.id);
-            btn.disabled = false; btn.textContent = "Guardar Cambios";
+            btn.disabled = false; btn.textContent = "Guardar Todo";
+            
             if(error) alert("Error: " + error.message);
-            else alert("¡Configuración actualizada!");
+            else {
+                alert("¡Configuración actualizada!");
+                if(newQrUrl) {
+                     document.getElementById('qr-preview').src = newQrUrl;
+                     document.getElementById('qr-preview').style.display = 'block';
+                }
+            }
         });
 
         // --- PRODUCTOS ---
@@ -359,7 +361,7 @@
                         <button class="btn-icon" style="color:#ef4444;" onclick="delProd(${p.id})"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
-            `).join('') : '<tr><td colspan="3" style="text-align:center; padding:20px; color:#94a3b8;">Sin productos aún.</td></tr>';
+            `).join('') : '<tr><td colspan="3" style="text-align:center; padding:20px; color:#94a3b8;">Sin productos.</td></tr>';
         }
 
         document.getElementById('product-form').addEventListener('submit', async (e) => {
@@ -391,20 +393,20 @@
             resetProdForm(); loadProducts();
         });
 
+        function openProdForm() { document.getElementById('product-form-container').style.display = 'block'; }
         function editProd(id) {
             const p = products.find(x => x.id === id);
             editingProdId = id;
             document.getElementById('nombre').value = p.nombre;
             document.getElementById('precio').value = p.precio;
             document.getElementById('descripcion').value = p.descripcion || '';
-            document.getElementById('product-form-container').style.display = 'block';
-            document.getElementById('img-text-status').textContent = "📸 Cambiar foto (opcional)";
+            openProdForm();
+            document.getElementById('img-text-status').textContent = "📸 Cambiar foto";
         }
         function resetProdForm() {
             document.getElementById('product-form').reset();
             editingProdId = null;
             document.getElementById('product-form-container').style.display = 'none';
-            document.querySelector("button[onclick*='product-form']").style.display = 'inline-block';
         }
         async function delProd(id) { if(confirm('¿Borrar?')) { await supabase.from('productos').delete().eq('id', id); loadProducts(); } }
 
@@ -434,9 +436,15 @@
             });
         }
 
-        // --- PEDIDOS SIMPLE ---
+        // --- PEDIDOS (Usando tienda_id para RLS) ---
         async function loadOrders() {
-            const { data } = await supabase.from('pedidos').select('*, clientes(nombre)').eq('estado','pendiente').order('fecha',{ascending:false});
+            // Se asume que has ejecutado el SQL que agrega tienda_id a pedidos
+            const { data } = await supabase.from('pedidos')
+                .select('*, clientes(nombre)')
+                .eq('tienda_id', currentUser.id) 
+                .eq('estado','pendiente')
+                .order('fecha',{ascending:false});
+                
             document.getElementById('orders-list').innerHTML = data && data.length ? data.map(o => `
                 <div style="border:1px solid var(--border); padding:15px; border-radius:12px; margin-bottom:10px;">
                     <div style="font-weight:bold;">${o.clientes?.nombre || 'Cliente'} - $${o.total}</div>
@@ -447,18 +455,73 @@
         }
         async function finishOrder(id) { await supabase.from('pedidos').update({estado:'completado'}).eq('id', id); loadOrders(); }
 
-        // --- UTILS ---
+        // --- CHAT (Lógica recuperada) ---
+        async function loadChatsList() {
+             const { data } = await supabase.from('mensajes').select('*, clientes(nombre)').eq('tienda_id', currentUser.id).order('created_at', {ascending:false});
+             // Agrupar simple
+             const grouped = {};
+             data.forEach(m => { if(!grouped[m.cliente_id]) grouped[m.cliente_id] = m; });
+             
+             document.getElementById('chats-list').innerHTML = Object.values(grouped).map(m => `
+                <div onclick="openChat('${m.cliente_id}', '${m.clientes?.nombre}')" style="padding:15px; border-bottom:1px solid var(--border); cursor:pointer;">
+                    <div style="font-weight:bold;">${m.clientes?.nombre || 'Cliente'}</div>
+                    <div style="font-size:0.85rem; color:var(--text-light);">${m.contenido.substring(0,30)}...</div>
+                </div>
+             `).join('');
+        }
+
+        async function openChat(clientId, name) {
+            activeChatId = clientId;
+            document.getElementById('chat-client-name').textContent = name;
+            document.getElementById('chats-inbox').style.display = 'none';
+            document.getElementById('chat-interface').style.display = 'flex';
+            
+            const { data } = await supabase.from('mensajes').select('*').eq('tienda_id', currentUser.id).eq('cliente_id', clientId).order('created_at');
+            const div = document.getElementById('messages-container');
+            div.innerHTML = data.map(m => `
+                <div style="margin:5px; padding:8px 12px; border-radius:12px; max-width:80%; font-size:0.9rem; 
+                    background: ${m.enviado_por_rol==='dueño' ? 'var(--brand)' : 'white'}; 
+                    color: ${m.enviado_por_rol==='dueño' ? 'white' : 'black'}; 
+                    align-self: ${m.enviado_por_rol==='dueño' ? 'flex-end' : 'flex-start'};
+                    margin-left: ${m.enviado_por_rol==='dueño' ? 'auto' : '0'};">
+                    ${m.contenido}
+                </div>
+            `).join('');
+            div.scrollTop = div.scrollHeight;
+        }
+
+        async function sendMessage(e) {
+            e.preventDefault();
+            const txt = document.getElementById('msg-input').value;
+            if(!txt || !activeChatId) return;
+            await supabase.from('mensajes').insert({
+                tienda_id: currentUser.id, cliente_id: activeChatId, enviado_por_rol: 'dueño', contenido: txt
+            });
+            document.getElementById('msg-input').value = '';
+            // Recargar chat (idealmente usar realtime, pero simplificado por ahora)
+            openChat(activeChatId, document.getElementById('chat-client-name').textContent);
+        }
+
+        function closeChat() {
+            activeChatId = null;
+            document.getElementById('chat-interface').style.display = 'none';
+            document.getElementById('chats-inbox').style.display = 'block';
+            loadChatsList();
+        }
+
+        // UTILS
         function switchTab(id) {
             document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
             document.getElementById('tab-'+id).classList.add('active');
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             event.target.classList.add('active');
             if(id === 'pedidos') loadOrders();
+            if(id === 'chats') loadChatsList();
         }
         async function shareStoreLink() {
              const alias = document.getElementById('conf-alias').value;
-             const code = document.getElementById('store-code-display').textContent.trim();
-             const url = window.location.href.replace('admin.html', '') + (alias ? '?u='+alias : '?tienda='+code.replace('...',''));
+             const code = document.getElementById('store-code-display').textContent.replace(/[^a-zA-Z0-9-]/g, '');
+             const url = window.location.href.replace('admin.html', '') + (alias ? '?u='+alias : '?tienda='+code);
              navigator.clipboard.writeText(url);
              alert("Enlace copiado: " + url);
         }
