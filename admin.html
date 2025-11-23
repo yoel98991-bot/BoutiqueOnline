@@ -310,33 +310,36 @@
             document.getElementById('color-hex-val').textContent = color;
         }
 
+       // --- 3. CARGA DE DATOS con MÁXIMO LOGGING ---
         async function initData() {
-            console.log("Cargando datos...");
-            try {
-                // Cargar perfil
-                const { data: user } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
-                
-                if (user) {
-                    document.getElementById('store-code-display').innerHTML = `<i class="fas fa-store"></i> ${user.codigo_tienda || 'Sin Código'}`;
-                    if(user.color_tema) { previewColor(user.color_tema); document.getElementById('conf-color').value = user.color_tema; }
-                    
-                    document.getElementById('conf-alias').value = user.slug || '';
-                    document.getElementById('conf-banco').value = user.banco_nombre || '';
-                    document.getElementById('conf-titular').value = user.banco_titular || '';
-                    document.getElementById('conf-ci').value = user.banco_ci || '';
-                    document.getElementById('conf-tipo').value = user.banco_tipo || '';
-                    document.getElementById('conf-numero').value = user.banco_numero || '';
-                    
-                    if(user.logo_url) { document.getElementById('logo-preview').src = user.logo_url; document.getElementById('logo-preview').style.display = 'block'; }
-                    if(user.qr_imagen_url) { document.getElementById('qr-preview').src = user.qr_imagen_url; document.getElementById('qr-preview').style.display = 'block'; }
-                }
-
-                await loadProducts();
-                await loadOrders();
-
-            } catch (err) {
-                console.error("Error iniciando datos:", err);
+            console.log("Cargando datos para usuario ID:", currentUser.id);
+            
+            // 1. CARGA DEL PERFIL (usuarios)
+            const { data: user, error: userError } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
+            
+            if (userError) {
+                // ¡ALERTA! Si hay un error aquí, es porque no encuentra tu perfil
+                console.error("ERROR CRÍTICO: Fallo al cargar el perfil de usuario 'usuarios'.", userError);
+                document.getElementById('dashboard').innerHTML = '<div style="color:red; text-align:center; padding:50px;">ERROR CRÍTICO: No se pudo cargar el perfil del dueño. Revisa las políticas RLS en la tabla "usuarios" o si el usuario existe.</div>';
+                return; // Detenemos la carga si falla el perfil
             }
+            
+            // Si no hay error, seguimos cargando la UI
+            if (user) {
+                document.getElementById('store-code-display').innerHTML = `<i class="fas fa-store"></i> ${user.codigo_tienda || 'Sin Código'}`;
+                // ... (el resto de la lógica de carga de UI/configuración sigue aquí) ...
+                if(user.color_tema) { previewColor(user.color_tema); document.getElementById('conf-color').value = user.color_tema; }
+                document.getElementById('conf-alias').value = user.slug || '';
+                document.getElementById('conf-banco').value = user.banco_nombre || '';
+                // ... (y así sucesivamente con los demás campos) ...
+                if(user.logo_url) { document.getElementById('logo-preview').src = user.logo_url; document.getElementById('logo-preview').style.display = 'block'; }
+                if(user.qr_imagen_url) { document.getElementById('qr-preview').src = user.qr_imagen_url; document.getElementById('qr-preview').style.display = 'block'; }
+            }
+
+            // 2. CARGA DE PRODUCTOS Y PEDIDOS
+            await loadProducts();
+            await loadOrders();
+            await loadChatsList();
         }
 
         // --- 4. FUNCIONES DE PRODUCTOS ---
@@ -346,8 +349,12 @@
                 .eq('creado_por', currentUser.id)
                 .order('id', {ascending:false});
 
-            if(error) console.error("Error productos:", error);
-            products = data || [];
+            if(error) {
+                console.error("Error SQL Productos:", error);
+                // ESTO AGREGARÁ UN MENSAJE VISIBLE SI FALLA EL RLS
+                document.getElementById('products-table').innerHTML = `<tr><td colspan="3" style="color:red; text-align:center;">ERROR AL CARGAR PRODUCTOS: ${error.message}</td></tr>`;
+                return;
+            }
             
             const table = document.getElementById('products-table');
             table.innerHTML = products.length ? products.map(p => `
