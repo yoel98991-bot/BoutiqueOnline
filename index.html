@@ -226,8 +226,11 @@
         // 1. Buscamos si hay un código de tienda en la URL (Ej: index.html?tienda=TIENDA-123)
         const params = new URLSearchParams(window.location.search);
         const urlStoreCode = params.get('tienda');
+        const urlAlias = params.get('u'); // Soporte para alias
 
-        if (urlStoreCode) {
+        if (urlAlias) {
+             await resolveAlias(urlAlias);
+        } else if (urlStoreCode) {
             // Si viene por URL, intentamos cargar esa tienda directamente
             await resolveStore(urlStoreCode.toUpperCase());
         } else if (session.storeId) {
@@ -239,22 +242,35 @@
         }
     });
 
+    async function resolveAlias(alias) {
+        try {
+            const { data: store, error } = await supabase.from('usuarios').select('id, codigo_tienda').eq('slug', alias.toLowerCase()).single();
+            if (error || !store) throw new Error("Tienda no encontrada por alias");
+            setSessionStore(store);
+            initApp();
+        } catch (e) {
+            alert("Enlace de tienda inválido.");
+            promptStoreCode();
+        }
+    }
+
     async function resolveStore(code) {
         try {
             const { data: store, error } = await supabase.from('usuarios').select('id, codigo_tienda').eq('codigo_tienda', code).single();
             if (error || !store) throw new Error("Tienda no encontrada");
-
-            // Guardamos la tienda en local, pero NO requerimos cliente aún
-            localStorage.setItem('storeId', store.id);
-            localStorage.setItem('storeCode', store.codigo_tienda);
-            session.storeId = store.id;
-            session.storeCode = store.codigo_tienda;
-
-            initApp(); // Arranca la app (carga catálogo)
+            setSessionStore(store);
+            initApp(); 
         } catch (e) {
             alert("El código de tienda del enlace es inválido.");
             promptStoreCode();
         }
+    }
+
+    function setSessionStore(store) {
+        localStorage.setItem('storeId', store.id);
+        localStorage.setItem('storeCode', store.codigo_tienda);
+        session.storeId = store.id;
+        session.storeCode = store.codigo_tienda;
     }
 
     function promptStoreCode() {
@@ -390,6 +406,12 @@
             renderPaymentInfo();
             if (storeData.logo_url) {
                 document.getElementById('store-branding').innerHTML = `<img src="${storeData.logo_url}" alt="Logo" style="height: 40px; max-width: 180px; object-fit: contain;">`;
+            }
+            // --- APLICAR TEMA ---
+            if(storeData.color_tema) {
+                document.documentElement.style.setProperty('--accent', storeData.color_tema);
+                const chatBtn = document.querySelector('.chat-btn');
+                if(chatBtn) chatBtn.style.backgroundColor = storeData.color_tema;
             }
         }
     }
