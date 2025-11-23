@@ -436,23 +436,29 @@
             });
         }
 
-        // --- PEDIDOS (Usando tienda_id para RLS) ---
-        async function loadOrders() {
-            // Se asume que has ejecutado el SQL que agrega tienda_id a pedidos
-            const { data } = await supabase.from('pedidos')
-                .select('*, clientes(nombre)')
-                .eq('tienda_id', currentUser.id) 
-                .eq('estado','pendiente')
-                .order('fecha',{ascending:false});
-                
-            document.getElementById('orders-list').innerHTML = data && data.length ? data.map(o => `
-                <div style="border:1px solid var(--border); padding:15px; border-radius:12px; margin-bottom:10px;">
-                    <div style="font-weight:bold;">${o.clientes?.nombre || 'Cliente'} - $${o.total}</div>
-                    <div style="font-size:0.85rem; color:#64748b;">${new Date(o.fecha).toLocaleDateString()}</div>
-                    <button class="btn btn-primary" style="margin-top:10px; padding:8px;" onclick="finishOrder(${o.id})">Marcar Entregado</button>
-                </div>
-            `).join('') : '<p style="text-align:center; color:#94a3b8;">No hay pedidos pendientes.</p>';
-        }
+     async function loadOrders() {
+    console.log("Cargando pedidos...");
+    
+    const { data, error } = await supabase.from('pedidos')
+        .select('*, clientes(nombre)')
+        .eq('tienda_id', currentUser.id) // <--- ESTA LÍNEA ES CRUCIAL PARA VENDER EL SOFTWARE
+        .eq('estado','pendiente')
+        .order('fecha',{ascending:false});
+    
+    if(error) {
+        console.error("Error:", error);
+        return;
+    }
+    
+    // ... (el resto del código de renderizado sigue igual) ...
+    document.getElementById('orders-list').innerHTML = data && data.length ? data.map(o => `
+        <div style="border:1px solid var(--border); padding:15px; border-radius:12px; margin-bottom:10px;">
+            <div style="font-weight:bold;">${o.clientes?.nombre || 'Cliente'} - $${o.total}</div>
+            <div style="font-size:0.85rem; color:#64748b;">${new Date(o.fecha).toLocaleDateString()}</div>
+            <button class="btn btn-primary" style="margin-top:10px; padding:8px;" onclick="finishOrder(${o.id})">Marcar Entregado</button>
+        </div>
+    `).join('') : '<p style="text-align:center; color:#94a3b8;">No hay pedidos pendientes.</p>';
+}
         async function finishOrder(id) { await supabase.from('pedidos').update({estado:'completado'}).eq('id', id); loadOrders(); }
 
         // --- CHAT (Lógica recuperada) ---
