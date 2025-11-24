@@ -494,7 +494,7 @@
         const orderMetadata = { items: cart.map(p => ({ id: p.id, name: p.nombre, price: p.precio })), delivery: { method, address: method === 'delivery' ? address : 'N/A' } };
 
         try {
-            await supabase.from('pedidos').insert({ cliente_id: session.clientId, total: total, productos: orderMetadata, estado: 'pendiente' });
+            await supabase.from('pedidos').insert({ cliente_id: session.clientId, total: total, productos: orderMetadata, estado: 'pendiente' tienda_id: session.storeId });
             
             let autoMsg = `✅ ¡Nuevo pedido! Total: $${total.toFixed(2)} (${cart.length} items).\n${method === 'delivery' ? '🛵 Delivery: ' + address : '📍 Retiro en Tienda.'}`;
             if(storePaymentInfo && storePaymentInfo.banco_numero) autoMsg += `\n\n💳 Envíame el comprobante por aquí.`;
