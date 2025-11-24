@@ -224,7 +224,10 @@
                     <textarea id="descripcion" rows="2" placeholder="Descripción"></textarea>
                     <div class="form-grid">
                         <input type="number" id="stock" value="10" placeholder="Stock">
-                        <input type="text" id="categoria" placeholder="Categoría">
+                        <div>
+                            <input type="text" id="categoria" list="lista-categorias" placeholder="Categoría (Escribe o selecciona)" style="width:100%; margin-bottom:15px;">
+                            <datalist id="lista-categorias"></datalist>
+                        </div>
                     </div>
                     <div class="upload-zone" onclick="document.getElementById('imagen-input').click()">
                         <p id="upload-text" style="margin:0; color:#64748b;">Subir Foto</p>
@@ -555,6 +558,11 @@
         async function loadProducts() {
             const { data } = await supabase.from('productos').select('*').eq('creado_por', currentUser.id).order('id', {ascending:false});
             productsCache = data || [];
+            
+            // --- CAMBIO: Actualizar Datalist ---
+            updateCategoryDatalist(); 
+            // -----------------------------------
+
             const table = document.getElementById('products-table');
             if(!data || data.length === 0) { table.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Sin productos.</td></tr>'; return; }
             table.innerHTML = `<thead><tr><th>FOTO</th><th>DETALLE</th><th>$</th><th>ACCIONES</th></tr></thead><tbody>${data.map(p => `<tr><td><img src="${p.imagen_url || 'https://via.placeholder.com/50'}" class="product-img"></td><td><div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div><div style="font-size:0.75rem; color:#94a3b8;">Stock: ${p.stock}</div></td><td style="font-weight:bold;">${p.precio}</td><td><button class="btn-icon btn-edit" onclick="startEdit(${p.id})"><i class="fas fa-pen"></i></button><button class="btn-icon btn-danger" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>`;
@@ -822,6 +830,21 @@
             if (data.qr_imagen_url) { document.getElementById('qr-preview').src = data.qr_imagen_url; document.getElementById('qr-preview').style.display = 'block'; }
             if(data.logo_url) updateAdminLogoUI(data.logo_url);
             if(data.slug) document.getElementById('conf-alias').value = data.slug;
+        }
+
+        // --- CAMBIO: Función para autocompletar categorías ---
+        function updateCategoryDatalist() {
+            // 1. Obtenemos todas las categorías de los productos cargados
+            const rawCategories = productsCache.map(p => p.categoria).filter(c => c && c.trim() !== '');
+            
+            // 2. Quitamos duplicados usando Set
+            const uniqueCategories = [...new Set(rawCategories)];
+            
+            // 3. Llenamos el datalist en el HTML
+            const datalist = document.getElementById('lista-categorias');
+            datalist.innerHTML = uniqueCategories.sort().map(cat => 
+                `<option value="${cat}">`
+            ).join('');
         }
     </script>
 </body>
