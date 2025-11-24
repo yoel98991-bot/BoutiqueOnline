@@ -236,15 +236,6 @@
                     <img id="logo-img-preview" class="current-logo" style="display:none;">
                     <input type="file" id="logo-input" accept="image/*" style="display:none;">
                 </div>
-
-                <div style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
-                    <label style="margin-bottom: 10px; display:block;">🎨 Color de la Marca</label>
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <input type="color" id="conf-color" value="#6366f1" style="width: 60px; height: 40px; border: none; padding: 0; cursor: pointer; background: none;">
-                        <span style="font-size: 0.9rem; color: #64748b;">Elige el color principal de tu tienda</span>
-                    </div>
-                </div>
-
             </div>
 
             <div class="card">
@@ -449,27 +440,38 @@
             setTimeout(() => { if (currentUser) setupGlobalRealtime(); }, 5000);
         }
 
-        async function shareStoreLink() {
-            const aliasInput = document.getElementById('conf-alias').value.trim();
-            let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-            const finalParam = aliasInput ? `?u=${aliasInput}` : `?tienda=${storeCode}`;
-            const promoUrl = `${baseUrl}/${finalParam}`;
+// --- REEMPLAZA LA FUNCIÓN shareStoreLink ENTERA POR ESTA ---
 
-            const shareData = {
-                title: 'Mi Boutique Online',
-                text: '¡Hola! Te invito a visitar mi catálogo online y realizar tus pedidos aquí:',
-                url: promoUrl
-            };
+async function shareStoreLink() {
+    // 1. Buscamos si hay un alias configurado
+    const aliasInput = document.getElementById('conf-alias').value.trim();
+    
+    // 2. Obtenemos la URL base (quitamos 'admin.html' de la ruta actual)
+    // Si estás en https://mi-sitio.vercel.app/admin.html -> queda https://mi-sitio.vercel.app
+    let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
 
-            if (navigator.share) {
-                try { await navigator.share(shareData); } catch (err) {}
-            } else {
-                try {
-                    await navigator.clipboard.writeText(promoUrl);
-                    showToast("¡Enlace Copiado!", "Link: " + promoUrl);
-                } catch (err) { alert("Tu enlace es: " + promoUrl); }
-            }
-        }
+    // 3. Definimos el parámetro
+    const finalParam = aliasInput ? `?u=${aliasInput}` : `?tienda=${storeCode}`;
+
+    // 4. CORRECCIÓN: Quitamos "/index.html". Ahora queda limpio.
+    // Generará: https://mi-sitio.vercel.app/?u=noe-joyeria
+    const promoUrl = `${baseUrl}/${finalParam}`;
+
+    const shareData = {
+        title: 'Mi Boutique Online',
+        text: '¡Hola! Te invito a visitar mi catálogo online y realizar tus pedidos aquí:',
+        url: promoUrl
+    };
+
+    if (navigator.share) {
+        try { await navigator.share(shareData); } catch (err) {}
+    } else {
+        try {
+            await navigator.clipboard.writeText(promoUrl);
+            showToast("¡Enlace Copiado!", "Link: " + promoUrl);
+        } catch (err) { alert("Tu enlace es: " + promoUrl); }
+    }
+}
 
         function copyCode() { navigator.clipboard.writeText(storeCode); alert("Código copiado: " + storeCode); }
 
@@ -671,8 +673,7 @@
                     banco_ci: document.getElementById('conf-ci').value,
                     banco_numero: document.getElementById('conf-numero').value,
                     banco_tipo: document.getElementById('conf-tipo').value,
-                    color_tema: document.getElementById('conf-color').value, // <-- GUARDAR COLOR
-                    slug: aliasInput || null,
+                    slug: aliasInput || null, // Guardamos el alias
                     qr_imagen_url: qrUrl && qrUrl.startsWith('http') ? qrUrl : null
                 };
                 
@@ -698,9 +699,8 @@
             if (data.qr_imagen_url) { document.getElementById('qr-preview').src = data.qr_imagen_url; document.getElementById('qr-preview').style.display = 'block'; }
             if(data.logo_url) updateAdminLogoUI(data.logo_url);
             
+            // Cargar alias
             if(data.slug) document.getElementById('conf-alias').value = data.slug;
-            // <-- CARGAR COLOR
-            if(data.color_tema) document.getElementById('conf-color').value = data.color_tema;
         }
     </script>
 </body>
