@@ -24,7 +24,7 @@
         .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; transition: opacity 0.3s ease; }
         
-        /* --- ESTILOS PARA CATEGORÍAS (NUEVO) --- */
+        /* --- ESTILOS PARA CATEGORÍAS --- */
         .category-scroll {
             display: flex;
             gap: 10px;
@@ -60,10 +60,18 @@
 
         /* Product Card */
         .card { background: white; border-radius: var(--radius); overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
-        .card-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background: #eee; }
+        /* La imagen ahora tiene cursor pointer */
+        .card-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background: #eee; cursor: pointer; transition: opacity 0.2s; }
+        .card-img:hover { opacity: 0.9; }
+        
         .card-body { padding: 12px; display: flex; flex-direction: column; flex: 1; }
-        .btn-add { width: 100%; padding: 10px; background: var(--text-main); color: white; border: none; border-radius: 8px; margin-top: auto; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-        .btn-add:active { transform: scale(0.98); }
+        
+        /* Botones de acción */
+        .btn-group { display: flex; gap: 5px; margin-top: auto; }
+        .btn-add { flex: 2; padding: 10px; background: var(--text-main); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; font-size: 0.9rem;}
+        .btn-view { flex: 1; padding: 10px; background: white; color: var(--text-main); border: 1px solid #e2e8f0; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem;}
+        
+        .btn-add:active, .btn-view:active { transform: scale(0.98); }
 
         /* Chat Widget */
         .chat-btn { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4); cursor: pointer; z-index: 100; transition: transform 0.2s; }
@@ -107,6 +115,35 @@
         .payment-val { font-family: monospace; font-size: 1rem; color: #1e293b; font-weight: bold; }
 
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        /* --- MODAL DETALLE DE PRODUCTO (NUEVO) --- */
+        #product-detail-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 4000; display: none; justify-content: center; align-items: center; padding: 20px; opacity: 0; transition: opacity 0.3s; }
+        #product-detail-modal.open { display: flex; opacity: 1; }
+        
+        .detail-card { 
+            background: white; 
+            border-radius: 20px; 
+            width: 100%; 
+            max-width: 500px; 
+            max-height: 90vh; 
+            overflow-y: auto; 
+            position: relative; 
+            transform: scale(0.9); 
+            transition: transform 0.3s; 
+            display: flex;
+            flex-direction: column;
+        }
+        #product-detail-modal.open .detail-card { transform: scale(1); }
+
+        .detail-img { width: 100%; height: 300px; object-fit: cover; background: #eee; }
+        .detail-content { padding: 25px; }
+        .close-detail { position: absolute; top: 15px; right: 15px; background: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; color: #333; z-index: 10; font-size: 1.2rem;}
+        
+        /* GATILLOS MENTALES (PRECIO) */
+        .price-trigger-container { margin: 15px 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .fake-price { color: #94a3b8; text-decoration: line-through; font-size: 1.1rem; font-weight: 500; }
+        .real-price { color: var(--accent); font-size: 1.8rem; font-weight: 800; }
+        .discount-badge { background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; letter-spacing: 0.5px; border: 1px solid #fca5a5; }
 
         /* Modal QR */
         #qr-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: none; justify-content: center; align-items: center; padding: 20px; opacity: 0; transition: opacity 0.3s; }
@@ -228,6 +265,29 @@
         </div>
     </div>
 
+    <div id="product-detail-modal" onclick="if(event.target === this) closeProductModal()">
+        <div class="detail-card">
+            <div class="close-detail" onclick="closeProductModal()"><i class="fas fa-times"></i></div>
+            <img id="detail-img" src="" class="detail-img">
+            <div class="detail-content">
+                <h2 id="detail-title" style="margin-bottom:5px;">Nombre Producto</h2>
+                <div id="detail-category" style="color: #64748b; font-size: 0.9rem; margin-bottom: 10px;">Categoría</div>
+                
+                <div class="price-trigger-container">
+                    <span id="detail-fake-price" class="fake-price">$0.00</span>
+                    <span id="detail-real-price" class="real-price">$0.00</span>
+                    <span class="discount-badge">¡OFERTA FLASH!</span>
+                </div>
+                
+                <p id="detail-desc" style="line-height: 1.6; color: #475569; margin-bottom: 25px;">Descripción...</p>
+                
+                <button id="detail-add-btn" class="btn-add" style="width:100%; padding: 15px; font-size: 1.1rem;">
+                    <i class="fas fa-cart-plus"></i> Agregar al Carrito
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="qr-modal" onclick="if(event.target === this) closeQRModal()">
         <div class="qr-card">
             <i class="fas fa-times" onclick="closeQRModal()" style="position: absolute; top: 15px; right: 20px; font-size: 1.5rem; color: #94a3b8; cursor: pointer;"></i>
@@ -256,7 +316,7 @@
     let productsCache = []; 
     let storePaymentInfo = null;
     let unreadCount = 0;
-    let currentCategory = 'Todos'; // NUEVO: Estado de categoría
+    let currentCategory = 'Todos'; 
     const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
     // --- INICIO: LÓGICA DE ARRANQUE ---
@@ -381,7 +441,7 @@
         loadCatalog();
     }
 
-    // --- NUEVA LÓGICA DE CATÁLOGO CON FILTROS ---
+    // --- CATÁLOGO Y RENDERIZADO ---
     async function loadCatalog() {
         const grid = document.getElementById('products-grid');
         grid.innerHTML = '<p style="text-align:center; width:100%;"><i class="fas fa-spinner fa-spin"></i> Cargando catálogo...</p>';
@@ -449,18 +509,55 @@
         setTimeout(() => {
             grid.innerHTML = productsList.map(p => `
                 <div class="card">
-                    <img src="${p.imagen_url || 'https://via.placeholder.com/300'}" class="card-img" loading="lazy">
+                    <img src="${p.imagen_url || 'https://via.placeholder.com/300'}" class="card-img" loading="lazy" onclick="openProductModal(${p.id})">
                     <div class="card-body">
                         <div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div>
                         <div style="color:var(--accent); font-weight:bold; margin-bottom:5px;">$${p.precio}</div>
                         <div style="font-size:0.75rem; color:#64748b; margin-bottom:10px;">
-                            ${p.descripcion ? p.descripcion.substring(0, 50) + (p.descripcion.length > 50 ? '...' : '') : ''}
+                            ${p.descripcion ? p.descripcion.substring(0, 45) + (p.descripcion.length > 45 ? '...' : '') : 'Sin descripción'}
                         </div>
-                        <button class="btn-add" onclick="addToCart(${p.id})">Agregar +</button>
+                        <div class="btn-group">
+                            <button class="btn-view" onclick="openProductModal(${p.id})"><i class="fas fa-eye"></i></button>
+                            <button class="btn-add" onclick="addToCart(${p.id})">Agregar +</button>
+                        </div>
                     </div>
                 </div>`).join('');
             grid.style.opacity = '1';
         }, 100);
+    }
+
+    // --- MODAL DE DETALLES Y GATILLOS MENTALES ---
+    function openProductModal(productId) {
+        const product = productsCache.find(p => p.id === productId);
+        if (!product) return;
+
+        // 1. Calcular precio "Ancla" (40% más)
+        const realPrice = parseFloat(product.precio);
+        const fakePrice = realPrice * 1.40;
+
+        // 2. Llenar datos
+        document.getElementById('detail-img').src = product.imagen_url || 'https://via.placeholder.com/300';
+        document.getElementById('detail-title').textContent = product.nombre;
+        document.getElementById('detail-category').textContent = product.categoria || 'General';
+        document.getElementById('detail-desc').textContent = product.descripcion || 'Sin descripción detallada.';
+        
+        // 3. Mostrar precios
+        document.getElementById('detail-real-price').textContent = `$${realPrice.toFixed(2)}`;
+        document.getElementById('detail-fake-price').textContent = `$${fakePrice.toFixed(2)}`;
+
+        // 4. Configurar botón de agregar
+        const addBtn = document.getElementById('detail-add-btn');
+        addBtn.onclick = function() {
+            addToCart(product.id);
+            closeProductModal();
+        };
+
+        // 5. Mostrar modal
+        document.getElementById('product-detail-modal').classList.add('open');
+    }
+
+    function closeProductModal() {
+        document.getElementById('product-detail-modal').classList.remove('open');
     }
 
     // ... FUNCIONES DE PAGO ...
