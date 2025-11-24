@@ -618,57 +618,68 @@
             finally { if(document.body.contains(btn)) btn.innerHTML = originalText; }
         }
 
-        // --- LÓGICA DE RESUMEN ---
-        async function loadSummary() {
-            const { data: orders, error } = await supabase
-                .from('pedidos')
-                .select('total, fecha, cliente_id, clientes(nombre)')
-                .eq('estado', 'completado') 
-                .eq('tienda_id', currentUser.id) // Filtrar por tienda para seguridad
-                .order('fecha', { ascending: false });
+      // REEMPLAZAR FUNCIÓN LOADSUMMARY EN ADMIN.HTML
+    async function loadSummary() {
+        const { data: orders, error } = await supabase
+            .from('pedidos')
+            .select('total, fecha, cliente_id, clientes(nombre)')
+            .eq('estado', 'completado') 
+            // .eq('tienda_id', currentUser.id) // <--- COMENTADO PARA VER VENTAS ANTIGUAS
+            .order('fecha', { ascending: false });
 
-            if (error) { console.error(error); return; }
+        if (error) { console.error(error); return; }
+        
+        // A. Calcular Totales
+        let totalIncome = 0;
+        let totalCount = orders.length;
+        const clientMap = {}; 
+
+        orders.forEach(o => {
+            const amount = parseFloat(o.total);
+            totalIncome += amount;
+
+            // Lógica para Cliente Top
+            const cId = o.cliente_id;
+            const cName = o.clientes ? o.clientes.nombre : 'Desconocido';
             
-            let totalIncome = 0;
-            let totalCount = orders.length;
-            const clientMap = {}; 
-
-            orders.forEach(o => {
-                const amount = parseFloat(o.total);
-                totalIncome += amount;
-                const cId = o.cliente_id;
-                const cName = o.clientes ? o.clientes.nombre : 'Desconocido';
-                if (!clientMap[cId]) { clientMap[cId] = { name: cName, total: 0, orders: 0 }; }
-                clientMap[cId].total += amount;
-                clientMap[cId].orders += 1;
-            });
-
-            let topClientName = "Nadie aún";
-            let topClientAmount = 0;
-            const sortedClients = Object.values(clientMap).sort((a, b) => b.total - a.total);
-            if (sortedClients.length > 0) {
-                topClientName = sortedClients[0].name;
-                topClientAmount = sortedClients[0].total;
+            if (!clientMap[cId]) {
+                clientMap[cId] = { name: cName, total: 0, orders: 0 };
             }
+            clientMap[cId].total += amount;
+            clientMap[cId].orders += 1;
+        });
 
-            document.getElementById('stat-income').textContent = `$${totalIncome.toFixed(2)}`;
-            document.getElementById('stat-orders').textContent = totalCount;
-            document.getElementById('stat-top-client').textContent = topClientName;
-            document.getElementById('stat-top-spent').textContent = `Ha comprado: $${topClientAmount.toFixed(2)}`;
-
-            const recentBody = document.getElementById('recent-sales-body');
-            if(orders.length === 0) {
-                recentBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px; color:#94a3b8;">Sin ventas registradas</td></tr>';
-            } else {
-                recentBody.innerHTML = orders.slice(0, 5).map(o => `
-                    <tr>
-                        <td>${o.clientes?.nombre || 'Anon'}</td>
-                        <td style="color:#22c55e; font-weight:bold;">+$${o.total}</td>
-                        <td style="color:#64748b; font-size:0.85rem;">${new Date(o.fecha).toLocaleDateString()}</td>
-                    </tr>
-                `).join('');
-            }
+        // B. Encontrar al Ganador (Top Client)
+        let topClientName = "Nadie aún";
+        let topClientAmount = 0;
+        
+        const sortedClients = Object.values(clientMap).sort((a, b) => b.total - a.total);
+        
+        if (sortedClients.length > 0) {
+            topClientName = sortedClients[0].name;
+            topClientAmount = sortedClients[0].total;
         }
+
+        // C. Renderizar en HTML
+        document.getElementById('stat-income').textContent = `$${totalIncome.toFixed(2)}`;
+        document.getElementById('stat-orders').textContent = totalCount;
+        document.getElementById('stat-top-client').textContent = topClientName;
+        document.getElementById('stat-top-spent').textContent = `Ha comprado: $${topClientAmount.toFixed(2)}`;
+
+        // D. Llenar tabla de historial reciente
+        const recentBody = document.getElementById('recent-sales-body');
+        if(orders.length === 0) {
+            recentBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px; color:#94a3b8;">Sin ventas registradas</td></tr>';
+        } else {
+            recentBody.innerHTML = orders.slice(0, 5).map(o => `
+                <tr>
+                    <td>${o.clientes?.nombre || 'Anon'}</td>
+                    <td style="color:#22c55e; font-weight:bold;">+$${o.total}</td>
+                    <td style="color:#64748b; font-size:0.85rem;">${new Date(o.fecha).toLocaleDateString()}</td>
+                </tr>
+            `).join('');
+        }
+    }
 
         // --- UI & CHATS ---
         function showToast(title, message) {
