@@ -86,6 +86,41 @@
         .panel-section { display: none; animation: fadeIn 0.3s ease; }
         .panel-section.active { display: block; }
 
+        /* --- NUEVO: GALERÍA DE PREVISUALIZACIÓN --- */
+        .gallery-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .gallery-item {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1/1;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .btn-remove-img {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+
         /* Table */
         .table-container { overflow-x: auto; margin: 0 -20px; padding: 0 20px; }
         table { width: 100%; border-collapse: collapse; white-space: nowrap; }
@@ -135,7 +170,7 @@
         .top-client-box .value { color: white; font-size: 1.5rem; }
         .top-client-box .sub-text { color: rgba(255,255,255,0.9); }
 
-        /* --- NUEVO: ESTILOS PARA MODAL PERSONALIZADO --- */
+        /* MODAL PERSONALIZADO */
         .custom-modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
@@ -282,10 +317,17 @@
                             <datalist id="lista-categorias"></datalist>
                         </div>
                     </div>
+                    
+                    <label style="margin-top:10px; display:block;">Galería de Imágenes (Máx 6)</label>
                     <div class="upload-zone" onclick="document.getElementById('imagen-input').click()">
-                        <p id="upload-text" style="margin:0; color:#64748b;">Subir Foto</p>
-                        <input type="file" id="imagen-input" accept="image/*" style="display:none;">
+                        <p id="upload-text" style="margin:0; color:#64748b;">
+                            <i class="fas fa-images"></i> Toca para seleccionar fotos
+                        </p>
+                        <input type="file" id="imagen-input" accept="image/*" multiple style="display:none;">
                     </div>
+                    
+                    <div id="gallery-preview-container" class="gallery-preview-grid"></div>
+
                     <div style="margin-bottom: 15px;"><input type="checkbox" id="destacado"> Destacar</div>
                     <button type="submit" id="btn-save" class="btn btn-primary">Publicar</button>
                     <button type="button" id="btn-cancel" class="btn btn-cancel" style="display:none;" onclick="resetForm()">Cancelar</button>
@@ -419,37 +461,27 @@
         const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
         let globalChannel = null;
         let isReconnecting = false;
-        let modalCallback = null; // Para guardar la función a ejecutar al confirmar
+        let modalCallback = null;
+
+        // --- NUEVO: ESTADO PARA GALERÍA ---
+        let galleryFiles = []; // Almacena objetos: { type: 'file'|'url', data: File|String }
 
         // --- SISTEMA DE MODALES PERSONALIZADO ---
         function customConfirm(title, message, type = 'info', callback) {
-            // type: 'success', 'danger', 'info'
             const modal = document.getElementById('app-modal');
             const card = document.getElementById('modal-card-content');
             const iconEl = document.getElementById('modal-icon');
             const btnConfirm = document.getElementById('btn-modal-confirm');
-            
-            // 1. Resetear clases
             card.className = 'custom-modal-card modal-type-' + type;
-
-            // 2. Configurar contenido
             document.getElementById('modal-title').textContent = title;
             document.getElementById('modal-msg').innerHTML = message;
-
-            // 3. Configurar Icono
             let iconClass = 'fa-info-circle';
             if(type === 'success') iconClass = 'fa-check';
             if(type === 'danger') iconClass = 'fa-trash-alt';
             iconEl.innerHTML = `<i class="fas ${iconClass}"></i>`;
-
-            // 4. Configurar Botón
             btnConfirm.textContent = type === 'danger' ? 'Eliminar' : 'Confirmar';
             if(type === 'success') btnConfirm.textContent = '¡Si, Entregado!';
-
-            // 5. Guardar callback
             modalCallback = callback;
-
-            // 6. Mostrar
             modal.classList.add('open');
         }
 
@@ -463,11 +495,9 @@
             closeCustomModal();
         });
 
-        // Cerrar al tocar afuera
         document.getElementById('app-modal').addEventListener('click', (e) => {
             if (e.target.id === 'app-modal') closeCustomModal();
         });
-
 
         // --- FUNCIONES PUSH ---
         function urlBase64ToUint8Array(base64String) {
@@ -601,42 +631,108 @@
             let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
             const finalParam = aliasInput ? `?u=${aliasInput}` : `?tienda=${storeCode}`;
             const promoUrl = `${baseUrl}/${finalParam}`;
-
-            const shareData = {
-                title: 'Mi Boutique Online',
-                text: '¡Hola! Te invito a visitar mi catálogo online y realizar tus pedidos aquí:',
-                url: promoUrl
-            };
-
-            if (navigator.share) {
-                try { await navigator.share(shareData); } catch (err) {}
-            } else {
-                try {
-                    await navigator.clipboard.writeText(promoUrl);
-                    showToast("¡Enlace Copiado!", "Link: " + promoUrl);
-                } catch (err) { alert("Tu enlace es: " + promoUrl); }
-            }
+            const shareData = { title: 'Mi Boutique Online', text: '¡Hola! Te invito a visitar mi catálogo online:', url: promoUrl };
+            if (navigator.share) { try { await navigator.share(shareData); } catch (err) {} } 
+            else { try { await navigator.clipboard.writeText(promoUrl); showToast("¡Enlace Copiado!", "Link: " + promoUrl); } catch (err) { alert("Tu enlace es: " + promoUrl); } }
         }
 
-        function copyCode() { 
-            navigator.clipboard.writeText(storeCode); 
-            showToast("Código Copiado", storeCode);
+        function copyCode() { navigator.clipboard.writeText(storeCode); showToast("Código Copiado", storeCode); }
+
+        // --- NUEVO: LÓGICA DE GALERÍA DE IMÁGENES ---
+        
+        // 1. Listener para el input file
+        document.getElementById('imagen-input').addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            const totalCurrent = galleryFiles.length;
+            const available = 6 - totalCurrent;
+
+            if (files.length > available) {
+                showToast("Límite Excedido", "Máximo 6 fotos en total.");
+            }
+
+            // Tomar solo los que caben
+            const filesToAdd = files.slice(0, available);
+            
+            filesToAdd.forEach(file => {
+                galleryFiles.push({ type: 'file', data: file });
+            });
+            
+            renderGalleryPreview();
+            // Limpiar input para permitir seleccionar el mismo archivo si se borra y vuelve a poner
+            this.value = '';
+        });
+
+        function renderGalleryPreview() {
+            const container = document.getElementById('gallery-preview-container');
+            container.innerHTML = '';
+
+            galleryFiles.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'gallery-item';
+                
+                const img = document.createElement('img');
+                if (item.type === 'file') {
+                    img.src = URL.createObjectURL(item.data);
+                } else {
+                    img.src = item.data; // Es una URL string
+                }
+                
+                const btn = document.createElement('button');
+                btn.className = 'btn-remove-img';
+                btn.innerHTML = '<i class="fas fa-times"></i>';
+                btn.onclick = (e) => {
+                    e.preventDefault(); // Evitar submit
+                    removeImageFromGallery(index);
+                };
+
+                div.appendChild(img);
+                div.appendChild(btn);
+                container.appendChild(div);
+            });
+        }
+
+        function removeImageFromGallery(index) {
+            galleryFiles.splice(index, 1);
+            renderGalleryPreview();
         }
 
         // --- PRODUCTOS ---
         document.getElementById('product-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); const btn = document.getElementById('btn-save'); btn.textContent = "Guardando..."; btn.disabled = true;
+            e.preventDefault(); 
+            
+            if(galleryFiles.length === 0) {
+                showToast("Falta Imagen", "Sube al menos una foto.");
+                return;
+            }
+
+            const btn = document.getElementById('btn-save'); 
+            btn.textContent = "Guardando..."; 
+            btn.disabled = true;
+            
             try {
-                const file = document.getElementById('imagen-input').files[0];
-                let imageUrl = null;
-                if (file) {
-                    const fileName = `${currentUser.id}/${Date.now()}`;
-                    await supabase.storage.from('imagenes-productos').upload(fileName, file);
-                    const { data } = supabase.storage.from('imagenes-productos').getPublicUrl(fileName);
-                    imageUrl = data.publicUrl;
-                } else if (editingId) {
-                    imageUrl = productsCache.find(p => p.id === editingId).imagen_url;
+                // 1. Subir las imágenes nuevas
+                let uploadedUrls = [];
+
+                // Recorremos el array de galería
+                for (const item of galleryFiles) {
+                    if (item.type === 'url') {
+                        // Si ya era URL (existente), la mantenemos
+                        uploadedUrls.push(item.data);
+                    } else if (item.type === 'file') {
+                        // Si es archivo nuevo, subimos
+                        const file = item.data;
+                        const fileName = `${currentUser.id}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                        const { error: uploadErr } = await supabase.storage.from('imagenes-productos').upload(fileName, file);
+                        if (uploadErr) throw uploadErr;
+                        
+                        const { data } = supabase.storage.from('imagenes-productos').getPublicUrl(fileName);
+                        uploadedUrls.push(data.publicUrl);
+                    }
                 }
+
+                // La primera imagen será la "Principal" (imagen_url) para compatibilidad
+                const mainImage = uploadedUrls[0];
+
                 const productData = {
                     nombre: document.getElementById('nombre').value,
                     precio: parseFloat(document.getElementById('precio').value),
@@ -645,17 +741,33 @@
                     categoria: document.getElementById('categoria').value,
                     destacado: document.getElementById('destacado').checked,
                     creado_por: currentUser.id,
-                    ...(imageUrl && { imagen_url: imageUrl }) 
+                    imagen_url: mainImage,     // Compatible con vista grid antigua
+                    galeria: uploadedUrls      // Array completo JSONB
                 };
-                if (editingId) await supabase.from('productos').update(productData).eq('id', editingId);
-                else { productData.imagen_url = imageUrl; await supabase.from('productos').insert([productData]); }
-                resetForm(); loadProducts(); showToast("Éxito", "Producto guardado");
-            } catch (error) { alert("Error: " + error.message); } 
-            finally { btn.disabled = false; btn.textContent = "Publicar"; }
+
+                if (editingId) {
+                    await supabase.from('productos').update(productData).eq('id', editingId);
+                } else { 
+                    await supabase.from('productos').insert([productData]); 
+                }
+                
+                resetForm(); 
+                loadProducts(); 
+                showToast("Éxito", "Producto guardado con fotos.");
+            } catch (error) { 
+                alert("Error: " + error.message); 
+            } finally { 
+                btn.disabled = false; 
+                btn.textContent = "Publicar"; 
+            }
         });
 
         function resetForm() {
-            document.getElementById('product-form').reset(); editingId = null;
+            document.getElementById('product-form').reset(); 
+            editingId = null;
+            galleryFiles = []; // Limpiar galería
+            renderGalleryPreview();
+            
             document.getElementById('btn-save').textContent = "Publicar";
             document.getElementById('btn-cancel').style.display = 'none';
             document.getElementById('form-title').innerHTML = '<i class="fas fa-plus-circle"></i> Nuevo Producto';
@@ -673,9 +785,27 @@
         function startEdit(id) {
             const p = productsCache.find(x => x.id === id); if(!p) return;
             editingId = id;
-            document.getElementById('nombre').value = p.nombre; document.getElementById('precio').value = p.precio;
-            document.getElementById('descripcion').value = p.descripcion || ''; document.getElementById('stock').value = p.stock;
-            document.getElementById('categoria').value = p.categoria || ''; document.getElementById('destacado').checked = p.destacado;
+            document.getElementById('nombre').value = p.nombre; 
+            document.getElementById('precio').value = p.precio;
+            document.getElementById('descripcion').value = p.descripcion || ''; 
+            document.getElementById('stock').value = p.stock;
+            document.getElementById('categoria').value = p.categoria || ''; 
+            document.getElementById('destacado').checked = p.destacado;
+
+            // --- Cargar galería existente ---
+            galleryFiles = [];
+            
+            // 1. Revisar columna 'galeria' (array nuevo)
+            if (p.galeria && Array.isArray(p.galeria) && p.galeria.length > 0) {
+                p.galeria.forEach(url => {
+                    galleryFiles.push({ type: 'url', data: url });
+                });
+            } else if (p.imagen_url) {
+                // 2. Si no hay galería pero hay imagen principal antigua
+                galleryFiles.push({ type: 'url', data: p.imagen_url });
+            }
+            renderGalleryPreview();
+
             document.getElementById('form-title').innerHTML = '<i class="fas fa-edit"></i> Editando Producto';
             document.getElementById('btn-save').textContent = "Actualizar";
             document.getElementById('btn-cancel').style.display = 'inline-block';
@@ -742,7 +872,6 @@
             );
         }
 
-      // REEMPLAZAR FUNCIÓN LOADSUMMARY EN ADMIN.HTML
     async function loadSummary() {
         const { data: orders, error } = await supabase
             .from('pedidos')
