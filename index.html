@@ -116,7 +116,7 @@
 
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-        /* --- MODAL DETALLE DE PRODUCTO (NUEVO) --- */
+        /* --- MODAL DETALLE DE PRODUCTO ACTUALIZADO --- */
         #product-detail-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 4000; display: none; justify-content: center; align-items: center; padding: 20px; opacity: 0; transition: opacity 0.3s; }
         #product-detail-modal.open { display: flex; opacity: 1; }
         
@@ -135,7 +135,34 @@
         }
         #product-detail-modal.open .detail-card { transform: scale(1); }
 
-        .detail-img { width: 100%; height: 300px; object-fit: cover; background: #eee; }
+        .detail-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background: #eee; border-radius: 12px 12px 0 0; transition: opacity 0.3s; }
+        
+        /* NUEVO: Contenedor de miniaturas */
+        .thumbs-container {
+            display: flex;
+            gap: 10px;
+            padding: 10px 25px 0 25px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .thumbs-container::-webkit-scrollbar { display: none; }
+        .thumb {
+            width: 60px; height: 60px;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            object-fit: cover;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .thumb.active {
+            border-color: var(--accent);
+            opacity: 1;
+            transform: scale(1.05);
+        }
+
         .detail-content { padding: 25px; }
         .close-detail { position: absolute; top: 15px; right: 15px; background: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; color: #333; z-index: 10; font-size: 1.2rem;}
         
@@ -268,7 +295,11 @@
     <div id="product-detail-modal" onclick="if(event.target === this) closeProductModal()">
         <div class="detail-card">
             <div class="close-detail" onclick="closeProductModal()"><i class="fas fa-times"></i></div>
+            
             <img id="detail-img" src="" class="detail-img">
+            
+            <div id="detail-thumbs" class="thumbs-container"></div>
+
             <div class="detail-content">
                 <h2 id="detail-title" style="margin-bottom:5px;">Nombre Producto</h2>
                 <div id="detail-category" style="color: #64748b; font-size: 0.9rem; margin-bottom: 10px;">Categoría</div>
@@ -526,34 +557,72 @@
         }, 100);
     }
 
-    // --- MODAL DE DETALLES Y GATILLOS MENTALES ---
+    // --- MODAL DE DETALLES Y GATILLOS MENTALES (CON GALERÍA) ---
     function openProductModal(productId) {
         const product = productsCache.find(p => p.id === productId);
         if (!product) return;
 
-        // 1. Calcular precio "Ancla" (40% más)
-        const realPrice = parseFloat(product.precio);
-        const fakePrice = realPrice * 1.40;
+        // 1. Determinar lista de imágenes
+        let imagesList = [];
+        if (product.galeria && Array.isArray(product.galeria) && product.galeria.length > 0) {
+            imagesList = product.galeria;
+        } else if (product.imagen_url) {
+            imagesList = [product.imagen_url];
+        } else {
+            imagesList = ['https://via.placeholder.com/300'];
+        }
 
-        // 2. Llenar datos
-        document.getElementById('detail-img').src = product.imagen_url || 'https://via.placeholder.com/300';
+        // 2. Renderizar imagen principal (la primera)
+        const mainImg = document.getElementById('detail-img');
+        mainImg.src = imagesList[0];
+
+        // 3. Renderizar tira de miniaturas
+        const thumbsContainer = document.getElementById('detail-thumbs');
+        if (imagesList.length > 1) {
+            thumbsContainer.style.display = 'flex';
+            thumbsContainer.innerHTML = imagesList.map((imgUrl, index) => `
+                <img src="${imgUrl}" 
+                     class="thumb ${index === 0 ? 'active' : ''}" 
+                     onclick="switchImage(this, '${imgUrl}')">
+            `).join('');
+        } else {
+            thumbsContainer.style.display = 'none'; // Ocultar si solo hay una
+        }
+
+        // 4. Llenar textos
         document.getElementById('detail-title').textContent = product.nombre;
         document.getElementById('detail-category').textContent = product.categoria || 'General';
         document.getElementById('detail-desc').textContent = product.descripcion || 'Sin descripción detallada.';
         
-        // 3. Mostrar precios
+        // 5. Gatillos Mentales
+        const realPrice = parseFloat(product.precio);
+        const fakePrice = realPrice * 1.40;
         document.getElementById('detail-real-price').textContent = `$${realPrice.toFixed(2)}`;
         document.getElementById('detail-fake-price').textContent = `$${fakePrice.toFixed(2)}`;
 
-        // 4. Configurar botón de agregar
+        // 6. Configurar botón de agregar
         const addBtn = document.getElementById('detail-add-btn');
         addBtn.onclick = function() {
             addToCart(product.id);
             closeProductModal();
         };
 
-        // 5. Mostrar modal
+        // 7. Mostrar modal
         document.getElementById('product-detail-modal').classList.add('open');
+    }
+
+    function switchImage(thumbElement, newSrc) {
+        // Cambiar imagen principal con pequeña animación
+        const mainImg = document.getElementById('detail-img');
+        mainImg.style.opacity = '0.5';
+        setTimeout(() => {
+            mainImg.src = newSrc;
+            mainImg.style.opacity = '1';
+        }, 150);
+
+        // Actualizar clase activa en miniaturas
+        document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
+        thumbElement.classList.add('active');
     }
 
     function closeProductModal() {
