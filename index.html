@@ -25,67 +25,33 @@
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; transition: opacity 0.3s ease; }
         
         /* --- ESTILOS PARA CATEGORÍAS --- */
-        .category-scroll {
-            display: flex;
-            gap: 10px;
-            overflow-x: auto;
-            padding: 10px 5px;
-            margin-bottom: 20px;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-        }
+        .category-scroll { display: flex; gap: 10px; overflow-x: auto; padding: 10px 5px; margin-bottom: 20px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
         .category-scroll::-webkit-scrollbar { display: none; }
-
-        .cat-pill {
-            padding: 8px 20px;
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 30px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #64748b;
-            white-space: nowrap;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
-        }
-
-        .cat-pill.active {
-            background: var(--text-main);
-            color: white;
-            border-color: var(--text-main);
-            transform: scale(1.05);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-        }
+        .cat-pill { padding: 8px 20px; background: white; border: 1px solid #e2e8f0; border-radius: 30px; font-size: 0.9rem; font-weight: 600; color: #64748b; white-space: nowrap; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+        .cat-pill.active { background: var(--text-main); color: white; border-color: var(--text-main); transform: scale(1.05); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
 
         /* Product Card */
         .card { background: white; border-radius: var(--radius); overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
-        /* La imagen ahora tiene cursor pointer */
         .card-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background: #eee; cursor: pointer; transition: opacity 0.2s; }
         .card-img:hover { opacity: 0.9; }
-        
         .card-body { padding: 12px; display: flex; flex-direction: column; flex: 1; }
         
         /* Botones de acción */
         .btn-group { display: flex; gap: 5px; margin-top: auto; }
         .btn-add { flex: 2; padding: 10px; background: var(--text-main); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; font-size: 0.9rem;}
         .btn-view { flex: 1; padding: 10px; background: white; color: var(--text-main); border: 1px solid #e2e8f0; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem;}
-        
         .btn-add:active, .btn-view:active { transform: scale(0.98); }
 
         /* Chat Widget */
         .chat-btn { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4); cursor: pointer; z-index: 100; transition: transform 0.2s; }
         .chat-btn:active { transform: scale(0.9); }
-        
         .chat-badge { position: absolute; top: -5px; right: -5px; background-color: #ef4444; color: white; font-size: 0.75rem; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; display: none; animation: popIn 0.3s ease; z-index: 102; }
         @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
-
         .chat-widget { display: none; position: fixed; bottom: 100px; right: 20px; width: 350px; max-width: 90%; height: 500px; background: white; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); flex-direction: column; z-index: 100; overflow: hidden; }
         .chat-widget.open { display: flex; }
         .chat-header { background: var(--accent); color: white; padding: 15px; font-weight: 600; display: flex; justify-content: space-between; }
         .chat-body { flex: 1; padding: 15px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 10px; }
         .chat-footer { padding: 10px; border-top: 1px solid #eee; display: flex; gap: 10px; background: white; align-items: center; }
-        
         .msg { max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; word-wrap: break-word; }
         .msg.me { background: var(--accent); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
         .msg.store { background: white; color: var(--text-main); align-self: flex-start; border-bottom-left-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
@@ -95,28 +61,22 @@
         /* Cart Styles */
         .cart-float { position: fixed; bottom: 30px; left: 30px; background: white; padding: 15px 25px; border-radius: 30px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); font-weight: bold; display: flex; gap: 10px; align-items: center; cursor: pointer; z-index: 90; border: 1px solid #eee; transition: transform 0.2s;}
         .cart-float:active { transform: scale(0.95); }
-
         .cart-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 150; display: none; align-items: flex-end; }
         .cart-overlay.open { display: flex; }
         .cart-panel { background: white; width: 100%; max-height: 90vh; border-radius: 20px 20px 0 0; padding: 20px; display: flex; flex-direction: column; animation: slideUp 0.3s ease; overflow-y: auto;}
-        
         .cart-items { margin: 20px 0; flex: 1; overflow-y: auto; min-height: 100px; }
         .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
         .cart-item-info { font-size: 0.9rem; }
         .btn-remove { color: #ef4444; background: none; border: none; padding: 5px; cursor: pointer; font-size: 1.1rem; }
-        
         .btn-checkout { width: 100%; padding: 15px; background: var(--text-main); color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; margin-top: 15px; }
         .btn-geo { background: #eff6ff; color: var(--accent); border: 1px dashed var(--accent); padding: 10px; width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px; }
-
-        /* Payment Info */
         .payment-info-card { background: #f0f9ff; border: 1px dashed #2563eb; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px; font-size: 0.9rem; display: none; }
         .payment-row { display: flex; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 5px; }
         .payment-label { font-weight: 600; color: #475569; }
         .payment-val { font-family: monospace; font-size: 1rem; color: #1e293b; font-weight: bold; }
-
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-        /* --- MODAL DETALLE DE PRODUCTO ACTUALIZADO --- */
+        /* --- MODAL DETALLE DE PRODUCTO (ACTUALIZADO CON SLIDER) --- */
         #product-detail-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 4000; display: none; justify-content: center; align-items: center; padding: 20px; opacity: 0; transition: opacity 0.3s; }
         #product-detail-modal.open { display: flex; opacity: 1; }
         
@@ -135,9 +95,53 @@
         }
         #product-detail-modal.open .detail-card { transform: scale(1); }
 
-        .detail-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background: #eee; border-radius: 12px 12px 0 0; transition: opacity 0.3s; }
-        
-        /* NUEVO: Contenedor de miniaturas */
+        /* --- ESTILOS DEL SLIDER --- */
+        .slider-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1/1;
+            overflow: hidden;
+            border-radius: 12px 12px 0 0;
+            background: #eee;
+        }
+        .slider-track {
+            display: flex;
+            height: 100%;
+            transition: transform 0.3s ease-out; /* Efecto deslizamiento suave */
+            width: 100%;
+        }
+        .slider-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+        .slider-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--text-main);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 20;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        .slider-arrow:active { transform: translateY(-50%) scale(0.9); }
+        .slider-arrow.prev { left: 10px; }
+        .slider-arrow.next { right: 10px; }
+        /* Ocultar flechas si no son necesarias */
+        .slider-arrow.hidden { display: none; }
+
+        /* Contenedor de miniaturas */
         .thumbs-container {
             display: flex;
             gap: 10px;
@@ -164,7 +168,7 @@
         }
 
         .detail-content { padding: 25px; }
-        .close-detail { position: absolute; top: 15px; right: 15px; background: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; color: #333; z-index: 10; font-size: 1.2rem;}
+        .close-detail { position: absolute; top: 15px; right: 15px; background: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; color: #333; z-index: 50; font-size: 1.2rem;}
         
         /* GATILLOS MENTALES (PRECIO) */
         .price-trigger-container { margin: 15px 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -296,7 +300,12 @@
         <div class="detail-card">
             <div class="close-detail" onclick="closeProductModal()"><i class="fas fa-times"></i></div>
             
-            <img id="detail-img" src="" class="detail-img">
+            <div class="slider-container" id="slider-container">
+                <div class="slider-track" id="slider-track">
+                    </div>
+                <button class="slider-arrow prev" id="slider-prev" onclick="prevSlide()"><i class="fas fa-chevron-left"></i></button>
+                <button class="slider-arrow next" id="slider-next" onclick="nextSlide()"><i class="fas fa-chevron-right"></i></button>
+            </div>
             
             <div id="detail-thumbs" class="thumbs-container"></div>
 
@@ -348,6 +357,13 @@
     let storePaymentInfo = null;
     let unreadCount = 0;
     let currentCategory = 'Todos'; 
+    
+    // --- NUEVAS VARIABLES PARA EL SLIDER ---
+    let currentSlideIndex = 0;
+    let currentSlideImages = [];
+    let touchStartX = 0;
+    let touchEndX = 0;
+
     const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
     // --- INICIO: LÓGICA DE ARRANQUE ---
@@ -362,7 +378,28 @@
         } else {
             promptStoreCode();
         }
+        
+        // Inicializar listeners del slider (touch)
+        initSliderTouch();
     });
+
+    function initSliderTouch() {
+        const track = document.getElementById('slider-track');
+        track.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, {passive: true});
+        
+        track.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleGesture();
+        }, {passive: true});
+    }
+    
+    function handleGesture() {
+        if (currentSlideImages.length <= 1) return;
+        if (touchEndX < touchStartX - 50) nextSlide(); // Deslizar izquierda -> Siguiente
+        if (touchEndX > touchStartX + 50) prevSlide(); // Deslizar derecha -> Anterior
+    }
 
     async function resolveStore(code) {
         try {
@@ -557,44 +594,60 @@
         }, 100);
     }
 
-    // --- MODAL DE DETALLES Y GATILLOS MENTALES (CON GALERÍA) ---
+    // --- MODAL DE DETALLES CON SLIDER ---
     function openProductModal(productId) {
         const product = productsCache.find(p => p.id === productId);
         if (!product) return;
 
-        // 1. Determinar lista de imágenes
-        let imagesList = [];
+        // 1. Obtener lista de imágenes
+        currentSlideImages = [];
         if (product.galeria && Array.isArray(product.galeria) && product.galeria.length > 0) {
-            imagesList = product.galeria;
+            currentSlideImages = product.galeria;
         } else if (product.imagen_url) {
-            imagesList = [product.imagen_url];
+            currentSlideImages = [product.imagen_url];
         } else {
-            imagesList = ['https://via.placeholder.com/300'];
+            currentSlideImages = ['https://via.placeholder.com/300'];
         }
 
-        // 2. Renderizar imagen principal (la primera)
-        const mainImg = document.getElementById('detail-img');
-        mainImg.src = imagesList[0];
+        // 2. Resetear Slider
+        currentSlideIndex = 0;
+        const track = document.getElementById('slider-track');
+        track.innerHTML = currentSlideImages.map(imgUrl => `
+            <img src="${imgUrl}" class="slider-img">
+        `).join('');
 
-        // 3. Renderizar tira de miniaturas
+        // 3. Manejo de Flechas y Desplazamiento
+        const prevBtn = document.getElementById('slider-prev');
+        const nextBtn = document.getElementById('slider-next');
+        
+        if (currentSlideImages.length > 1) {
+            prevBtn.classList.remove('hidden');
+            nextBtn.classList.remove('hidden');
+        } else {
+            prevBtn.classList.add('hidden');
+            nextBtn.classList.add('hidden');
+        }
+        
+        updateSliderUI(); // Mueve el track a la posición 0
+
+        // 4. Renderizar Miniaturas
         const thumbsContainer = document.getElementById('detail-thumbs');
-        if (imagesList.length > 1) {
+        if (currentSlideImages.length > 1) {
             thumbsContainer.style.display = 'flex';
-            thumbsContainer.innerHTML = imagesList.map((imgUrl, index) => `
+            thumbsContainer.innerHTML = currentSlideImages.map((imgUrl, index) => `
                 <img src="${imgUrl}" 
                      class="thumb ${index === 0 ? 'active' : ''}" 
-                     onclick="switchImage(this, '${imgUrl}')">
+                     onclick="jumpToSlide(${index})">
             `).join('');
         } else {
-            thumbsContainer.style.display = 'none'; // Ocultar si solo hay una
+            thumbsContainer.style.display = 'none';
         }
 
-        // 4. Llenar textos
+        // 5. Llenar textos y precios
         document.getElementById('detail-title').textContent = product.nombre;
         document.getElementById('detail-category').textContent = product.categoria || 'General';
         document.getElementById('detail-desc').textContent = product.descripcion || 'Sin descripción detallada.';
         
-        // 5. Gatillos Mentales
         const realPrice = parseFloat(product.precio);
         const fakePrice = realPrice * 1.40;
         document.getElementById('detail-real-price').textContent = `$${realPrice.toFixed(2)}`;
@@ -611,18 +664,44 @@
         document.getElementById('product-detail-modal').classList.add('open');
     }
 
-    function switchImage(thumbElement, newSrc) {
-        // Cambiar imagen principal con pequeña animación
-        const mainImg = document.getElementById('detail-img');
-        mainImg.style.opacity = '0.5';
-        setTimeout(() => {
-            mainImg.src = newSrc;
-            mainImg.style.opacity = '1';
-        }, 150);
+    // Funciones del Slider
+    function nextSlide() {
+        if (currentSlideIndex < currentSlideImages.length - 1) {
+            currentSlideIndex++;
+            updateSliderUI();
+        } else {
+            // Loop opcional: volver al principio
+            currentSlideIndex = 0;
+            updateSliderUI();
+        }
+    }
+
+    function prevSlide() {
+        if (currentSlideIndex > 0) {
+            currentSlideIndex--;
+            updateSliderUI();
+        } else {
+            // Loop opcional: ir al final
+            currentSlideIndex = currentSlideImages.length - 1;
+            updateSliderUI();
+        }
+    }
+
+    function jumpToSlide(index) {
+        currentSlideIndex = index;
+        updateSliderUI();
+    }
+
+    function updateSliderUI() {
+        const track = document.getElementById('slider-track');
+        // Mover el track horizontalmente basado en el índice
+        track.style.transform = `translateX(-${currentSlideIndex * 100}%)`;
 
         // Actualizar clase activa en miniaturas
-        document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
-        thumbElement.classList.add('active');
+        document.querySelectorAll('.thumb').forEach((t, i) => {
+            if (i === currentSlideIndex) t.classList.add('active');
+            else t.classList.remove('active');
+        });
     }
 
     function closeProductModal() {
