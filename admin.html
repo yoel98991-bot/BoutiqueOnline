@@ -395,9 +395,21 @@
             </div>
 
             <div class="card">
-                <h3><i class="fas fa-university"></i> Datos Bancarios & Link</h3>
+                <h3><i class="fas fa-university"></i> Datos Generales & Bancarios</h3>
                 <form id="config-form">
                     
+                    <h4 style="margin-top:0; color:var(--primary); margin-bottom: 15px;">Datos del Administrador</h4>
+                    <div class="form-grid">
+                        <div>
+                            <label>Nombre y Apellido</label>
+                            <input type="text" id="conf-nombre-admin" placeholder="Tu nombre">
+                        </div>
+                        <div>
+                            <label>WhatsApp (Soporte)</label>
+                            <input type="tel" id="conf-telefono" placeholder="+58...">
+                        </div>
+                    </div>
+                    <hr style="border:0; border-top:1px solid #e2e8f0; margin-bottom:20px;">
                     <div style="margin-bottom: 20px; padding: 15px; background: #f0fdf4; border: 1px dashed #22c55e; border-radius: 12px;">
                         <label style="color: #15803d;">🔗 Enlace Personalizado (Alias)</label>
                         <p style="font-size: 0.8rem; color: #166534; margin-bottom: 8px;">
@@ -408,6 +420,8 @@
                             <input type="text" id="conf-alias" placeholder="ej: modas-ana" style="margin:0; text-transform: lowercase; font-weight: bold;" oninput="this.value = this.value.replace(/[^a-z0-9-]/g, '')">
                         </div>
                     </div>
+
+                    <h4 style="margin-top:0; color:var(--primary); margin-bottom: 15px;">Datos Bancarios</h4>
                     <label>Banco</label>
                     <input type="text" id="conf-banco" placeholder="Ej: Banco Venezuela">
                     <div class="form-grid">
@@ -470,9 +484,7 @@
         let globalChannel = null;
         let isReconnecting = false;
         let modalCallback = null;
-
-        // --- NUEVO: ESTADO PARA GALERÍA ---
-        let galleryFiles = []; // Almacena objetos: { type: 'file'|'url', data: File|String }
+        let galleryFiles = [];
 
         // --- SISTEMA DE MODALES PERSONALIZADO ---
         function customConfirm(title, message, type = 'info', callback) {
@@ -588,7 +600,6 @@
             setTimeout(() => setupGlobalRealtime(), 2000);
         }
 
-        // --- LÓGICA DE LOGIN / REGISTRO MEJORADA ---
         let isLoginMode = true;
 
         function toggleAuthMode() {
@@ -648,9 +659,8 @@
                     btn.textContent = originalBtnText;
                     return;
                 }
-                // Si hay sesión, onAuthStateChange manejará la redirección.
             } catch (error) {
-                msg.style.color = 'var(--accent)'; // Rojo o acento
+                msg.style.color = 'var(--accent)'; 
                 msg.textContent = "Error: " + (error.message === "Invalid login credentials" ? "Credenciales incorrectas" : error.message);
                 btn.disabled = false;
                 btn.textContent = originalBtnText;
@@ -681,9 +691,7 @@
                 }
             })
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, (payload) => {
-                // *** CORRECCIÓN DE SEGURIDAD ***
                 if (payload.new.tienda_id !== currentUser.id) return; 
-
                 showToast('Nuevo Pedido', '¡Revisa la lista!'); updateDashboardCounters();
                 if(document.getElementById('tab-pedidos').classList.contains('active')) loadOrders();
             })
@@ -710,56 +718,28 @@
 
         function copyCode() { navigator.clipboard.writeText(storeCode); showToast("Código Copiado", storeCode); }
 
-        // --- NUEVO: LÓGICA DE GALERÍA DE IMÁGENES ---
-        
-        // 1. Listener para el input file
+        // --- GALERÍA DE IMÁGENES ---
         document.getElementById('imagen-input').addEventListener('change', function(e) {
             const files = Array.from(e.target.files);
             const totalCurrent = galleryFiles.length;
             const available = 6 - totalCurrent;
-
-            if (files.length > available) {
-                showToast("Límite Excedido", "Máximo 6 fotos en total.");
-            }
-
-            // Tomar solo los que caben
+            if (files.length > available) { showToast("Límite Excedido", "Máximo 6 fotos en total."); }
             const filesToAdd = files.slice(0, available);
-            
-            filesToAdd.forEach(file => {
-                galleryFiles.push({ type: 'file', data: file });
-            });
-            
+            filesToAdd.forEach(file => { galleryFiles.push({ type: 'file', data: file }); });
             renderGalleryPreview();
-            // Limpiar input para permitir seleccionar el mismo archivo si se borra y vuelve a poner
             this.value = '';
         });
 
         function renderGalleryPreview() {
             const container = document.getElementById('gallery-preview-container');
             container.innerHTML = '';
-
             galleryFiles.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = 'gallery-item';
-                
+                const div = document.createElement('div'); div.className = 'gallery-item';
                 const img = document.createElement('img');
-                if (item.type === 'file') {
-                    img.src = URL.createObjectURL(item.data);
-                } else {
-                    img.src = item.data; // Es una URL string
-                }
-                
-                const btn = document.createElement('button');
-                btn.className = 'btn-remove-img';
-                btn.innerHTML = '<i class="fas fa-times"></i>';
-                btn.onclick = (e) => {
-                    e.preventDefault(); // Evitar submit
-                    removeImageFromGallery(index);
-                };
-
-                div.appendChild(img);
-                div.appendChild(btn);
-                container.appendChild(div);
+                if (item.type === 'file') { img.src = URL.createObjectURL(item.data); } else { img.src = item.data; }
+                const btn = document.createElement('button'); btn.className = 'btn-remove-img'; btn.innerHTML = '<i class="fas fa-times"></i>';
+                btn.onclick = (e) => { e.preventDefault(); removeImageFromGallery(index); };
+                div.appendChild(img); div.appendChild(btn); container.appendChild(div);
             });
         }
 
@@ -771,40 +751,24 @@
         // --- PRODUCTOS ---
         document.getElementById('product-form').addEventListener('submit', async (e) => {
             e.preventDefault(); 
-            
-            if(galleryFiles.length === 0) {
-                showToast("Falta Imagen", "Sube al menos una foto.");
-                return;
-            }
-
-            const btn = document.getElementById('btn-save'); 
-            btn.textContent = "Guardando..."; 
-            btn.disabled = true;
+            if(galleryFiles.length === 0) { showToast("Falta Imagen", "Sube al menos una foto."); return; }
+            const btn = document.getElementById('btn-save'); btn.textContent = "Guardando..."; btn.disabled = true;
             
             try {
-                // 1. Subir las imágenes nuevas
                 let uploadedUrls = [];
-
-                // Recorremos el array de galería
                 for (const item of galleryFiles) {
                     if (item.type === 'url') {
-                        // Si ya era URL (existente), la mantenemos
                         uploadedUrls.push(item.data);
                     } else if (item.type === 'file') {
-                        // Si es archivo nuevo, subimos
                         const file = item.data;
                         const fileName = `${currentUser.id}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                         const { error: uploadErr } = await supabase.storage.from('imagenes-productos').upload(fileName, file);
                         if (uploadErr) throw uploadErr;
-                        
                         const { data } = supabase.storage.from('imagenes-productos').getPublicUrl(fileName);
                         uploadedUrls.push(data.publicUrl);
                     }
                 }
-
-                // La primera imagen será la "Principal" (imagen_url) para compatibilidad
                 const mainImage = uploadedUrls[0];
-
                 const productData = {
                     nombre: document.getElementById('nombre').value,
                     precio: parseFloat(document.getElementById('precio').value),
@@ -813,33 +777,18 @@
                     categoria: document.getElementById('categoria').value,
                     destacado: document.getElementById('destacado').checked,
                     creado_por: currentUser.id,
-                    imagen_url: mainImage,     // Compatible con vista grid antigua
-                    galeria: uploadedUrls      // Array completo JSONB
+                    imagen_url: mainImage,
+                    galeria: uploadedUrls
                 };
-
-                if (editingId) {
-                    await supabase.from('productos').update(productData).eq('id', editingId);
-                } else { 
-                    await supabase.from('productos').insert([productData]); 
-                }
-                
-                resetForm(); 
-                loadProducts(); 
-                showToast("Éxito", "Producto guardado con fotos.");
-            } catch (error) { 
-                alert("Error: " + error.message); 
-            } finally { 
-                btn.disabled = false; 
-                btn.textContent = "Publicar"; 
-            }
+                if (editingId) { await supabase.from('productos').update(productData).eq('id', editingId); } 
+                else { await supabase.from('productos').insert([productData]); }
+                resetForm(); loadProducts(); showToast("Éxito", "Producto guardado con fotos.");
+            } catch (error) { alert("Error: " + error.message); } 
+            finally { btn.disabled = false; btn.textContent = "Publicar"; }
         });
 
         function resetForm() {
-            document.getElementById('product-form').reset(); 
-            editingId = null;
-            galleryFiles = []; // Limpiar galería
-            renderGalleryPreview();
-            
+            document.getElementById('product-form').reset(); editingId = null; galleryFiles = []; renderGalleryPreview();
             document.getElementById('btn-save').textContent = "Publicar";
             document.getElementById('btn-cancel').style.display = 'none';
             document.getElementById('form-title').innerHTML = '<i class="fas fa-plus-circle"></i> Nuevo Producto';
@@ -847,8 +796,7 @@
 
         async function loadProducts() {
             const { data } = await supabase.from('productos').select('*').eq('creado_por', currentUser.id).order('id', {ascending:false});
-            productsCache = data || [];
-            updateCategoryDatalist(); 
+            productsCache = data || []; updateCategoryDatalist(); 
             const table = document.getElementById('products-table');
             if(!data || data.length === 0) { table.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Sin productos.</td></tr>'; return; }
             table.innerHTML = `<thead><tr><th>FOTO</th><th>DETALLE</th><th>$</th><th>ACCIONES</th></tr></thead><tbody>${data.map(p => `<tr><td><img src="${p.imagen_url || 'https://via.placeholder.com/50'}" class="product-img"></td><td><div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div><div style="font-size:0.75rem; color:#94a3b8;">Stock: ${p.stock}</div></td><td style="font-weight:bold;">${p.precio}</td><td><button class="btn-icon btn-edit" onclick="startEdit(${p.id})"><i class="fas fa-pen"></i></button><button class="btn-icon btn-danger" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>`;
@@ -857,27 +805,14 @@
         function startEdit(id) {
             const p = productsCache.find(x => x.id === id); if(!p) return;
             editingId = id;
-            document.getElementById('nombre').value = p.nombre; 
-            document.getElementById('precio').value = p.precio;
-            document.getElementById('descripcion').value = p.descripcion || ''; 
-            document.getElementById('stock').value = p.stock;
-            document.getElementById('categoria').value = p.categoria || ''; 
-            document.getElementById('destacado').checked = p.destacado;
-
-            // --- Cargar galería existente ---
+            document.getElementById('nombre').value = p.nombre; document.getElementById('precio').value = p.precio;
+            document.getElementById('descripcion').value = p.descripcion || ''; document.getElementById('stock').value = p.stock;
+            document.getElementById('categoria').value = p.categoria || ''; document.getElementById('destacado').checked = p.destacado;
             galleryFiles = [];
-            
-            // 1. Revisar columna 'galeria' (array nuevo)
             if (p.galeria && Array.isArray(p.galeria) && p.galeria.length > 0) {
-                p.galeria.forEach(url => {
-                    galleryFiles.push({ type: 'url', data: url });
-                });
-            } else if (p.imagen_url) {
-                // 2. Si no hay galería pero hay imagen principal antigua
-                galleryFiles.push({ type: 'url', data: p.imagen_url });
-            }
+                p.galeria.forEach(url => { galleryFiles.push({ type: 'url', data: url }); });
+            } else if (p.imagen_url) { galleryFiles.push({ type: 'url', data: p.imagen_url }); }
             renderGalleryPreview();
-
             document.getElementById('form-title').innerHTML = '<i class="fas fa-edit"></i> Editando Producto';
             document.getElementById('btn-save').textContent = "Actualizar";
             document.getElementById('btn-cancel').style.display = 'inline-block';
@@ -885,28 +820,15 @@
         }
 
         async function deleteProduct(id) { 
-            customConfirm(
-                "¿Eliminar Producto?", 
-                "Esta acción borrará el producto permanentemente del catálogo.",
-                "danger",
-                async () => {
-                    await supabase.from('productos').delete().eq('id', id); 
-                    loadProducts();
-                    showToast("Eliminado", "Producto borrado correctamente");
-                }
+            customConfirm("¿Eliminar Producto?", "Esta acción borrará el producto permanentemente del catálogo.", "danger",
+                async () => { await supabase.from('productos').delete().eq('id', id); loadProducts(); showToast("Eliminado", "Producto borrado correctamente"); }
             );
         }
 
         // --- PEDIDOS ---
         let showingHistory = false; 
-        
         async function loadOrders() {
-            // *** CORRECCIÓN DE SEGURIDAD ***
-            const { data } = await supabase.from('pedidos')
-                .select('*, clientes(nombre, telefono)')
-                .eq('tienda_id', currentUser.id) // <--- Filtro agregado
-                .order('fecha', {ascending:false});
-            
+            const { data } = await supabase.from('pedidos').select('*, clientes(nombre, telefono)').eq('tienda_id', currentUser.id).order('fecha', {ascending:false});
             ordersCache = data || []; updateDashboardCounters(); renderOrders();
         }
 
@@ -926,74 +848,44 @@
         function toggleHistory() { showingHistory = !showingHistory; renderOrders(); }
         
         async function completeOrder(orderId) {
-            customConfirm(
-                "¿Confirmar Entrega?", 
-                "¿Confirmas que recibiste el dinero y entregaste el producto?", 
-                "success", 
+            customConfirm("¿Confirmar Entrega?", "¿Confirmas que recibiste el dinero y entregaste el producto?", "success", 
                 async () => {
-                    const order = ordersCache.find(o => o.id === orderId);
-                    if(!order) return;
+                    const order = ordersCache.find(o => o.id === orderId); if(!order) return;
                     let items = []; if (order.productos && order.productos.items) items = order.productos.items; else if (Array.isArray(order.productos)) items = order.productos;
-
                     try {
                         for (const item of items) { 
                             const { data: curr } = await supabase.from('productos').select('stock').eq('id', item.id).single(); 
                             if (curr) await supabase.from('productos').update({ stock: curr.stock - 1 }).eq('id', item.id); 
                         }
                         await supabase.from('pedidos').update({ estado: 'completado' }).eq('id', orderId); 
-                        
                         showToast("¡Venta Registrada!", "Sumado al resumen.");
-                        loadOrders(); 
-                        loadSummary(); 
-                        loadProducts();
+                        loadOrders(); loadSummary(); loadProducts();
                     } catch (e) { showToast("Error", e.message); }
                 }
             );
         }
 
-    async function loadSummary() {
-        // *** CORRECCIÓN DE SEGURIDAD ***
-        const { data: orders, error } = await supabase
-            .from('pedidos')
-            .select('total, fecha, cliente_id, clientes(nombre)')
-            .eq('tienda_id', currentUser.id) // <--- Filtro agregado
-            .eq('estado', 'completado') 
-            .order('fecha', { ascending: false });
-
-        if (error) { console.error(error); return; }
-        
-        let totalIncome = 0;
-        let totalCount = orders.length;
-        const clientMap = {}; 
-
-        orders.forEach(o => {
-            const amount = parseFloat(o.total);
-            totalIncome += amount;
-            const cId = o.cliente_id;
-            const cName = o.clientes ? o.clientes.nombre : 'Desconocido';
-            
-            if (!clientMap[cId]) { clientMap[cId] = { name: cName, total: 0, orders: 0 }; }
-            clientMap[cId].total += amount;
-            clientMap[cId].orders += 1;
-        });
-
-        let topClientName = "Nadie aún";
-        let topClientAmount = 0;
-        const sortedClients = Object.values(clientMap).sort((a, b) => b.total - a.total);
-        if (sortedClients.length > 0) { topClientName = sortedClients[0].name; topClientAmount = sortedClients[0].total; }
-
-        document.getElementById('stat-income').textContent = `$${totalIncome.toFixed(2)}`;
-        document.getElementById('stat-orders').textContent = totalCount;
-        document.getElementById('stat-top-client').textContent = topClientName;
-        document.getElementById('stat-top-spent').textContent = `Ha comprado: $${topClientAmount.toFixed(2)}`;
-
-        const recentBody = document.getElementById('recent-sales-body');
-        if(orders.length === 0) {
-            recentBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px; color:#94a3b8;">Sin ventas registradas</td></tr>';
-        } else {
-            recentBody.innerHTML = orders.slice(0, 5).map(o => `<tr><td>${o.clientes?.nombre || 'Anon'}</td><td style="color:#22c55e; font-weight:bold;">+$${o.total}</td><td style="color:#64748b; font-size:0.85rem;">${new Date(o.fecha).toLocaleDateString()}</td></tr>`).join('');
+        async function loadSummary() {
+            const { data: orders, error } = await supabase.from('pedidos').select('total, fecha, cliente_id, clientes(nombre)').eq('tienda_id', currentUser.id).eq('estado', 'completado').order('fecha', { ascending: false });
+            if (error) { console.error(error); return; }
+            let totalIncome = 0; let totalCount = orders.length; const clientMap = {}; 
+            orders.forEach(o => {
+                const amount = parseFloat(o.total); totalIncome += amount;
+                const cId = o.cliente_id; const cName = o.clientes ? o.clientes.nombre : 'Desconocido';
+                if (!clientMap[cId]) { clientMap[cId] = { name: cName, total: 0, orders: 0 }; }
+                clientMap[cId].total += amount; clientMap[cId].orders += 1;
+            });
+            let topClientName = "Nadie aún"; let topClientAmount = 0;
+            const sortedClients = Object.values(clientMap).sort((a, b) => b.total - a.total);
+            if (sortedClients.length > 0) { topClientName = sortedClients[0].name; topClientAmount = sortedClients[0].total; }
+            document.getElementById('stat-income').textContent = `$${totalIncome.toFixed(2)}`;
+            document.getElementById('stat-orders').textContent = totalCount;
+            document.getElementById('stat-top-client').textContent = topClientName;
+            document.getElementById('stat-top-spent').textContent = `Ha comprado: $${topClientAmount.toFixed(2)}`;
+            const recentBody = document.getElementById('recent-sales-body');
+            if(orders.length === 0) { recentBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px; color:#94a3b8;">Sin ventas registradas</td></tr>'; } 
+            else { recentBody.innerHTML = orders.slice(0, 5).map(o => `<tr><td>${o.clientes?.nombre || 'Anon'}</td><td style="color:#22c55e; font-weight:bold;">+$${o.total}</td><td style="color:#64748b; font-size:0.85rem;">${new Date(o.fecha).toLocaleDateString()}</td></tr>`).join(''); }
         }
-    }
 
         // --- UI & CHATS ---
         function showToast(title, message) {
@@ -1016,11 +908,7 @@
             document.getElementById('tab-'+t).classList.add('active');
             document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
             const btn = event.target.closest('.tab'); if(btn) btn.classList.add('active');
-            
-            if(t === 'chats') loadChatsList(); 
-            if(t === 'pedidos') loadOrders(); 
-            if(t === 'config') loadConfig();
-            if(t === 'resumen') loadSummary();
+            if(t === 'chats') loadChatsList(); if(t === 'pedidos') loadOrders(); if(t === 'config') loadConfig(); if(t === 'resumen') loadSummary();
         }
 
         async function loadChatsList() {
@@ -1105,7 +993,10 @@
                 
                 const aliasInput = document.getElementById('conf-alias').value.trim().toLowerCase();
                 
+                // ACTUALIZADO: AHORA GUARDA NOMBRE Y TELEFONO
                 const updates = {
+                    nombre: document.getElementById('conf-nombre-admin').value,
+                    telefono: document.getElementById('conf-telefono').value,
                     banco_nombre: document.getElementById('conf-banco').value,
                     banco_titular: document.getElementById('conf-titular').value,
                     banco_ci: document.getElementById('conf-ci').value,
@@ -1129,6 +1020,11 @@
         async function loadConfig() {
             const { data } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
             if (!data) return;
+            
+            // ACTUALIZADO: CARGA NOMBRE Y TELEFONO
+            document.getElementById('conf-nombre-admin').value = data.nombre || '';
+            document.getElementById('conf-telefono').value = data.telefono || '';
+
             document.getElementById('conf-banco').value = data.banco_nombre || '';
             document.getElementById('conf-titular').value = data.banco_titular || '';
             document.getElementById('conf-ci').value = data.banco_ci || '';
