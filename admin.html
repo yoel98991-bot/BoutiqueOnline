@@ -681,6 +681,9 @@
                 }
             })
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, (payload) => {
+                // *** CORRECCIÓN DE SEGURIDAD ***
+                if (payload.new.tienda_id !== currentUser.id) return; 
+
                 showToast('Nuevo Pedido', '¡Revisa la lista!'); updateDashboardCounters();
                 if(document.getElementById('tab-pedidos').classList.contains('active')) loadOrders();
             })
@@ -896,10 +899,17 @@
 
         // --- PEDIDOS ---
         let showingHistory = false; 
+        
         async function loadOrders() {
-            const { data } = await supabase.from('pedidos').select('*, clientes(nombre, telefono)').order('fecha', {ascending:false});
+            // *** CORRECCIÓN DE SEGURIDAD ***
+            const { data } = await supabase.from('pedidos')
+                .select('*, clientes(nombre, telefono)')
+                .eq('tienda_id', currentUser.id) // <--- Filtro agregado
+                .order('fecha', {ascending:false});
+            
             ordersCache = data || []; updateDashboardCounters(); renderOrders();
         }
+
         function renderOrders() {
             const list = document.getElementById('orders-list');
             const visibleOrders = showingHistory ? ordersCache : ordersCache.filter(o => o.estado === 'pendiente');
@@ -942,9 +952,11 @@
         }
 
     async function loadSummary() {
+        // *** CORRECCIÓN DE SEGURIDAD ***
         const { data: orders, error } = await supabase
             .from('pedidos')
             .select('total, fecha, cliente_id, clientes(nombre)')
+            .eq('tienda_id', currentUser.id) // <--- Filtro agregado
             .eq('estado', 'completado') 
             .order('fecha', { ascending: false });
 
