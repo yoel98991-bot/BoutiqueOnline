@@ -86,7 +86,7 @@
         .panel-section { display: none; animation: fadeIn 0.3s ease; }
         .panel-section.active { display: block; }
 
-        /* --- NUEVO: GALERÍA DE PREVISUALIZACIÓN --- */
+        /* GALERÍA DE PREVISUALIZACIÓN */
         .gallery-preview-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
@@ -215,13 +215,21 @@
 <body>
 
     <div id="login-container">
-        <h2 style="margin-bottom: 10px;">Admin Access</h2>
+        <h2 id="auth-title" style="margin-bottom: 10px;">Admin Access</h2>
         <form id="auth-form">
-            <input type="email" id="email" placeholder="Correo" required>
+            <input type="email" id="email" placeholder="Correo Electrónico" required>
             <input type="password" id="password" placeholder="Contraseña" required>
-            <button type="submit" class="btn btn-primary">Ingresar</button>
+            <button type="submit" id="btn-auth-action" class="btn btn-primary">Ingresar</button>
         </form>
-        <p id="auth-msg" style="color: var(--accent);"></p>
+        <p id="auth-msg" style="color: var(--accent); margin-top: 15px; min-height: 20px; font-size: 0.9rem;"></p>
+
+        <div style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 15px; font-size: 0.9rem; color: #64748b;">
+            <span id="toggle-text">¿No tienes cuenta?</span>
+            <button type="button" id="btn-toggle-auth" onclick="toggleAuthMode()" 
+                    style="background:none; border:none; color: var(--accent); font-weight:bold; cursor:pointer; font-size: 0.9rem; text-decoration: underline;">
+                Crear Tienda
+            </button>
+        </div>
     </div>
 
     <div id="toast-container"></div>
@@ -580,12 +588,73 @@
             setTimeout(() => setupGlobalRealtime(), 2000);
         }
 
+        // --- LÓGICA DE LOGIN / REGISTRO MEJORADA ---
+        let isLoginMode = true;
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            const title = document.getElementById('auth-title');
+            const btn = document.getElementById('btn-auth-action');
+            const toggleText = document.getElementById('toggle-text');
+            const toggleBtn = document.getElementById('btn-toggle-auth');
+            const msg = document.getElementById('auth-msg');
+
+            msg.textContent = '';
+
+            if (isLoginMode) {
+                title.textContent = "Admin Access";
+                btn.textContent = "Ingresar";
+                toggleText.textContent = "¿No tienes cuenta?";
+                toggleBtn.textContent = "Crear Tienda";
+            } else {
+                title.textContent = "Crear Nueva Tienda";
+                btn.textContent = "Registrarme";
+                toggleText.textContent = "¿Ya tienes cuenta?";
+                toggleBtn.textContent = "Iniciar Sesión";
+            }
+        }
+
         document.getElementById('auth-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) document.getElementById('auth-msg').textContent = "Error: " + error.message;
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const msg = document.getElementById('auth-msg');
+            const btn = document.getElementById('btn-auth-action');
+            const originalBtnText = btn.textContent;
+
+            if (password.length < 6) {
+                msg.textContent = "La contraseña debe tener al menos 6 caracteres.";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+            msg.textContent = "";
+
+            try {
+                let result;
+                if (isLoginMode) {
+                    result = await supabase.auth.signInWithPassword({ email, password });
+                } else {
+                    result = await supabase.auth.signUp({ email, password });
+                }
+
+                if (result.error) throw result.error;
+
+                if (!isLoginMode && result.data.user && !result.data.session) {
+                    msg.style.color = '#22c55e';
+                    msg.textContent = "¡Registro exitoso! Revisa tu correo para confirmar.";
+                    btn.disabled = false;
+                    btn.textContent = originalBtnText;
+                    return;
+                }
+                // Si hay sesión, onAuthStateChange manejará la redirección.
+            } catch (error) {
+                msg.style.color = 'var(--accent)'; // Rojo o acento
+                msg.textContent = "Error: " + (error.message === "Invalid login credentials" ? "Credenciales incorrectas" : error.message);
+                btn.disabled = false;
+                btn.textContent = originalBtnText;
+            }
         });
 
         async function logout() {
