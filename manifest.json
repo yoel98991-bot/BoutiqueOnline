@@ -1,6 +1,6 @@
 {
-  "name": "Admin Boutique Panel",
-  "short_name": "Boutique Admin",
+  "name": "Vende Facil",
+  "short_name": "Area VIP Admin",
   "description": "Panel administrativo para gestión de tienda.",
   "start_url": "./admin.html",
   "scope": "./",
@@ -20,5 +20,6 @@
     }
   ]
 }
+
 
 
