@@ -6,8 +6,7 @@
     <meta name="theme-color" content="#ffffff">
     <title>Admin Studio</title>
 
-    <link rel="manifest" href="">
-
+    <link rel="manifest" href="./manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Studio">
@@ -450,63 +449,6 @@
                 </form>
             </div>
             
-            <!-- ====== SECCIÓN PWA PERSONALIZABLE ====== -->
-            <div class="card" style="border: 2px solid #6366f1; background: #f0f9ff;">
-                <h3 style="color: #6366f1;"><i class="fas fa-mobile-alt"></i> Personalización PWA</h3>
-                
-                <form id="pwa-config-form">
-                    <div class="form-grid">
-                        <div>
-                            <label>Nombre de la App</label>
-                            <input type="text" id="conf-app-name" placeholder="Mi Boutique" maxlength="30">
-                            <small style="color: #64748b; font-size: 0.8rem;">Aparecerá en la pantalla de inicio</small>
-                        </div>
-                        <div>
-                            <label>Color del Tema</label>
-                            <input type="color" id="conf-theme-color" value="#6366f1">
-                        </div>
-                    </div>
-                    
-                    <label>Ícono de la App (512x512px recomendado)</label>
-                    <div class="upload-zone" onclick="document.getElementById('app-icon-input').click()" 
-                         style="border: 2px dashed #6366f1; background: #f8fafc;">
-                        <div id="app-icon-placeholder">
-                            <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: #6366f1; margin-bottom: 10px;"></i>
-                            <p style="margin:0; font-weight:600; color:#6366f1;">Subir ícono PWA</p>
-                            <p style="font-size:0.8rem; color:#64748b; margin-top:5px;">PNG, JPG o SVG</p>
-                        </div>
-                        <div id="app-icon-preview-container" style="display:none; text-align: center;">
-                            <img id="app-icon-preview" style="max-width: 120px; border-radius: 12px; margin: 10px 0;">
-                            <div style="margin-top: 10px;">
-                                <button type="button" onclick="deleteAppIcon()" class="btn btn-danger" style="padding: 8px 12px; font-size: 0.9rem;">
-                                    <i class="fas fa-trash"></i> Eliminar ícono
-                                </button>
-                            </div>
-                        </div>
-                        <input type="file" id="app-icon-input" accept="image/*" style="display:none;">
-                    </div>
-                    
-                    <div style="margin-top:15px; padding: 12px; background: #f0fdf4; border-radius: 8px; border: 1px dashed #22c55e;">
-                        <label style="color: #15803d; font-weight: bold;">🔗 URL de Manifest Personalizado</label>
-                        <p style="font-size: 0.85rem; color: #166534; margin: 5px 0;">
-                            Los clientes accederán a tu PWA con este manifest:
-                        </p>
-                        <div style="display: flex; gap: 5px; margin-top: 8px;">
-                            <input type="text" id="pwa-manifest-url" readonly 
-                                   style="flex:1; padding: 10px; border: 1px solid #22c55e; border-radius: 8px; background: white; font-size: 0.9rem;">
-                            <button type="button" onclick="copyPWAManifestUrl()" class="btn btn-outline" style="width: auto;">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary" style="margin-top: 15px;">
-                        <i class="fas fa-save"></i> Guardar Configuración PWA
-                    </button>
-                </form>
-            </div>
-            <!-- ====== FIN SECCIÓN PWA ====== -->
-            
             <div class="card" style="border: 2px solid #fca5a5; background: #fff5f5;">
                 <h3 style="color: #dc2626;"><i class="fas fa-bell"></i> Notificaciones Push</h3>
                 <p style="font-size: 0.85rem; color: #7f1d1d; margin-bottom: 10px;">
@@ -543,10 +485,6 @@
         let isReconnecting = false;
         let modalCallback = null;
         let galleryFiles = [];
-        
-        // Variables para PWA
-        let currentAppIconUrl = '';
-        let currentAppIconPath = '';
 
         // --- SISTEMA DE MODALES PERSONALIZADO ---
         function customConfirm(title, message, type = 'info', callback) {
@@ -1079,234 +1017,23 @@
             } catch (err) { showToast("Error", err.message); } finally { btn.disabled = false; btn.textContent = "Guardar Configuración"; }
         });
         
-        // ====== FUNCIONES PWA PERSONALIZABLE ======
-        // Manejo de ícono PWA
-        document.getElementById('app-icon-input').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            // Validar tamaño (máximo 2MB)
-            if (file.size > 2 * 1024 * 1024) {
-                showToast("❌ Error", "El ícono debe ser menor a 2MB");
-                this.value = '';
-                return;
-            }
-            
-            // Validar tipo
-            if (!file.type.startsWith('image/')) {
-                showToast("❌ Error", "Solo se permiten imágenes");
-                this.value = '';
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                document.getElementById('app-icon-preview').src = evt.target.result;
-                document.getElementById('app-icon-preview-container').style.display = 'block';
-                document.getElementById('app-icon-placeholder').style.display = 'none';
-            };
-            reader.readAsDataURL(file);
-        });
-
-        // Eliminar ícono actual
-        async function deleteAppIcon() {
-            customConfirm("¿Eliminar Ícono?", "Se eliminará el ícono de la aplicación PWA.", "danger", 
-                async () => {
-                    try {
-                        // Si hay un ícono actual, eliminarlo del storage
-                        if (currentAppIconPath) {
-                            const { error: deleteError } = await supabase.storage
-                                .from('pwa-icons')
-                                .remove([currentAppIconPath]);
-                            
-                            if (deleteError) throw deleteError;
-                        }
-                        
-                        // Actualizar base de datos
-                        const { error: updateError } = await supabase
-                            .from('usuarios')
-                            .update({ 
-                                app_icon_url: null,
-                                updated_at: new Date().toISOString()
-                            })
-                            .eq('id', currentUser.id);
-                        
-                        if (updateError) throw updateError;
-                        
-                        // Limpiar UI
-                        document.getElementById('app-icon-preview-container').style.display = 'none';
-                        document.getElementById('app-icon-placeholder').style.display = 'block';
-                        document.getElementById('app-icon-input').value = '';
-                        currentAppIconUrl = '';
-                        currentAppIconPath = '';
-                        
-                        // Actualizar URL del manifest
-                        updatePWAManifestUrl();
-                        
-                        showToast("✅ Ícono eliminado", "Se usará el ícono por defecto");
-                        
-                    } catch (error) {
-                        showToast("❌ Error", error.message);
-                    }
-                }
-            );
-        }
-
-        // Guardar configuración PWA
-        document.getElementById('pwa-config-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const btn = this.querySelector('button[type="submit"]');
-            const originalText = btn.innerHTML;
-            
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-            btn.disabled = true;
-            
-            try {
-                const fileInput = document.getElementById('app-icon-input');
-                let appIconUrl = currentAppIconUrl;
-                let iconPath = currentAppIconPath;
-                
-                // Si hay un archivo nuevo, subirlo
-                if (fileInput.files.length > 0) {
-                    const file = fileInput.files[0];
-                    
-                    // 1. Eliminar ícono anterior si existe
-                    if (currentAppIconPath) {
-                        const { error: deleteError } = await supabase.storage
-                            .from('pwa-icons')
-                            .remove([currentAppIconPath]);
-                        
-                        // No lanzamos error si no se puede eliminar (puede que ya no exista)
-                        if (deleteError) console.warn("No se pudo eliminar ícono anterior:", deleteError);
-                    }
-                    
-                    // 2. Subir nuevo ícono
-                    const fileName = `${currentUser.id}_app_icon_${Date.now()}.${file.name.split('.').pop()}`;
-                    
-                    const { error: uploadErr } = await supabase.storage
-                        .from('pwa-icons')
-                        .upload(fileName, file, { 
-                            upsert: true, 
-                            contentType: file.type,
-                            cacheControl: '3600'
-                        });
-                    
-                    if (uploadErr) throw uploadErr;
-                    
-                    // 3. Obtener URL pública
-                    const { data } = supabase.storage
-                        .from('pwa-icons')
-                        .getPublicUrl(fileName);
-                    
-                    appIconUrl = data.publicUrl;
-                    iconPath = fileName;
-                    
-                    // Resetear input
-                    fileInput.value = '';
-                }
-                
-                // 4. Guardar configuración en la base de datos
-                const updates = {
-                    app_name: document.getElementById('conf-app-name').value.trim() || null,
-                    app_icon_url: appIconUrl || null,
-                    pwa_theme_color: document.getElementById('conf-theme-color').value,
-                    updated_at: new Date().toISOString()
-                };
-                
-                const { error } = await supabase
-                    .from('usuarios')
-                    .update(updates)
-                    .eq('id', currentUser.id);
-                
-                if (error) throw error;
-                
-                // 5. Actualizar variables locales
-                currentAppIconUrl = appIconUrl;
-                currentAppIconPath = iconPath;
-                
-                // 6. Actualizar UI
-                updatePWAManifestUrl();
-                
-                showToast("✅ Configuración guardada", "La PWA ahora tiene tu marca");
-                
-            } catch (error) {
-                showToast("❌ Error", error.message);
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        });
-
-      function updatePWAManifestUrl() {
-    const alias = document.getElementById('conf-alias').value.trim();
-    
-    // Actualizar el manifest del documento ADMIN actual
-    const link = document.querySelector('link[rel="manifest"]');
-    if (link) {
-        if (alias) {
-            link.href = `${window.location.origin}${window.location.pathname}?u=${alias}`;
-        } else {
-            link.href = `${window.location.origin}${window.location.pathname}?tienda=${storeCode}`;
-        }
-    }
-
-    // Mostrar URL para compartir (la del cliente)
-    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-    const clientUrl = `${baseUrl}/index.html${alias ? `?u=${alias}` : `?tienda=${storeCode}`}`;
-    
-    document.getElementById('pwa-manifest-url').value = clientUrl;
-    console.log('📱 URL PWA para clientes:', clientUrl);
-}
-
-        function copyPWAManifestUrl() {
-            const urlInput = document.getElementById('pwa-manifest-url');
-            navigator.clipboard.writeText(urlInput.value);
-            showToast("📋 URL Copiada", "Comparte esta URL para la PWA");
-        }
-
         async function loadConfig() {
             const { data } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
             if (!data) return;
             
-            // CONFIGURACIÓN GENERAL
+            // ACTUALIZADO: CARGA NOMBRE Y TELEFONO
             document.getElementById('conf-nombre-admin').value = data.nombre || '';
             document.getElementById('conf-telefono').value = data.telefono || '';
+
             document.getElementById('conf-banco').value = data.banco_nombre || '';
             document.getElementById('conf-titular').value = data.banco_titular || '';
             document.getElementById('conf-ci').value = data.banco_ci || '';
             document.getElementById('conf-numero').value = data.banco_numero || '';
             if(data.banco_tipo) document.getElementById('conf-tipo').value = data.banco_tipo;
-            if (data.qr_imagen_url) { 
-                document.getElementById('qr-preview').src = data.qr_imagen_url; 
-                document.getElementById('qr-preview').style.display = 'block'; 
-            }
+            if (data.qr_imagen_url) { document.getElementById('qr-preview').src = data.qr_imagen_url; document.getElementById('qr-preview').style.display = 'block'; }
             if(data.logo_url) updateAdminLogoUI(data.logo_url);
             if(data.slug) document.getElementById('conf-alias').value = data.slug;
-            
-            // CONFIGURACIÓN PWA
-            document.getElementById('conf-app-name').value = data.app_name || '';
-            document.getElementById('conf-theme-color').value = data.pwa_theme_color || '#6366f1';
-            
-            if (data.app_icon_url) {
-                document.getElementById('app-icon-preview').src = data.app_icon_url;
-                document.getElementById('app-icon-preview-container').style.display = 'block';
-                document.getElementById('app-icon-placeholder').style.display = 'none';
-                
-                // Extraer el nombre del archivo de la URL para eliminación futura
-                const urlParts = data.app_icon_url.split('/');
-                const fileName = urlParts[urlParts.length - 1];
-                currentAppIconUrl = data.app_icon_url;
-                currentAppIconPath = fileName;
-            } else {
-                document.getElementById('app-icon-preview-container').style.display = 'none';
-                document.getElementById('app-icon-placeholder').style.display = 'block';
-                currentAppIconUrl = '';
-                currentAppIconPath = '';
-            }
-            
-            updatePWAManifestUrl();
         }
-        // ====== FIN FUNCIONES PWA ======
 
         function updateCategoryDatalist() {
             const rawCategories = productsCache.map(p => p.categoria).filter(c => c && c.trim() !== '');
