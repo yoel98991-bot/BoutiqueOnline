@@ -399,21 +399,38 @@
     });
 
     // Función para inicializar la app
-    async function initApp() {
-        const params = new URLSearchParams(window.location.search);
-        const urlStoreCode = params.get('tienda');
+   // En initApp(), reemplaza la lógica del manifest con:
 
-        if (urlStoreCode) {
-            await resolveStore(urlStoreCode.toUpperCase());
-        } else if (session.storeId) {
-            loadApp();
-        } else {
-            promptStoreCode();
-        }
+async function initApp() {
+    const params = new URLSearchParams(window.location.search);
+    const urlStoreCode = params.get('tienda');
+    const urlAlias = params.get('u');
+
+    // Cargar manifest DINÁMICO ANTES que nada
+    const manifestLink = document.querySelector('link[rel="manifest"]');
+    if (manifestLink) {
+        const manifestUrl = urlAlias 
+            ? `https://cirrapytmbnjlhxunkaq.supabase.co/functions/v1/dynamic-manifest?u=${urlAlias}`
+            : (urlStoreCode 
+                ? `https://cirrapytmbnjlhxunkaq.supabase.co/functions/v1/dynamic-manifest?tienda=${urlStoreCode}`
+                : './manifest.json');
         
-        // Inicializar listeners del slider (touch)
-        initSliderTouch();
+        manifestLink.href = manifestUrl;
+        console.log('✅ Manifest dinámico cargado:', manifestUrl);
     }
+
+    // Resto de la inicialización...
+    if (urlStoreCode || urlAlias) {
+        const codeToSearch = (urlAlias || urlStoreCode).toUpperCase();
+        await resolveStore(codeToSearch);
+    } else if (session.storeId) {
+        loadApp();
+    } else {
+        promptStoreCode();
+    }
+    
+    initSliderTouch();
+}
 
     function initSliderTouch() {
         const track = document.getElementById('slider-track');
