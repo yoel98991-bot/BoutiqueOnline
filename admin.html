@@ -1236,20 +1236,31 @@
             }
         });
 
-        // Actualizar URL del manifest
         function updatePWAManifestUrl() {
-            const baseUrl = 'https://cirrapytmbnjlhxunkaq.supabase.co/functions/v1/dynamic-manifest';
-            const alias = document.getElementById('conf-alias').value.trim();
-            
-            let manifestUrl;
-            if (alias) {
-                manifestUrl = `${baseUrl}?u=${alias}`;
-            } else {
-                manifestUrl = `${baseUrl}?tienda=${storeCode}`;
-            }
-            
-            document.getElementById('pwa-manifest-url').value = manifestUrl;
-        }
+    const baseUrl = 'https://cirrapytmbnjlhxunkaq.supabase.co/functions/v1/dynamic-manifest';
+    const alias = document.getElementById('conf-alias').value.trim();
+    
+    let manifestUrl;
+    if (alias) {
+        manifestUrl = `${baseUrl}?u=${alias}`;
+    } else {
+        manifestUrl = `${baseUrl}?tienda=${storeCode}`;
+    }
+    
+    document.getElementById('pwa-manifest-url').value = manifestUrl;
+    
+    // También actualizar el atributo href del manifest
+    const dynamicManifestLink = document.querySelector('link[rel="manifest"]');
+    if (dynamicManifestLink) {
+        dynamicManifestLink.href = manifestUrl;
+    }
+    
+    // Notificar al usuario que debe compartir el enclave con ?u=alias
+    if (alias) {
+        const shareUrl = `${window.location.origin}${window.location.pathname}?u=${alias}`;
+        console.log('🔗 Enlace directo a la PWA:', shareUrl);
+    }
+}
 
         function copyPWAManifestUrl() {
             const urlInput = document.getElementById('pwa-manifest-url');
