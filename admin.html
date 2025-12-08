@@ -459,6 +459,56 @@
         </div>
     </div>
 
+    <!-- ====== SECCIÓN PWA PERSONALIZABLE ====== -->
+<div class="card" style="border: 2px solid #6366f1; background: #f0f9ff;">
+    <h3 style="color: #6366f1;"><i class="fas fa-mobile-alt"></i> Personalización PWA</h3>
+    
+    <form id="pwa-config-form">
+        <div class="form-grid">
+            <div>
+                <label>Nombre de la App</label>
+                <input type="text" id="conf-app-name" placeholder="Mi Boutique" maxlength="30">
+                <small style="color: #64748b; font-size: 0.8rem;">Aparecerá en la pantalla de inicio</small>
+            </div>
+            <div>
+                <label>Color del Tema</label>
+                <input type="color" id="conf-theme-color" value="#6366f1">
+            </div>
+        </div>
+        
+        <label>Ícono de la App (512x512px recomendado)</label>
+        <div class="upload-zone" onclick="document.getElementById('app-icon-input').click()" 
+             style="border: 2px dashed #6366f1; background: #f8fafc;">
+            <div id="app-icon-placeholder">
+                <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: #6366f1; margin-bottom: 10px;"></i>
+                <p style="margin:0; font-weight:600; color:#6366f1;">Subir ícono PWA</p>
+                <p style="font-size:0.8rem; color:#64748b; margin-top:5px;">PNG, JPG o SVG</p>
+            </div>
+            <img id="app-icon-preview" style="display:none; max-width: 120px; border-radius: 12px; margin-top:10px;">
+            <input type="file" id="app-icon-input" accept="image/*" style="display:none;">
+        </div>
+        
+        <div style="margin-top:15px; padding: 12px; background: #f0fdf4; border-radius: 8px; border: 1px dashed #22c55e;">
+            <label style="color: #15803d; font-weight: bold;">🔗 URL de Manifest Personalizado</label>
+            <p style="font-size: 0.85rem; color: #166534; margin: 5px 0;">
+                Los clientes accederán a tu PWA con este manifest:
+            </p>
+            <div style="display: flex; gap: 5px; margin-top: 8px;">
+                <input type="text" id="pwa-manifest-url" readonly 
+                       style="flex:1; padding: 10px; border: 1px solid #22c55e; border-radius: 8px; background: white; font-size: 0.9rem;">
+                <button type="button" onclick="copyPWAManifestUrl()" class="btn btn-outline" style="width: auto;">
+                    <i class="fas fa-copy"></i>
+                </button>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary" style="margin-top: 15px;">
+            <i class="fas fa-save"></i> Guardar Configuración PWA
+        </button>
+    </form>
+</div>
+<!-- ====== FIN SECCIÓN PWA ====== -->
+
     <div id="crop-modal">
         <div class="crop-container"><img id="crop-image-target" src=""></div>
         <div class="crop-controls">
@@ -1034,6 +1084,122 @@
             if(data.logo_url) updateAdminLogoUI(data.logo_url);
             if(data.slug) document.getElementById('conf-alias').value = data.slug;
         }
+
+        // ====== FUNCIONES PWA PERSONALIZABLE ======
+// Manejo de ícono PWA
+document.getElementById('app-icon-input').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        document.getElementById('app-icon-preview').src = evt.target.result;
+        document.getElementById('app-icon-preview').style.display = 'block';
+        document.getElementById('app-icon-placeholder').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+});
+
+// Guardar configuración PWA
+document.getElementById('pwa-config-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = this.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+    btn.disabled = true;
+    
+    try {
+        let appIconUrl = document.getElementById('app-icon-preview').src;
+        const fileInput = document.getElementById('app-icon-input');
+        
+        // Subir nuevo ícono si hay archivo
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const fileName = `pwa_icons/${currentUser.id}_${Date.now()}.${file.name.split('.').pop()}`;
+            
+            const { error: uploadErr } = await supabase.storage
+                .from('pwa-icons')
+                .upload(fileName, file, { upsert: true, contentType: file.type });
+            
+            if (uploadErr) throw uploadErr;
+            
+            const { data } = supabase.storage
+                .from('pwa-icons')
+                .getPublicUrl(fileName);
+            
+            appIconUrl = data.publicUrl;
+        }
+        
+        // Guardar configuración
+        const updates = {
+            app_name: document.getElementById('conf-app-name').value.trim() || null,
+            app_icon_url: appIconUrl.startsWith('http') ? appIconUrl : null,
+            pwa_theme_color: document.getElementById('conf-theme-color').value,
+            updated_at: new Date().toISOString()
+        };
+        
+        const { error } = await supabase
+            .from('usuarios')
+            .update(updates)
+            .eq('id', currentUser.id);
+        
+        if (error) throw error;
+        
+        // Actualizar URL del manifest
+        updatePWAManifestUrl();
+        
+        showToast("✅ Configuración PWA guardada", "La app ahora mostrará tu marca");
+        
+    } catch (error) {
+        showToast("❌ Error", error.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+});
+
+// Actualizar URL del manifest
+function updatePWAManifestUrl() {
+    const baseUrl = 'https://cirrapytmbnjlhxunkaq.supabase.co/functions/v1/dynamic-manifest';
+    const alias = document.getElementById('conf-alias').value.trim();
+    
+    let manifestUrl;
+    if (alias) {
+        manifestUrl = `${baseUrl}?u=${alias}`;
+    } else {
+        manifestUrl = `${baseUrl}?tienda=${storeCode}`;
+    }
+    
+    document.getElementById('pwa-manifest-url').value = manifestUrl;
+}
+
+function copyPWAManifestUrl() {
+    const urlInput = document.getElementById('pwa-manifest-url');
+    navigator.clipboard.writeText(urlInput.value);
+    showToast("📋 URL Copiada", "Comparte esta URL para la PWA");
+}
+
+// En loadConfig(), agregar al final:
+async function loadConfig() {
+    const { data } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
+    if (!data) return;
+    
+    // ... (tu código existente aquí) ...
+    
+    // CONFIGURACIÓN PWA (AGREGAR ESTO AL FINAL)
+    document.getElementById('conf-app-name').value = data.app_name || '';
+    document.getElementById('conf-theme-color').value = data.pwa_theme_color || '#6366f1';
+    
+    if (data.app_icon_url) {
+        document.getElementById('app-icon-preview').src = data.app_icon_url;
+        document.getElementById('app-icon-preview').style.display = 'block';
+        document.getElementById('app-icon-placeholder').style.display = 'none';
+    }
+    
+    updatePWAManifestUrl();
+}
+// ====== FIN FUNCIONES PWA ======
 
         function updateCategoryDatalist() {
             const rawCategories = productsCache.map(p => p.categoria).filter(c => c && c.trim() !== '');
