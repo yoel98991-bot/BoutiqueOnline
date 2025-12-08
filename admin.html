@@ -1236,30 +1236,22 @@
             }
         });
 
-        function updatePWAManifestUrl() {
+     function updatePWAManifestUrl() {
     const baseUrl = 'https://cirrapytmbnjlhxunkaq.supabase.co/functions/v1/dynamic-manifest';
     const alias = document.getElementById('conf-alias').value.trim();
     
     let manifestUrl;
     if (alias) {
         manifestUrl = `${baseUrl}?u=${alias}`;
+        // Actualizar manifest del documento actual
+        const link = document.querySelector('link[rel="manifest"]');
+        if (link) link.href = manifestUrl;
     } else {
         manifestUrl = `${baseUrl}?tienda=${storeCode}`;
     }
     
     document.getElementById('pwa-manifest-url').value = manifestUrl;
-    
-    // También actualizar el atributo href del manifest
-    const dynamicManifestLink = document.querySelector('link[rel="manifest"]');
-    if (dynamicManifestLink) {
-        dynamicManifestLink.href = manifestUrl;
-    }
-    
-    // Notificar al usuario que debe compartir el enclave con ?u=alias
-    if (alias) {
-        const shareUrl = `${window.location.origin}${window.location.pathname}?u=${alias}`;
-        console.log('🔗 Enlace directo a la PWA:', shareUrl);
-    }
+    console.log('📱 Manifest URL:', manifestUrl);
 }
 
         function copyPWAManifestUrl() {
