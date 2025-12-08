@@ -8,10 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <!-- MANIFEST DINÁMICO -->
-  <link rel="manifest" href="">
-
-    
     <style>
         /* --- ESTILOS GENERALES --- */
         :root { --bg: #f8f9fa; --text-main: #1a1a1a; --accent: #2563eb; --radius: 12px; }
@@ -111,7 +107,7 @@
         .slider-track {
             display: flex;
             height: 100%;
-            transition: transform 0.3s ease-out;
+            transition: transform 0.3s ease-out; /* Efecto deslizamiento suave */
             width: 100%;
         }
         .slider-img {
@@ -142,6 +138,7 @@
         .slider-arrow:active { transform: translateY(-50%) scale(0.9); }
         .slider-arrow.prev { left: 10px; }
         .slider-arrow.next { right: 10px; }
+        /* Ocultar flechas si no son necesarias */
         .slider-arrow.hidden { display: none; }
 
         /* Contenedor de miniaturas */
@@ -305,8 +302,7 @@
             
             <div class="slider-container" id="slider-container">
                 <div class="slider-track" id="slider-track">
-                    <!-- Las imágenes se cargan aquí -->
-                </div>
+                    </div>
                 <button class="slider-arrow prev" id="slider-prev" onclick="prevSlide()"><i class="fas fa-chevron-left"></i></button>
                 <button class="slider-arrow next" id="slider-next" onclick="nextSlide()"><i class="fas fa-chevron-right"></i></button>
             </div>
@@ -362,7 +358,7 @@
     let unreadCount = 0;
     let currentCategory = 'Todos'; 
     
-    // Variables para el slider
+    // --- NUEVAS VARIABLES PARA EL SLIDER ---
     let currentSlideIndex = 0;
     let currentSlideImages = [];
     let touchStartX = 0;
@@ -370,70 +366,22 @@
 
     const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
-    // --- SCRIPT PARA MANIFEST DINÁMICO ---
-   // EN index.html, REEMPLAZA TODO el bloque DOMContentLoaded por esto:
+    // --- INICIO: LÓGICA DE ARRANQUE ---
+    window.addEventListener('DOMContentLoaded', async () => {
+        const params = new URLSearchParams(window.location.search);
+        const urlStoreCode = params.get('tienda');
 
-document.addEventListener('DOMContentLoaded', async function() {
-    // 1. REGISTRAR SERVICE WORKER PRIMERO
-    if ('serviceWorker' in navigator) {
-        try {
-            const registration = await navigator.serviceWorker.register('./sw-manifest.js');
-            console.log('✅ SW registrado:', registration.scope);
-        } catch (err) {
-            console.error('❌ Error SW:', err);
+        if (urlStoreCode) {
+            await resolveStore(urlStoreCode.toUpperCase());
+        } else if (session.storeId) {
+            initApp();
+        } else {
+            promptStoreCode();
         }
-    }
-
-    // 2. Continuar con tu lógica normal
-    const params = new URLSearchParams(window.location.search);
-    const urlStoreCode = params.get('tienda');
-    const urlAlias = params.get('u');
-
-    if (urlStoreCode || urlAlias) {
-        const codeToSearch = (urlAlias || urlStoreCode).toUpperCase();
-        await resolveStore(codeToSearch);
-    } else if (session.storeId) {
-        loadApp();
-    } else {
-        promptStoreCode();
-    }
-    
-    initSliderTouch();
-});
-
-    // Función para inicializar la app
-   // En initApp(), reemplaza la lógica del manifest con:
-
-async function initApp() {
-    const params = new URLSearchParams(window.location.search);
-    const urlStoreCode = params.get('tienda');
-    const urlAlias = params.get('u');
-
-    // Cargar manifest DINÁMICO ANTES que nada
-    const manifestLink = document.querySelector('link[rel="manifest"]');
-    if (manifestLink) {
-        const manifestUrl = urlAlias 
-            ? `https://cirrapytmbnjlhxunkaq.supabase.co/functions/v1/dynamic-manifest?u=${urlAlias}`
-            : (urlStoreCode 
-                ? `https://cirrapytmbnjlhxunkaq.supabase.co/functions/v1/dynamic-manifest?tienda=${urlStoreCode}`
-                : './manifest.json');
         
-        manifestLink.href = manifestUrl;
-        console.log('✅ Manifest dinámico cargado:', manifestUrl);
-    }
-
-    // Resto de la inicialización...
-    if (urlStoreCode || urlAlias) {
-        const codeToSearch = (urlAlias || urlStoreCode).toUpperCase();
-        await resolveStore(codeToSearch);
-    } else if (session.storeId) {
-        loadApp();
-    } else {
-        promptStoreCode();
-    }
-    
-    initSliderTouch();
-}
+        // Inicializar listeners del slider (touch)
+        initSliderTouch();
+    });
 
     function initSliderTouch() {
         const track = document.getElementById('slider-track');
@@ -449,8 +397,8 @@ async function initApp() {
     
     function handleGesture() {
         if (currentSlideImages.length <= 1) return;
-        if (touchEndX < touchStartX - 50) nextSlide();
-        if (touchEndX > touchStartX + 50) prevSlide();
+        if (touchEndX < touchStartX - 50) nextSlide(); // Deslizar izquierda -> Siguiente
+        if (touchEndX > touchStartX + 50) prevSlide(); // Deslizar derecha -> Anterior
     }
 
     async function resolveStore(code) {
@@ -463,23 +411,11 @@ async function initApp() {
             session.storeId = store.id;
             session.storeCode = store.codigo_tienda;
 
-            loadApp();
+            initApp();
         } catch (e) {
             alert("El código de tienda del enlace es inválido.");
             promptStoreCode();
         }
-    }
-
-    function loadApp() {
-        document.getElementById('login-overlay').style.display = 'none';
-        if(session.clientName) {
-            document.getElementById('client-info').textContent = `Hola, ${session.clientName}`;
-            initChat();
-        } else {
-            document.getElementById('client-info').textContent = "Bienvenido a la tienda";
-        }
-        
-        loadCatalog();
     }
 
     function promptStoreCode() {
@@ -561,6 +497,18 @@ async function initApp() {
         }
     });
 
+    function initApp() {
+        document.getElementById('login-overlay').style.display = 'none';
+        if(session.clientName) {
+            document.getElementById('client-info').textContent = `Hola, ${session.clientName}`;
+            initChat();
+        } else {
+            document.getElementById('client-info').textContent = "Bienvenido a la tienda";
+        }
+        
+        loadCatalog();
+    }
+
     // --- CATÁLOGO Y RENDERIZADO ---
     async function loadCatalog() {
         const grid = document.getElementById('products-grid');
@@ -591,10 +539,6 @@ async function initApp() {
             renderPaymentInfo();
             if (storeData.logo_url) {
                 document.getElementById('store-branding').innerHTML = `<img src="${storeData.logo_url}" alt="Logo" style="height: 40px; max-width: 180px; object-fit: contain;">`;
-            }
-            // Actualizar el título de la página con el nombre de la app si está configurado
-            if (storeData.app_name) {
-                document.title = storeData.app_name;
             }
         }
     }
@@ -684,7 +628,7 @@ async function initApp() {
             nextBtn.classList.add('hidden');
         }
         
-        updateSliderUI();
+        updateSliderUI(); // Mueve el track a la posición 0
 
         // 4. Renderizar Miniaturas
         const thumbsContainer = document.getElementById('detail-thumbs');
@@ -726,6 +670,7 @@ async function initApp() {
             currentSlideIndex++;
             updateSliderUI();
         } else {
+            // Loop opcional: volver al principio
             currentSlideIndex = 0;
             updateSliderUI();
         }
@@ -736,6 +681,7 @@ async function initApp() {
             currentSlideIndex--;
             updateSliderUI();
         } else {
+            // Loop opcional: ir al final
             currentSlideIndex = currentSlideImages.length - 1;
             updateSliderUI();
         }
@@ -748,8 +694,10 @@ async function initApp() {
 
     function updateSliderUI() {
         const track = document.getElementById('slider-track');
+        // Mover el track horizontalmente basado en el índice
         track.style.transform = `translateX(-${currentSlideIndex * 100}%)`;
 
+        // Actualizar clase activa en miniaturas
         document.querySelectorAll('.thumb').forEach((t, i) => {
             if (i === currentSlideIndex) t.classList.add('active');
             else t.classList.remove('active');
@@ -781,15 +729,8 @@ async function initApp() {
             qrContainer.innerHTML = `<button type="button" class="btn-open-qr" onclick="openQRModal('${storePaymentInfo.qr_imagen_url}')"><i class="fas fa-qrcode"></i> Pagar por QR</button>`;
         }
     }
-    
-    function openQRModal(url) { 
-        document.getElementById('modal-qr-img').src = url; 
-        document.getElementById('qr-modal').classList.add('open'); 
-    }
-    
-    function closeQRModal() { 
-        document.getElementById('qr-modal').classList.remove('open'); 
-    }
+    function openQRModal(url) { document.getElementById('modal-qr-img').src = url; document.getElementById('qr-modal').classList.add('open'); }
+    function closeQRModal() { document.getElementById('qr-modal').classList.remove('open'); }
 
     // ... CARRITO Y UI ...
     function addToCart(id) {
