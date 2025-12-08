@@ -380,6 +380,20 @@
         </div>
 
         <div id="tab-config" class="panel-section">
+
+            <div class="card" id="install-card" style="display: none; border: 2px solid #6366f1; background: #eef2ff;">
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div>
+            <h3 style="color: #4338ca; margin: 0;"><i class="fas fa-mobile-alt"></i> Instalar App</h3>
+            <p style="font-size: 0.85rem; color: #4338ca; margin-top: 5px; margin-bottom: 0;">
+                Instala el panel en tu inicio para acceso rápido.
+            </p>
+        </div>
+        <button onclick="installPWA()" class="btn" style="background: #4338ca; color: white; width: auto; padding: 10px 20px;">
+            Instalar
+        </button>
+    </div>
+</div>
             
             <div class="card">
                 <h3><i class="fas fa-image"></i> Identidad Visual</h3>
@@ -1043,6 +1057,49 @@
                 `<option value="${cat}">`
             ).join('');
         }
+
+        // --- LÓGICA DE INSTALACIÓN PWA ---
+let deferredPrompt;
+
+// 1. Escuchar el evento que dispara el navegador cuando la app es instalable
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevenir que el navegador muestre su banner nativo antiguo
+    e.preventDefault();
+    // Guardar el evento para dispararlo cuando queramos (al dar clic al botón)
+    deferredPrompt = e;
+    
+    // Mostrar la tarjeta que creamos en el HTML (estaba oculta)
+    const installCard = document.getElementById('install-card');
+    if(installCard) installCard.style.display = 'block';
+    
+    console.log("App lista para instalar");
+});
+
+// 2. Función que se ejecuta al dar clic en el botón "Instalar"
+async function installPWA() {
+    if (!deferredPrompt) return;
+
+    // Mostrar el prompt nativo del sistema
+    deferredPrompt.prompt();
+
+    // Esperar a ver qué decide el usuario
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`El usuario decidió: ${outcome}`);
+
+    // Limpiar la variable, ya no se puede usar de nuevo
+    deferredPrompt = null;
+    
+    // Si aceptó, ocultamos la tarjeta
+    if(outcome === 'accepted'){
+        document.getElementById('install-card').style.display = 'none';
+    }
+}
+
+// 3. Detectar si ya se instaló exitosamente para ocultar el botón
+window.addEventListener('appinstalled', () => {
+    document.getElementById('install-card').style.display = 'none';
+    console.log('App instalada exitosamente');
+});
     </script>
 </body>
 </html>
