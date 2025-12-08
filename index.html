@@ -6,6 +6,30 @@
     <title>Boutique Online</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+// Cargar manifest dinámico según tienda
+window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const storeCode = params.get('tienda') || params.get('u');
+    
+    if (storeCode) {
+        const manifestLink = document.querySelector('link[rel="manifest"]');
+        if (manifestLink) {
+            // Usar la función de Supabase
+            manifestLink.href = `https://cirrapytmbnjlhxunkaq.supabase.co/functions/v1/dynamic-manifest?tienda=${storeCode}`;
+            
+            // Forzar actualización del service worker
+            if ('serviceWorker' in navigator) {
+                setTimeout(() => {
+                    navigator.serviceWorker.getRegistrations().then(registrations => {
+                        registrations.forEach(reg => reg.update());
+                    });
+                }, 1000);
+            }
+        }
+    }
+});
+</script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
