@@ -9,15 +9,16 @@
   "theme_color": "#1e293b",
   "icons": [
     {
-      "src": "icon1.png", 
+      "src": "Vende Facil.png", 
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "icon-512.png",
+      "src": "Vende Facil.png",
       "sizes": "512x512",
       "type": "image/png"
     }
   ]
 }
+
 
