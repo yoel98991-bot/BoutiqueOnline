@@ -1,6 +1,6 @@
 {
-  "name": "Admin Studio Panel",
-  "short_name": "Studio Admin",
+  "name": "Admin Boutique Panel",
+  "short_name": "Boutique Admin",
   "description": "Panel administrativo para gestión de tienda.",
   "start_url": "./admin.html",
   "scope": "./",
@@ -20,3 +20,4 @@
     }
   ]
 }
+
