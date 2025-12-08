@@ -1237,22 +1237,25 @@
             }
         });
 
-     function updatePWAManifestUrl() {
-    const baseUrl = 'https://cirrapytmbnjlhxunkaq.supabase.co/functions/v1/dynamic-manifest';
+      function updatePWAManifestUrl() {
     const alias = document.getElementById('conf-alias').value.trim();
     
-    let manifestUrl;
-    if (alias) {
-        manifestUrl = `${baseUrl}?u=${alias}`;
-        // Actualizar manifest del documento actual
-        const link = document.querySelector('link[rel="manifest"]');
-        if (link) link.href = manifestUrl;
-    } else {
-        manifestUrl = `${baseUrl}?tienda=${storeCode}`;
+    // Actualizar el manifest del documento ADMIN actual
+    const link = document.querySelector('link[rel="manifest"]');
+    if (link) {
+        if (alias) {
+            link.href = `${window.location.origin}${window.location.pathname}?u=${alias}`;
+        } else {
+            link.href = `${window.location.origin}${window.location.pathname}?tienda=${storeCode}`;
+        }
     }
+
+    // Mostrar URL para compartir (la del cliente)
+    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+    const clientUrl = `${baseUrl}/index.html${alias ? `?u=${alias}` : `?tienda=${storeCode}`}`;
     
-    document.getElementById('pwa-manifest-url').value = manifestUrl;
-    console.log('📱 Manifest URL:', manifestUrl);
+    document.getElementById('pwa-manifest-url').value = clientUrl;
+    console.log('📱 URL PWA para clientes:', clientUrl);
 }
 
         function copyPWAManifestUrl() {
