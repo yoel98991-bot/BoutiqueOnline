@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#ffffff">
+    <title>Admin Studio</title>
+
+    <link rel="manifest" href="./manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Studio">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        /* --- ESTILOS GENERALES --- */
+        :root { --primary: #1e293b; --accent: #6366f1; --bg: #f8fafc; --surface: #ffffff; --text: #334155; --border: #e2e8f0; --radius: 16px; --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; min-height: 100vh; padding-bottom: 80px; }
+        .container { max-width: 960px; margin: 0 auto; }
+
+        /* Login */
+        #login-container { max-width: 100%; width: 400px; margin: 60px auto; background: var(--surface); padding: 30px; border-radius: var(--radius); box-shadow: var(--shadow); text-align: center; }
+        
+        /* Header */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--surface); padding: 15px 20px; border-radius: var(--radius); box-shadow: var(--shadow); flex-wrap: wrap; gap: 10px;}
+        .store-code-badge { background: #eff6ff; color: var(--accent); padding: 5px 12px; border-radius: 8px; font-weight: 600; border: 1px dashed var(--accent); font-size: 0.9rem; cursor: pointer; transition: border-color 0.3s; border-width: 2px; }
+
+        /* Tabs Navigation */
+        .nav-tabs { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 20px; 
+            overflow-x: auto; 
+            padding: 10px; 
+            margin-left: -10px; 
+            margin-right: -10px;
+            width: calc(100% + 20px);
+        }
+        .nav-tabs::-webkit-scrollbar { display: none; }
+        .tab { padding: 10px 20px; border: none; background: white; color: #64748b; font-weight: 600; border-radius: 30px; font-size: 0.9rem; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.02); position: relative; }
+        .tab.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(30, 41, 59, 0.3); }
+
+        /* Badges */
+        .badge-count { 
+            position: absolute; 
+            top: -8px; 
+            right: -5px; 
+            background-color: #ef4444; 
+            color: white; 
+            font-size: 0.7rem; 
+            padding: 2px 6px; 
+            border-radius: 10px; 
+            font-weight: bold; 
+            display: none; 
+            animation: popIn 0.3s ease;
+            z-index: 10; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+            border: 2px solid white; 
+        }
+
+        /* Toasts */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
+        .toast-notification { background: white; border-left: 4px solid var(--accent); padding: 15px 20px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 15px; animation: slideInRight 0.3s ease-out forwards; min-width: 250px; }
+        .toast-content div { font-weight: 600; font-size: 0.9rem; }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* UI Components */
+        .card { background: var(--surface); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 20px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        label { display: block; margin-bottom: 6px; font-size: 0.8rem; font-weight: 600; color: #64748b; text-transform: uppercase; }
+        input, textarea, select { width: 100%; padding: 14px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 12px; background: #f8fafc; font-family: 'Inter', sans-serif; font-size: 16px; appearance: none; }
+        .btn { padding: 14px 20px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; width: 100%; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 8px 16px; font-size: 0.9rem; width: auto; }
+        .btn-icon { width: 36px; height: 36px; padding: 0; border-radius: 8px; display: inline-flex; margin-left: 5px; align-items: center; justify-content: center;}
+        .btn-danger { background: #fee2e2; color: #dc2626; }
+        .btn-edit { background: #e0e7ff; color: var(--accent); }
+        .upload-zone { border: 2px dashed #cbd5e1; border-radius: 12px; padding: 30px 20px; text-align: center; background: #f8fafc; margin-bottom: 20px; cursor: pointer; }
+        .panel-section { display: none; animation: fadeIn 0.3s ease; }
+        .panel-section.active { display: block; }
+
+        /* GALERÍA DE PREVISUALIZACIÓN */
+        .gallery-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .gallery-item {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1/1;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .btn-remove-img {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Table */
+        .table-container { overflow-x: auto; margin: 0 -20px; padding: 0 20px; }
+        table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+        td { padding: 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .product-img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: #eee; }
+
+        /* Orders */
+        .order-item { padding: 15px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; background: white; transition: all 0.3s ease; }
+        .badge-pending { background: #fff7ed; color: #c2410c; font-size: 0.7rem; padding: 4px 8px; border-radius: 10px; font-weight: bold;}
+        
+        /* Chat */
+        .chat-list-item { display: flex; gap: 15px; padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; }
+        .chat-list-item.unread { background: #eff6ff; }
+        .avatar { width: 45px; height: 45px; background: #cbd5e1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; position: relative; }
+        .chat-window { display: none; height: 70vh; flex-direction: column; background: #f1f5f9; border-radius: var(--radius); overflow: hidden; }
+        .chat-window.active { display: flex; }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .msg { max-width: 75%; padding: 10px 15px; border-radius: 15px; font-size: 0.95rem; }
+        .msg.me { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .msg.them { background: white; color: var(--text); align-self: flex-start; border-bottom-left-radius: 2px; }
+        .msg img { max-width: 100%; border-radius: 8px; margin-top: 5px; }
+        .map-btn { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; padding: 8px 12px; background: #e0e7ff; color: var(--accent); text-decoration: none; font-weight: 600; border-radius: 8px; font-size: 0.85rem; }
+        .chat-input-area { padding: 15px; background: white; display: flex; gap: 10px; border-top: 1px solid var(--border); }
+        .typing-indicator { font-size: 0.75rem; color: #64748b; margin-left: 55px; margin-top: -15px; margin-bottom: 10px; height: 15px; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* CROPPER */
+        #crop-modal { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index: 5000; display:none; justify-content:center; align-items:center; flex-direction:column; padding: 20px; }
+        .crop-container { max-width: 90%; max-height: 70vh; background: #333; overflow: hidden; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .crop-container img { max-width: 100%; display: block; }
+        .crop-controls { margin-top: 20px; display: flex; gap: 15px; }
+        
+        .logo-preview-container { background: white; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 15px; text-align: center; cursor: pointer; margin-bottom: 20px; transition: 0.3s; }
+        .logo-preview-container:hover { border-color: var(--accent); background: #f0f9ff; }
+        .current-logo { max-height: 60px; max-width: 100%; object-fit: contain; }
+
+        /* ESTILOS PARA RESUMEN */
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); position: relative; overflow: hidden; }
+        .stat-card h4 { margin: 0 0 10px 0; color: #64748b; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card .value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+        .stat-card .sub-text { font-size: 0.85rem; color: var(--accent); margin-top: 5px; font-weight: 500; }
+        .stat-card .icon-bg { position: absolute; bottom: -10px; right: -10px; font-size: 5rem; color: rgba(0,0,0,0.03); transform: rotate(-15deg); }
+        .top-client-box { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; }
+        .top-client-box h4 { color: rgba(255,255,255,0.8); }
+        .top-client-box .value { color: white; font-size: 1.5rem; }
+        .top-client-box .sub-text { color: rgba(255,255,255,0.9); }
+
+        /* MODAL PERSONALIZADO */
+        .custom-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+            z-index: 9999; display: none; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        .custom-modal-overlay.open { display: flex; opacity: 1; }
+        
+        .custom-modal-card {
+            background: white; width: 90%; max-width: 400px; padding: 25px;
+            border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            text-align: center; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative; overflow: hidden;
+        }
+        .custom-modal-overlay.open .custom-modal-card { transform: scale(1); }
+
+        .modal-icon-wrapper {
+            width: 70px; height: 70px; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 15px auto; font-size: 2rem;
+        }
+        
+        /* Tipos de Modal */
+        .modal-type-success .modal-icon-wrapper { background: #dcfce7; color: #16a34a; }
+        .modal-type-danger .modal-icon-wrapper { background: #fee2e2; color: #dc2626; }
+        .modal-type-info .modal-icon-wrapper { background: #e0e7ff; color: #4f46e5; }
+        
+        .modal-title { font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-bottom: 10px; }
+        .modal-desc { color: #64748b; font-size: 0.95rem; line-height: 1.5; margin-bottom: 25px; }
+        
+        .modal-actions { display: flex; gap: 10px; }
+        .modal-btn { flex: 1; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; font-size: 1rem; transition: transform 0.1s; }
+        .modal-btn:active { transform: scale(0.96); }
+        .modal-btn-cancel { background: #f1f5f9; color: #64748b; }
+        
+        .modal-type-success .modal-btn-confirm { background: #16a34a; color: white; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3); }
+        .modal-type-danger .modal-btn-confirm { background: #dc2626; color: white; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); }
+        .modal-type-info .modal-btn-confirm { background: #4f46e5; color: white; }
+
+    </style>
+</head>
+<body>
+
+    <div id="login-container">
+        <h2 id="auth-title" style="margin-bottom: 10px;">Admin Access</h2>
+        <form id="auth-form">
+            <input type="email" id="email" placeholder="Correo Electrónico" required>
+            <input type="password" id="password" placeholder="Contraseña" required>
+            <button type="submit" id="btn-auth-action" class="btn btn-primary">Ingresar</button>
+        </form>
+        <p id="auth-msg" style="color: var(--accent); margin-top: 15px; min-height: 20px; font-size: 0.9rem;"></p>
+
+        <div style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 15px; font-size: 0.9rem; color: #64748b;">
+            <span id="toggle-text">¿No tienes cuenta?</span>
+            <button type="button" id="btn-toggle-auth" onclick="toggleAuthMode()" 
+                    style="background:none; border:none; color: var(--accent); font-weight:bold; cursor:pointer; font-size: 0.9rem; text-decoration: underline;">
+                Crear Tienda
+            </button>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <div id="app-modal" class="custom-modal-overlay">
+        <div class="custom-modal-card" id="modal-card-content">
+            <div id="modal-icon" class="modal-icon-wrapper"><i class="fas fa-check"></i></div>
+            <h3 id="modal-title" class="modal-title">Título</h3>
+            <p id="modal-msg" class="modal-desc">Descripción aquí.</p>
+            <div class="modal-actions" id="modal-actions">
+                <button class="modal-btn modal-btn-cancel" onclick="closeCustomModal()">Cancelar</button>
+                <button id="btn-modal-confirm" class="modal-btn modal-btn-confirm">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboard" class="container" style="display:none;">
+        <div class="header">
+            <div>
+                <h2 style="margin:0; font-size:1.1rem; color: var(--primary);">Studio Panel</h2>
+                
+                <div style="display:flex; gap: 10px; margin-top: 5px; align-items: center;">
+                    <div id="store-code-display" class="store-code-badge" onclick="copyCode()" title="Copiar código">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </div>
+
+                    <button onclick="shareStoreLink()" class="btn-icon" style="background: var(--accent); color: white; box-shadow: 0 2px 5px rgba(99, 102, 241, 0.4); width: auto; padding: 0 12px; font-size: 0.85rem; height: 32px;" title="Promocionar Tienda">
+                        <i class="fas fa-share-alt"></i> <span style="margin-left:5px;">Promocionar</span>
+                    </button>
+                </div>
+            </div>
+            <button onclick="logout()" class="btn btn-outline"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="tab" onclick="switchTab('resumen')"><i class="fas fa-chart-pie"></i> Resumen</button>
+            <button class="tab active" onclick="switchTab('productos')"><i class="fas fa-box"></i> Productos</button>
+            <button class="tab" onclick="switchTab('chats')"><i class="fas fa-comments"></i> Chats <span id="badge-chats" class="badge-count">0</span></button>
+            <button class="tab" onclick="switchTab('pedidos')"><i class="fas fa-bell"></i> Pedidos <span id="badge-orders" class="badge-count">0</span></button>
+            <button class="tab" onclick="switchTab('config')"><i class="fas fa-cog"></i> Configuración</button>
+        </div>
+
+        <div id="tab-resumen" class="panel-section">
+            <h3 style="margin-bottom:20px;">Estadísticas de la Tienda</h3>
+            
+            <div class="summary-grid">
+                <div class="stat-card">
+                    <h4>Ingresos Totales</h4>
+                    <div class="value" id="stat-income">$0.00</div>
+                    <div class="sub-text">En pedidos despachados</div>
+                    <i class="fas fa-wallet icon-bg"></i>
+                </div>
+        
+                <div class="stat-card">
+                    <h4>Pedidos Completados</h4>
+                    <div class="value" id="stat-orders">0</div>
+                    <div class="sub-text">Envíos realizados</div>
+                    <i class="fas fa-shipping-fast icon-bg"></i>
+                </div>
+        
+                <div class="stat-card top-client-box">
+                    <h4>🏆 Cliente Top</h4>
+                    <div class="value" id="stat-top-client">---</div>
+                    <div class="sub-text" id="stat-top-spent">Sin datos aún</div>
+                    <i class="fas fa-crown icon-bg" style="color: rgba(255,255,255,0.1);"></i>
+                </div>
+            </div>
+        
+            <div class="card">
+                <h3>Últimos Movimientos</h3>
+                <div class="table-container">
+                    <table id="recent-sales-table">
+                        <thead><tr><th>Cliente</th><th>Monto</th><th>Fecha</th></tr></thead>
+                        <tbody id="recent-sales-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-productos" class="panel-section active">
+            <div class="card" id="form-card">
+                <h3 id="form-title"><i class="fas fa-plus-circle"></i> Nuevo Producto</h3>
+                <form id="product-form">
+                    <div class="form-grid">
+                        <input type="text" id="nombre" placeholder="Nombre" required>
+                        <input type="number" step="0.01" id="precio" placeholder="Precio" required>
+                    </div>
+                    <textarea id="descripcion" rows="2" placeholder="Descripción"></textarea>
+                    <div class="form-grid">
+                        <input type="number" id="stock" value="10" placeholder="Stock">
+                        <div>
+                            <input type="text" id="categoria" list="lista-categorias" placeholder="Categoría (Escribe o selecciona)" style="width:100%; margin-bottom:15px;">
+                            <datalist id="lista-categorias"></datalist>
+                        </div>
+                    </div>
+                    
+                    <label style="margin-top:10px; display:block;">Galería de Imágenes (Máx 6)</label>
+                    <div class="upload-zone" onclick="document.getElementById('imagen-input').click()">
+                        <p id="upload-text" style="margin:0; color:#64748b;">
+                            <i class="fas fa-images"></i> Toca para seleccionar fotos
+                        </p>
+                        <input type="file" id="imagen-input" accept="image/*" multiple style="display:none;">
+                    </div>
+                    
+                    <div id="gallery-preview-container" class="gallery-preview-grid"></div>
+
+                    <div style="margin-bottom: 15px;"><input type="checkbox" id="destacado"> Destacar</div>
+                    <button type="submit" id="btn-save" class="btn btn-primary">Publicar</button>
+                    <button type="button" id="btn-cancel" class="btn btn-cancel" style="display:none;" onclick="resetForm()">Cancelar</button>
+                </form>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-layer-group"></i> Inventario</h3>
+                <div class="table-container"><table id="products-table"></table></div>
+            </div>
+        </div>
+
+        <div id="tab-chats" class="panel-section">
+            <div class="card" id="chats-inbox">
+                <h3>Bandeja de Entrada</h3>
+                <div id="chats-list">Cargando...</div>
+            </div>
+            <div id="chat-interface" class="chat-window">
+                <div class="chat-header">
+                    <button class="btn btn-outline" style="padding: 5px 10px;" onclick="closeChat()"><i class="fas fa-arrow-left"></i></button>
+                    <div class="avatar" id="current-chat-avatar">User</div>
+                    <div>
+                        <div style="font-weight:600;" id="current-chat-name">Cliente</div>
+                    </div>
+                </div>
+                <div class="chat-messages" id="messages-container"></div>
+                <div class="typing-indicator" id="typing-indicator"></div>
+                <form class="chat-input-area" onsubmit="sendMessage(event)">
+                    <input type="text" id="msg-input" placeholder="Escribe un mensaje..." style="margin:0;" oninput="notifyTyping()">
+                    <button type="submit" class="btn btn-primary" style="width:auto;"><i class="fas fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </div>
+
+        <div id="tab-pedidos" class="panel-section">
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <h3>Pedidos</h3>
+                    <button onclick="loadOrders()" class="btn btn-outline"><i class="fas fa-sync"></i></button>
+                </div>
+                <div id="orders-list"></div>
+            </div>
+        </div>
+
+        <div id="tab-config" class="panel-section">
+
+            <div class="card" id="install-card" style="display: none; border: 2px solid #6366f1; background: #eef2ff;">
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div>
+            <h3 style="color: #4338ca; margin: 0;"><i class="fas fa-mobile-alt"></i> Instalar App</h3>
+            <p style="font-size: 0.85rem; color: #4338ca; margin-top: 5px; margin-bottom: 0;">
+                Instala el panel en tu inicio para acceso rápido.
+            </p>
+        </div>
+        <button onclick="installPWA()" class="btn" style="background: #4338ca; color: white; width: auto; padding: 10px 20px;">
+            Instalar
+        </button>
+    </div>
+</div>
+            
+            <div class="card">
+                <h3><i class="fas fa-image"></i> Identidad Visual</h3>
+                <p style="font-size:0.85rem; color:#64748b; margin-bottom:15px;">Sube tu logo. Se recortará automáticamente.</p>
+                <div class="logo-preview-container" onclick="document.getElementById('logo-input').click()">
+                    <div id="logo-placeholder">
+                        <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 10px;"></i>
+                        <p style="margin:0; font-weight:600; color:#64748b;">Toca para subir Logo</p>
+                    </div>
+                    <img id="logo-img-preview" class="current-logo" style="display:none;">
+                    <input type="file" id="logo-input" accept="image/*" style="display:none;">
+                </div>
+            </div>
+
+            <div class="card">
+                <h3><i class="fas fa-university"></i> Datos Generales & Bancarios</h3>
+                <form id="config-form">
+                    
+                    <h4 style="margin-top:0; color:var(--primary); margin-bottom: 15px;">Datos del Administrador</h4>
+                    <div class="form-grid">
+                        <div>
+                            <label>Nombre y Apellido</label>
+                            <input type="text" id="conf-nombre-admin" placeholder="Tu nombre">
+                        </div>
+                        <div>
+                            <label>WhatsApp (Soporte)</label>
+                            <input type="tel" id="conf-telefono" placeholder="+58...">
+                        </div>
+                    </div>
+                    <hr style="border:0; border-top:1px solid #e2e8f0; margin-bottom:20px;">
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f0fdf4; border: 1px dashed #22c55e; border-radius: 12px;">
+                        <label style="color: #15803d;">🔗 Enlace Personalizado (Alias)</label>
+                        <p style="font-size: 0.8rem; color: #166534; margin-bottom: 8px;">
+                            Elige un nombre corto para tu tienda.
+                        </p>
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <span style="font-weight: bold; color: #aaa;">?u=</span>
+                            <input type="text" id="conf-alias" placeholder="ej: modas-ana" style="margin:0; text-transform: lowercase; font-weight: bold;" oninput="this.value = this.value.replace(/[^a-z0-9-]/g, '')">
+                        </div>
+                    </div>
+
+                    <h4 style="margin-top:0; color:var(--primary); margin-bottom: 15px;">Datos Bancarios</h4>
+                    <label>Banco</label>
+                    <input type="text" id="conf-banco" placeholder="Ej: Banco Venezuela">
+                    <div class="form-grid">
+                        <div><label>Titular</label><input type="text" id="conf-titular"></div>
+                        <div><label>C.I. / RIF</label><input type="text" id="conf-ci"></div>
+                    </div>
+                    <div class="form-grid">
+                        <div><label>Teléfono / Cuenta</label><input type="text" id="conf-numero"></div>
+                        <div>
+                            <label>Tipo</label>
+                            <select id="conf-tipo" style="width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: #f8fafc;">
+                                <option value="Pago Móvil">Pago Móvil</option>
+                                <option value="Cuenta Corriente">Cuenta Corriente</option>
+                                <option value="Cuenta Ahorro">Cuenta Ahorro</option>
+                            </select>
+                        </div>
+                    </div>
+                    <label>Código QR</label>
+                    <div class="upload-zone" onclick="document.getElementById('qr-input').click()">
+                        <p id="qr-text" style="margin:0; color:#64748b;">Subir imagen QR</p>
+                        <img id="qr-preview" style="display:none; max-width:150px; margin-top:10px; border-radius:8px;">
+                        <input type="file" id="qr-input" accept="image/*" style="display:none;">
+                    </div>
+                    <button type="submit" id="btn-save-config" class="btn btn-primary">Guardar Configuración</button>
+                </form>
+            </div>
+            
+            <div class="card" style="border: 2px solid #fca5a5; background: #fff5f5;">
+                <h3 style="color: #dc2626;"><i class="fas fa-bell"></i> Notificaciones Push</h3>
+                <p style="font-size: 0.85rem; color: #7f1d1d; margin-bottom: 10px;">
+                    1. Acepta permisos.<br>2. Prueba la conexión.
+                </p>
+                <button onclick="testNotification()" class="btn" style="background: #dc2626; color: white;">🔔 PROBAR CONEXIÓN</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="crop-modal">
+        <div class="crop-container"><img id="crop-image-target" src=""></div>
+        <div class="crop-controls">
+            <button onclick="cancelCrop()" class="btn btn-danger" style="width: auto;">Cancelar</button>
+            <button onclick="confirmCrop()" class="btn btn-primary" style="width: auto;"><i class="fas fa-crop-alt"></i> Recortar y Guardar</button>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://cirrapytmbnjlhxunkaq.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnJhcHl0bWJuamxoeHVua2FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NzAyMDAsImV4cCI6MjA3ODU0NjIwMH0.OtJiLGj1EvhPICFaA9ruL02Z9kSQ2jT0t3Smqph81C4';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const VAPID_PUBLIC_KEY = "BCkvES3UU5IUHo52kr0VegCslrRYrCo7LcgfJTFAfU-x8g7Ioca5Q-WHU8qyMPDhee6Lbls-l_cjqNQxQuUpoJw";
+
+        let currentUser = null;
+        let storeCode = null;
+        let activeChatClientId = null;
+        let activeChannel = null;
+        let productsCache = []; 
+        let ordersCache = [];
+        let editingId = null;
+        const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        let globalChannel = null;
+        let isReconnecting = false;
+        let modalCallback = null;
+        let galleryFiles = [];
+
+        // --- SISTEMA DE MODALES PERSONALIZADO ---
+        function customConfirm(title, message, type = 'info', callback) {
+            const modal = document.getElementById('app-modal');
+            const card = document.getElementById('modal-card-content');
+            const iconEl = document.getElementById('modal-icon');
+            const btnConfirm = document.getElementById('btn-modal-confirm');
+            card.className = 'custom-modal-card modal-type-' + type;
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-msg').innerHTML = message;
+            let iconClass = 'fa-info-circle';
+            if(type === 'success') iconClass = 'fa-check';
+            if(type === 'danger') iconClass = 'fa-trash-alt';
+            iconEl.innerHTML = `<i class="fas ${iconClass}"></i>`;
+            btnConfirm.textContent = type === 'danger' ? 'Eliminar' : 'Confirmar';
+            if(type === 'success') btnConfirm.textContent = '¡Si, Entregado!';
+            modalCallback = callback;
+            modal.classList.add('open');
+        }
+
+        function closeCustomModal() {
+            document.getElementById('app-modal').classList.remove('open');
+            modalCallback = null;
+        }
+
+        document.getElementById('btn-modal-confirm').addEventListener('click', () => {
+            if (modalCallback) modalCallback();
+            closeCustomModal();
+        });
+
+        document.getElementById('app-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'app-modal') closeCustomModal();
+        });
+
+        // --- FUNCIONES PUSH ---
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+            return outputArray;
+        }
+
+        async function registerServiceWorker() {
+            if ('serviceWorker' in navigator && 'PushManager' in window) {
+                try {
+                    const registration = await navigator.serviceWorker.register('./sw.js');
+                    return registration;
+                } catch (error) { console.error('Error SW:', error); }
+            }
+        }
+
+        async function subscribeUser() {
+            const registration = await registerServiceWorker();
+            if (!registration) return;
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+            });
+            if (currentUser) {
+                const subData = JSON.parse(JSON.stringify(subscription));
+                await supabase.from('push_subscriptions').upsert({
+                    user_id: currentUser.id,
+                    endpoint: subData.endpoint,
+                    p256dh: subData.keys.p256dh,
+                    auth: subData.keys.auth
+                }, { onConflict: 'endpoint' });
+            }
+        }
+
+        async function testNotification() {
+            const btn = event.target; const txtOriginal = btn.innerText;
+            if(!currentUser) { showToast("Error", "Inicia sesión primero"); return; }
+            btn.disabled = true; btn.innerText = "⏳ Configurando...";
+            try {
+                await subscribeUser();
+                btn.innerText = "🚀 Enviando...";
+                const { error } = await supabase.functions.invoke('push-notifier', { body: { type: 'TEST', user_id: currentUser.id } });
+                if(error) throw error; 
+                showToast("¡Enviado!", "Revisa tus notificaciones");
+            } catch (e) { console.error(e); showToast("Error", e.message); } 
+            finally { btn.disabled = false; btn.innerText = txtOriginal; }
+        }
+
+        // --- AUTH Y CARGA ---
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                currentUser = session.user;
+                initAdmin(session.user);
+                setTimeout(registerServiceWorker, 1000);
+            } else {
+                document.getElementById('login-container').style.display = 'block';
+                document.getElementById('dashboard').style.display = 'none';
+            }
+        });
+
+        async function initAdmin(user) {
+            let { data: userData } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
+            if (!userData) {
+                userData = { id: user.id, email: user.email, nombre: 'Admin', rol: 'dueño' };
+                await supabase.from('usuarios').insert(userData);
+            }
+            storeCode = userData.codigo_tienda || 'TIENDA-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+            if (!userData.codigo_tienda) await supabase.from('usuarios').update({ codigo_tienda: storeCode }).eq('id', user.id);
+
+            document.getElementById('store-code-display').textContent = "CÓDIGO: " + storeCode;
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            
+            loadProducts();
+            updateDashboardCounters();
+            setTimeout(() => setupGlobalRealtime(), 2000);
+        }
+
+        let isLoginMode = true;
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            const title = document.getElementById('auth-title');
+            const btn = document.getElementById('btn-auth-action');
+            const toggleText = document.getElementById('toggle-text');
+            const toggleBtn = document.getElementById('btn-toggle-auth');
+            const msg = document.getElementById('auth-msg');
+
+            msg.textContent = '';
+
+            if (isLoginMode) {
+                title.textContent = "Admin Access";
+                btn.textContent = "Ingresar";
+                toggleText.textContent = "¿No tienes cuenta?";
+                toggleBtn.textContent = "Crear Tienda";
+            } else {
+                title.textContent = "Crear Nueva Tienda";
+                btn.textContent = "Registrarme";
+                toggleText.textContent = "¿Ya tienes cuenta?";
+                toggleBtn.textContent = "Iniciar Sesión";
+            }
+        }
+
+        document.getElementById('auth-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const msg = document.getElementById('auth-msg');
+            const btn = document.getElementById('btn-auth-action');
+            const originalBtnText = btn.textContent;
+
+            if (password.length < 6) {
+                msg.textContent = "La contraseña debe tener al menos 6 caracteres.";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+            msg.textContent = "";
+
+            try {
+                let result;
+                if (isLoginMode) {
+                    result = await supabase.auth.signInWithPassword({ email, password });
+                } else {
+                    result = await supabase.auth.signUp({ email, password });
+                }
+
+                if (result.error) throw result.error;
+
+                if (!isLoginMode && result.data.user && !result.data.session) {
+                    msg.style.color = '#22c55e';
+                    msg.textContent = "¡Registro exitoso! Revisa tu correo para confirmar.";
+                    btn.disabled = false;
+                    btn.textContent = originalBtnText;
+                    return;
+                }
+            } catch (error) {
+                msg.style.color = 'var(--accent)'; 
+                msg.textContent = "Error: " + (error.message === "Invalid login credentials" ? "Credenciales incorrectas" : error.message);
+                btn.disabled = false;
+                btn.textContent = originalBtnText;
+            }
+        });
+
+        async function logout() {
+            if (globalChannel) await supabase.removeChannel(globalChannel);
+            await supabase.auth.signOut(); window.location.reload();
+        }
+
+        // --- REALTIME ---
+        async function setupGlobalRealtime() {
+            if (globalChannel && ['SUBSCRIBED', 'JOINED'].includes(globalChannel.state)) return;
+            if (globalChannel) await supabase.removeChannel(globalChannel);
+            globalChannel = supabase.channel(`admin-global-${currentUser.id}-${Date.now()}`)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `tienda_id=eq.${currentUser.id}` }, payload => {
+                if(payload.new.tienda_id != currentUser.id) return;
+                if(payload.new.enviado_por_rol === 'cliente') {
+                    const incomingClientId = String(payload.new.cliente_id);
+                    const currentChatId = String(activeChatClientId);
+                    if (currentChatId !== incomingClientId) { showToast('Nuevo Mensaje', 'Cliente envió mensaje'); updateDashboardCounters(); }
+                }
+                if(document.getElementById('tab-chats').classList.contains('active')) loadChatsList();
+                const incomingClientId = String(payload.new.cliente_id);
+                if (activeChatClientId && incomingClientId === String(activeChatClientId) && payload.new.enviado_por_rol !== 'dueño') {
+                    renderMessage(payload.new);
+                }
+            })
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, (payload) => {
+                if (payload.new.tienda_id !== currentUser.id) return; 
+                showToast('Nuevo Pedido', '¡Revisa la lista!'); updateDashboardCounters();
+                if(document.getElementById('tab-pedidos').classList.contains('active')) loadOrders();
+            })
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') { isReconnecting = false; document.getElementById('store-code-display').style.borderColor = '#22c55e'; }
+                else if (status === 'TIMED_OUT' || status === 'CLOSED') { if (!isReconnecting) handleConnectionDrop(); }
+            });
+        }
+        function handleConnectionDrop() {
+            if (isReconnecting) return; isReconnecting = true;
+            document.getElementById('store-code-display').style.borderColor = '#ef4444'; 
+            setTimeout(() => { if (currentUser) setupGlobalRealtime(); }, 5000);
+        }
+
+        async function shareStoreLink() {
+            const aliasInput = document.getElementById('conf-alias').value.trim();
+            let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+            const finalParam = aliasInput ? `?u=${aliasInput}` : `?tienda=${storeCode}`;
+            const promoUrl = `${baseUrl}/${finalParam}`;
+            const shareData = { title: 'Mi Boutique Online', text: '¡Hola! Te invito a visitar mi catálogo online:', url: promoUrl };
+            if (navigator.share) { try { await navigator.share(shareData); } catch (err) {} } 
+            else { try { await navigator.clipboard.writeText(promoUrl); showToast("¡Enlace Copiado!", "Link: " + promoUrl); } catch (err) { alert("Tu enlace es: " + promoUrl); } }
+        }
+
+        function copyCode() { navigator.clipboard.writeText(storeCode); showToast("Código Copiado", storeCode); }
+
+        // --- GALERÍA DE IMÁGENES ---
+        document.getElementById('imagen-input').addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            const totalCurrent = galleryFiles.length;
+            const available = 6 - totalCurrent;
+            if (files.length > available) { showToast("Límite Excedido", "Máximo 6 fotos en total."); }
+            const filesToAdd = files.slice(0, available);
+            filesToAdd.forEach(file => { galleryFiles.push({ type: 'file', data: file }); });
+            renderGalleryPreview();
+            this.value = '';
+        });
+
+        function renderGalleryPreview() {
+            const container = document.getElementById('gallery-preview-container');
+            container.innerHTML = '';
+            galleryFiles.forEach((item, index) => {
+                const div = document.createElement('div'); div.className = 'gallery-item';
+                const img = document.createElement('img');
+                if (item.type === 'file') { img.src = URL.createObjectURL(item.data); } else { img.src = item.data; }
+                const btn = document.createElement('button'); btn.className = 'btn-remove-img'; btn.innerHTML = '<i class="fas fa-times"></i>';
+                btn.onclick = (e) => { e.preventDefault(); removeImageFromGallery(index); };
+                div.appendChild(img); div.appendChild(btn); container.appendChild(div);
+            });
+        }
+
+        function removeImageFromGallery(index) {
+            galleryFiles.splice(index, 1);
+            renderGalleryPreview();
+        }
+
+        // --- PRODUCTOS ---
+        document.getElementById('product-form').addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            if(galleryFiles.length === 0) { showToast("Falta Imagen", "Sube al menos una foto."); return; }
+            const btn = document.getElementById('btn-save'); btn.textContent = "Guardando..."; btn.disabled = true;
+            
+            try {
+                let uploadedUrls = [];
+                for (const item of galleryFiles) {
+                    if (item.type === 'url') {
+                        uploadedUrls.push(item.data);
+                    } else if (item.type === 'file') {
+                        const file = item.data;
+                        const fileName = `${currentUser.id}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                        const { error: uploadErr } = await supabase.storage.from('imagenes-productos').upload(fileName, file);
+                        if (uploadErr) throw uploadErr;
+                        const { data } = supabase.storage.from('imagenes-productos').getPublicUrl(fileName);
+                        uploadedUrls.push(data.publicUrl);
+                    }
+                }
+                const mainImage = uploadedUrls[0];
+                const productData = {
+                    nombre: document.getElementById('nombre').value,
+                    precio: parseFloat(document.getElementById('precio').value),
+                    descripcion: document.getElementById('descripcion').value,
+                    stock: parseInt(document.getElementById('stock').value),
+                    categoria: document.getElementById('categoria').value,
+                    destacado: document.getElementById('destacado').checked,
+                    creado_por: currentUser.id,
+                    imagen_url: mainImage,
+                    galeria: uploadedUrls
+                };
+                if (editingId) { await supabase.from('productos').update(productData).eq('id', editingId); } 
+                else { await supabase.from('productos').insert([productData]); }
+                resetForm(); loadProducts(); showToast("Éxito", "Producto guardado con fotos.");
+            } catch (error) { alert("Error: " + error.message); } 
+            finally { btn.disabled = false; btn.textContent = "Publicar"; }
+        });
+
+        function resetForm() {
+            document.getElementById('product-form').reset(); editingId = null; galleryFiles = []; renderGalleryPreview();
+            document.getElementById('btn-save').textContent = "Publicar";
+            document.getElementById('btn-cancel').style.display = 'none';
+            document.getElementById('form-title').innerHTML = '<i class="fas fa-plus-circle"></i> Nuevo Producto';
+        }
+
+        async function loadProducts() {
+            const { data } = await supabase.from('productos').select('*').eq('creado_por', currentUser.id).order('id', {ascending:false});
+            productsCache = data || []; updateCategoryDatalist(); 
+            const table = document.getElementById('products-table');
+            if(!data || data.length === 0) { table.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Sin productos.</td></tr>'; return; }
+            table.innerHTML = `<thead><tr><th>FOTO</th><th>DETALLE</th><th>$</th><th>ACCIONES</th></tr></thead><tbody>${data.map(p => `<tr><td><img src="${p.imagen_url || 'https://via.placeholder.com/50'}" class="product-img"></td><td><div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div><div style="font-size:0.75rem; color:#94a3b8;">Stock: ${p.stock}</div></td><td style="font-weight:bold;">${p.precio}</td><td><button class="btn-icon btn-edit" onclick="startEdit(${p.id})"><i class="fas fa-pen"></i></button><button class="btn-icon btn-danger" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>`;
+        }
+
+        function startEdit(id) {
+            const p = productsCache.find(x => x.id === id); if(!p) return;
+            editingId = id;
+            document.getElementById('nombre').value = p.nombre; document.getElementById('precio').value = p.precio;
+            document.getElementById('descripcion').value = p.descripcion || ''; document.getElementById('stock').value = p.stock;
+            document.getElementById('categoria').value = p.categoria || ''; document.getElementById('destacado').checked = p.destacado;
+            galleryFiles = [];
+            if (p.galeria && Array.isArray(p.galeria) && p.galeria.length > 0) {
+                p.galeria.forEach(url => { galleryFiles.push({ type: 'url', data: url }); });
+            } else if (p.imagen_url) { galleryFiles.push({ type: 'url', data: p.imagen_url }); }
+            renderGalleryPreview();
+            document.getElementById('form-title').innerHTML = '<i class="fas fa-edit"></i> Editando Producto';
+            document.getElementById('btn-save').textContent = "Actualizar";
+            document.getElementById('btn-cancel').style.display = 'inline-block';
+            document.getElementById('form-card').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function deleteProduct(id) { 
+            customConfirm("¿Eliminar Producto?", "Esta acción borrará el producto permanentemente del catálogo.", "danger",
+                async () => { await supabase.from('productos').delete().eq('id', id); loadProducts(); showToast("Eliminado", "Producto borrado correctamente"); }
+            );
+        }
+
+        // --- PEDIDOS ---
+        let showingHistory = false; 
+        async function loadOrders() {
+            const { data } = await supabase.from('pedidos').select('*, clientes(nombre, telefono)').eq('tienda_id', currentUser.id).order('fecha', {ascending:false});
+            ordersCache = data || []; updateDashboardCounters(); renderOrders();
+        }
+
+        function renderOrders() {
+            const list = document.getElementById('orders-list');
+            const visibleOrders = showingHistory ? ordersCache : ordersCache.filter(o => o.estado === 'pendiente');
+            let html = `<div style="margin-bottom:15px; text-align:right;"><button onclick="toggleHistory()" class="btn btn-outline" style="font-size:0.8rem; padding: 5px 10px;">${showingHistory ? '<i class="fas fa-eye-slash"></i> Ocultar Completados' : '<i class="fas fa-history"></i> Ver Historial'}</button></div>`;
+            if(visibleOrders.length === 0) { list.innerHTML = html + `<div style="text-align:center; padding:40px; color:#94a3b8;">No hay pedidos pendientes.</div>`; return; }
+            html += visibleOrders.map(o => {
+                let itemsArray = []; if (o.productos && o.productos.items) itemsArray = o.productos.items; else if (Array.isArray(o.productos)) itemsArray = o.productos;
+                const productsHTML = itemsArray.length > 0 ? itemsArray.map(i => i.name).join(', ') : 'Sin detalle';
+                const actionBtn = o.estado === 'pendiente' ? `<button onclick="completeOrder(${o.id})" class="btn btn-primary" style="padding: 10px; margin-top:12px; background:#22c55e;"><i class="fas fa-check"></i> DESPACHAR</button>` : `<div style="margin-top:10px; padding:8px; background:#f0fdf4; color:#15803d; border-radius:8px; text-align:center; font-size:0.85rem;"><i class="fas fa-check-double"></i> Entregado</div>`;
+                return `<div class="order-item" style="border-left: 4px solid ${o.estado === 'pendiente' ? '#f97316' : '#22c55e'};"><div style="display:flex; justify-content:space-between;"><div style="font-weight:600;">${o.clientes?.nombre || 'Cliente'}</div><span class="badge-pending">${o.estado.toUpperCase()}</span></div><div style="font-size:0.85rem; color:#64748b; margin-top:5px;">${productsHTML}</div><div style="display:flex; justify-content:space-between; margin-top:10px; font-weight:bold;"><span>$${o.total}</span> <small>${new Date(o.fecha).toLocaleDateString()}</small></div>${actionBtn}</div>`;
+            }).join('');
+            list.innerHTML = html;
+        }
+        function toggleHistory() { showingHistory = !showingHistory; renderOrders(); }
+        
+        async function completeOrder(orderId) {
+            customConfirm("¿Confirmar Entrega?", "¿Confirmas que recibiste el dinero y entregaste el producto?", "success", 
+                async () => {
+                    const order = ordersCache.find(o => o.id === orderId); if(!order) return;
+                    let items = []; if (order.productos && order.productos.items) items = order.productos.items; else if (Array.isArray(order.productos)) items = order.productos;
+                    try {
+                        for (const item of items) { 
+                            const { data: curr } = await supabase.from('productos').select('stock').eq('id', item.id).single(); 
+                            if (curr) await supabase.from('productos').update({ stock: curr.stock - 1 }).eq('id', item.id); 
+                        }
+                        await supabase.from('pedidos').update({ estado: 'completado' }).eq('id', orderId); 
+                        showToast("¡Venta Registrada!", "Sumado al resumen.");
+                        loadOrders(); loadSummary(); loadProducts();
+                    } catch (e) { showToast("Error", e.message); }
+                }
+            );
+        }
+
+        async function loadSummary() {
+            const { data: orders, error } = await supabase.from('pedidos').select('total, fecha, cliente_id, clientes(nombre)').eq('tienda_id', currentUser.id).eq('estado', 'completado').order('fecha', { ascending: false });
+            if (error) { console.error(error); return; }
+            let totalIncome = 0; let totalCount = orders.length; const clientMap = {}; 
+            orders.forEach(o => {
+                const amount = parseFloat(o.total); totalIncome += amount;
+                const cId = o.cliente_id; const cName = o.clientes ? o.clientes.nombre : 'Desconocido';
+                if (!clientMap[cId]) { clientMap[cId] = { name: cName, total: 0, orders: 0 }; }
+                clientMap[cId].total += amount; clientMap[cId].orders += 1;
+            });
+            let topClientName = "Nadie aún"; let topClientAmount = 0;
+            const sortedClients = Object.values(clientMap).sort((a, b) => b.total - a.total);
+            if (sortedClients.length > 0) { topClientName = sortedClients[0].name; topClientAmount = sortedClients[0].total; }
+            document.getElementById('stat-income').textContent = `$${totalIncome.toFixed(2)}`;
+            document.getElementById('stat-orders').textContent = totalCount;
+            document.getElementById('stat-top-client').textContent = topClientName;
+            document.getElementById('stat-top-spent').textContent = `Ha comprado: $${topClientAmount.toFixed(2)}`;
+            const recentBody = document.getElementById('recent-sales-body');
+            if(orders.length === 0) { recentBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px; color:#94a3b8;">Sin ventas registradas</td></tr>'; } 
+            else { recentBody.innerHTML = orders.slice(0, 5).map(o => `<tr><td>${o.clientes?.nombre || 'Anon'}</td><td style="color:#22c55e; font-weight:bold;">+$${o.total}</td><td style="color:#64748b; font-size:0.85rem;">${new Date(o.fecha).toLocaleDateString()}</td></tr>`).join(''); }
+        }
+
+        // --- UI & CHATS ---
+        function showToast(title, message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div'); toast.className = 'toast-notification';
+            toast.innerHTML = `<i class="fas fa-bell"></i><div class="toast-content"><div>${title}</div><small>${message}</small></div>`;
+            container.appendChild(toast); try { notificationSound.play().catch(()=>{}); } catch(e){}
+            setTimeout(() => { toast.remove(); }, 4000);
+        }
+        async function updateDashboardCounters() {
+            const { count: unreadMsgs } = await supabase.from('mensajes').select('*', { count: 'exact', head: true }).eq('tienda_id', currentUser.id).eq('leido', false).eq('enviado_por_rol', 'cliente');
+            const { count: pendingOrders } = await supabase.from('pedidos').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente'); 
+            const bChat = document.getElementById('badge-chats'); const bOrd = document.getElementById('badge-orders');
+            bChat.textContent = unreadMsgs; bChat.style.display = unreadMsgs > 0 ? 'block' : 'none';
+            bOrd.textContent = pendingOrders; bOrd.style.display = pendingOrders > 0 ? 'block' : 'none';
+        }
+        
+        function switchTab(t) {
+            document.querySelectorAll('.panel-section').forEach(s => s.classList.remove('active'));
+            document.getElementById('tab-'+t).classList.add('active');
+            document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+            const btn = event.target.closest('.tab'); if(btn) btn.classList.add('active');
+            if(t === 'chats') loadChatsList(); if(t === 'pedidos') loadOrders(); if(t === 'config') loadConfig(); if(t === 'resumen') loadSummary();
+        }
+
+        async function loadChatsList() {
+            const { data } = await supabase.from('mensajes').select('*, clientes(id, nombre)').eq('tienda_id', currentUser.id).order('created_at', { ascending: false }).limit(200);
+            const grouped = {};
+            data.forEach(msg => { if (!grouped[msg.cliente_id]) { grouped[msg.cliente_id] = { client: msg.clientes, lastMsg: msg }; } });
+            updateDashboardCounters();
+            document.getElementById('chats-list').innerHTML = Object.values(grouped).map(item => {
+                const isUnread = !item.lastMsg.leido && item.lastMsg.enviado_por_rol === 'cliente';
+                return `<div class="chat-list-item ${isUnread ? 'unread' : ''}" onclick="openChat('${item.client.id}', '${item.client.nombre}')"><div class="avatar">${item.client.nombre.substring(0,2).toUpperCase()}</div><div style="flex:1;"><div style="font-weight:600;">${item.client.nombre}</div><div style="font-size:0.85rem; color:#64748b;">${item.lastMsg.contenido.substring(0, 30)}...</div></div></div>`;
+            }).join('') || '<div style="padding:20px; text-align:center;">No hay chats</div>';
+        }
+        async function openChat(clientId, clientName) {
+            activeChatClientId = clientId;
+            document.getElementById('chats-inbox').style.display = 'none'; document.getElementById('chat-interface').classList.add('active');
+            document.getElementById('current-chat-name').textContent = clientName; document.getElementById('current-chat-avatar').textContent = clientName.substring(0,2).toUpperCase();
+            document.getElementById('messages-container').innerHTML = 'Cargando...';
+            const { data } = await supabase.from('mensajes').select('*').eq('tienda_id', currentUser.id).eq('cliente_id', clientId).order('created_at', { ascending: true });
+            document.getElementById('messages-container').innerHTML = ''; if(data) data.forEach(renderMessage);
+            await supabase.from('mensajes').update({ leido: true }).eq('cliente_id', clientId).eq('enviado_por_rol', 'cliente');
+            updateDashboardCounters();
+            if (activeChannel) await supabase.removeChannel(activeChannel);
+            activeChannel = supabase.channel(`typing_${currentUser.id}_${clientId}`).on('broadcast', { event: 'typing' }, () => {
+                const ind = document.getElementById('typing-indicator'); ind.textContent = `${clientName} escribe...`; setTimeout(() => ind.textContent = '', 3000);
+            }).subscribe();
+        }
+        function closeChat() {
+            activeChatClientId = null; if (activeChannel) { supabase.removeChannel(activeChannel); activeChannel = null; }
+            document.getElementById('chat-interface').classList.remove('active'); document.getElementById('chats-inbox').style.display = 'block'; loadChatsList();
+        }
+        function renderMessage(msg) {
+            const div = document.createElement('div'); div.className = `msg ${msg.enviado_por_rol === 'dueño' ? 'me' : 'them'}`;
+            let html = msg.contenido.replace(/\n/g, '<br>');
+            if (!html.includes('<img')) html = html.replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank" class="map-btn">Ver Enlace</a>`);
+            div.innerHTML = html;
+            const c = document.getElementById('messages-container'); c.appendChild(div); c.scrollTop = c.scrollHeight;
+        }
+        async function sendMessage(e) {
+            e.preventDefault(); const input = document.getElementById('msg-input'); const text = input.value.trim();
+            if(!text || !activeChatClientId) return; input.value = '';
+            renderMessage({ contenido: text, enviado_por_rol: 'dueño' });
+            await supabase.from('mensajes').insert({ tienda_id: currentUser.id, cliente_id: activeChatClientId, enviado_por_rol: 'dueño', contenido: text });
+        }
+        function notifyTyping() { if(activeChannel) activeChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); }
+
+        // --- CROPPER Y CONFIG ---
+        let cropper; const logoInput = document.getElementById('logo-input'); const cropModal = document.getElementById('crop-modal'); const imageTarget = document.getElementById('crop-image-target');
+        logoInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (evt) => { imageTarget.src = evt.target.result; openCropModal(); }; reader.readAsDataURL(file); } });
+        function openCropModal() { cropModal.style.display = 'flex'; if(cropper) cropper.destroy(); cropper = new Cropper(imageTarget, { aspectRatio: 4 / 1, viewMode: 2, autoCropArea: 1 }); }
+        function cancelCrop() { cropModal.style.display = 'none'; logoInput.value = ''; if(cropper) cropper.destroy(); }
+        async function confirmCrop() {
+            if(!cropper) return;
+            const canvas = cropper.getCroppedCanvas({ width: 600, height: 150 });
+            canvas.toBlob(async (blob) => {
+                const btnConfirm = document.querySelector('#crop-modal .btn-primary'); const txtOriginal = btnConfirm.innerHTML;
+                btnConfirm.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo...'; btnConfirm.disabled = true;
+                try {
+                    const fileName = `logo_${currentUser.id}_${Date.now()}.png`;
+                    const { error: uploadErr } = await supabase.storage.from('tienda-logos').upload(fileName, blob, { contentType: 'image/png', upsert: true });
+                    if (uploadErr) throw uploadErr;
+                    const { data: urlData } = supabase.storage.from('tienda-logos').getPublicUrl(fileName);
+                    await supabase.from('usuarios').update({ logo_url: urlData.publicUrl }).eq('id', currentUser.id);
+                    showToast("¡Logo actualizado!", "Ya aparece en tu tienda."); 
+                    updateAdminLogoUI(urlData.publicUrl); cancelCrop();
+                } catch (error) { showToast("Error", error.message); } finally { btnConfirm.innerHTML = txtOriginal; btnConfirm.disabled = false; }
+            }, 'image/png');
+        }
+        function updateAdminLogoUI(url) {
+            const preview = document.getElementById('logo-img-preview'); const placeholder = document.getElementById('logo-placeholder');
+            if(url) { preview.src = url; preview.style.display = 'block'; placeholder.style.display = 'none'; }
+        }
+
+        document.getElementById('config-form').addEventListener('submit', async (e) => {
+            e.preventDefault(); const btn = document.getElementById('btn-save-config'); btn.textContent = "Guardando..."; btn.disabled = true;
+            try {
+                const file = document.getElementById('qr-input').files[0]; let qrUrl = document.getElementById('qr-preview').src; 
+                if (file) {
+                    const fileName = `qr_${currentUser.id}_${Date.now()}.${file.name.split('.').pop()}`;
+                    await supabase.storage.from('imagenes-pagos').upload(fileName, file, { upsert: true });
+                    const { data } = supabase.storage.from('imagenes-pagos').getPublicUrl(fileName); qrUrl = data.publicUrl;
+                }
+                
+                const aliasInput = document.getElementById('conf-alias').value.trim().toLowerCase();
+                
+                // ACTUALIZADO: AHORA GUARDA NOMBRE Y TELEFONO
+                const updates = {
+                    nombre: document.getElementById('conf-nombre-admin').value,
+                    telefono: document.getElementById('conf-telefono').value,
+                    banco_nombre: document.getElementById('conf-banco').value,
+                    banco_titular: document.getElementById('conf-titular').value,
+                    banco_ci: document.getElementById('conf-ci').value,
+                    banco_numero: document.getElementById('conf-numero').value,
+                    banco_tipo: document.getElementById('conf-tipo').value,
+                    slug: aliasInput || null, 
+                    qr_imagen_url: qrUrl && qrUrl.startsWith('http') ? qrUrl : null
+                };
+                
+                const { error } = await supabase.from('usuarios').update(updates).eq('id', currentUser.id);
+                if (error) {
+                    if (error.code === '23505') throw new Error("¡Ese nombre de tienda ya existe!");
+                    throw error;
+                }
+
+                showToast("¡Configuración guardada!", "Datos actualizados.");
+                if(qrUrl.startsWith('http')) { document.getElementById('qr-preview').src = qrUrl; document.getElementById('qr-preview').style.display = 'block'; }
+            } catch (err) { showToast("Error", err.message); } finally { btn.disabled = false; btn.textContent = "Guardar Configuración"; }
+        });
+        
+        async function loadConfig() {
+            const { data } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
+            if (!data) return;
+            
+            // ACTUALIZADO: CARGA NOMBRE Y TELEFONO
+            document.getElementById('conf-nombre-admin').value = data.nombre || '';
+            document.getElementById('conf-telefono').value = data.telefono || '';
+
+            document.getElementById('conf-banco').value = data.banco_nombre || '';
+            document.getElementById('conf-titular').value = data.banco_titular || '';
+            document.getElementById('conf-ci').value = data.banco_ci || '';
+            document.getElementById('conf-numero').value = data.banco_numero || '';
+            if(data.banco_tipo) document.getElementById('conf-tipo').value = data.banco_tipo;
+            if (data.qr_imagen_url) { document.getElementById('qr-preview').src = data.qr_imagen_url; document.getElementById('qr-preview').style.display = 'block'; }
+            if(data.logo_url) updateAdminLogoUI(data.logo_url);
+            if(data.slug) document.getElementById('conf-alias').value = data.slug;
+        }
+
+        function updateCategoryDatalist() {
+            const rawCategories = productsCache.map(p => p.categoria).filter(c => c && c.trim() !== '');
+            const uniqueCategories = [...new Set(rawCategories)];
+            const datalist = document.getElementById('lista-categorias');
+            datalist.innerHTML = uniqueCategories.sort().map(cat => 
+                `<option value="${cat}">`
+            ).join('');
+        }
+
+        // --- LÓGICA DE INSTALACIÓN PWA ---
+let deferredPrompt;
+
+// 1. Escuchar el evento que dispara el navegador cuando la app es instalable
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevenir que el navegador muestre su banner nativo antiguo
+    e.preventDefault();
+    // Guardar el evento para dispararlo cuando queramos (al dar clic al botón)
+    deferredPrompt = e;
+    
+    // Mostrar la tarjeta que creamos en el HTML (estaba oculta)
+    const installCard = document.getElementById('install-card');
+    if(installCard) installCard.style.display = 'block';
+    
+    console.log("App lista para instalar");
+});
+
+// 2. Función que se ejecuta al dar clic en el botón "Instalar"
+async function installPWA() {
+    if (!deferredPrompt) return;
+
+    // Mostrar el prompt nativo del sistema
+    deferredPrompt.prompt();
+
+    // Esperar a ver qué decide el usuario
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`El usuario decidió: ${outcome}`);
+
+    // Limpiar la variable, ya no se puede usar de nuevo
+    deferredPrompt = null;
+    
+    // Si aceptó, ocultamos la tarjeta
+    if(outcome === 'accepted'){
+        document.getElementById('install-card').style.display = 'none';
+    }
+}
+
+// 3. Detectar si ya se instaló exitosamente para ocultar el botón
+window.addEventListener('appinstalled', () => {
+    document.getElementById('install-card').style.display = 'none';
+    console.log('App instalada exitosamente');
+});
+    </script>
+</body>
+</html>

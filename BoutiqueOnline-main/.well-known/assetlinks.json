@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.boutique_online_nine.twa",
+        "sha256_cert_fingerprints": ["5D:F4:20:74:27:69:50:F4:9D:D0:74:5C:5E:6F:34:2C:16:06:B7:C4:4A:9F:2C:38:01:C8:8B:5B:2F:91:A0:97"]
+      }
+    }]

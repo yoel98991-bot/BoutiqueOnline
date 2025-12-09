@@ -1,0 +1,25 @@
+{
+  "name": "Vende Facil",
+  "short_name": "Area VIP Admin",
+  "description": "Panel administrativo para gestión de tienda.",
+  "start_url": "./admin.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#1e293b",
+  "icons": [
+    {
+      "src": "Vende Facil.png", 
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "Vende Facil.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+
+
+
