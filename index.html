@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Boutique Online</title>
+    <meta name="theme-color" content="#f8f9fa">
+    <title>Cargando Tienda...</title>
+    
+    <link rel="manifest" id="my-manifest-placeholder">
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -76,101 +80,28 @@
         .payment-val { font-family: monospace; font-size: 1rem; color: #1e293b; font-weight: bold; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-        /* --- MODAL DETALLE DE PRODUCTO (ACTUALIZADO CON SLIDER) --- */
+        /* --- MODAL DETALLE DE PRODUCTO --- */
         #product-detail-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 4000; display: none; justify-content: center; align-items: center; padding: 20px; opacity: 0; transition: opacity 0.3s; }
         #product-detail-modal.open { display: flex; opacity: 1; }
-        
-        .detail-card { 
-            background: white; 
-            border-radius: 20px; 
-            width: 100%; 
-            max-width: 500px; 
-            max-height: 90vh; 
-            overflow-y: auto; 
-            position: relative; 
-            transform: scale(0.9); 
-            transition: transform 0.3s; 
-            display: flex;
-            flex-direction: column;
-        }
+        .detail-card { background: white; border-radius: 20px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; position: relative; transform: scale(0.9); transition: transform 0.3s; display: flex; flex-direction: column; }
         #product-detail-modal.open .detail-card { transform: scale(1); }
 
         /* --- ESTILOS DEL SLIDER --- */
-        .slider-container {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 1/1;
-            overflow: hidden;
-            border-radius: 12px 12px 0 0;
-            background: #eee;
-        }
-        .slider-track {
-            display: flex;
-            height: 100%;
-            transition: transform 0.3s ease-out; /* Efecto deslizamiento suave */
-            width: 100%;
-        }
-        .slider-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            flex-shrink: 0;
-        }
-        .slider-arrow {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(255, 255, 255, 0.8);
-            color: var(--text-main);
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 20;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            font-size: 1rem;
-            transition: all 0.2s;
-        }
+        .slider-container { position: relative; width: 100%; aspect-ratio: 1/1; overflow: hidden; border-radius: 12px 12px 0 0; background: #eee; }
+        .slider-track { display: flex; height: 100%; transition: transform 0.3s ease-out; width: 100%; }
+        .slider-img { width: 100%; height: 100%; object-fit: cover; flex-shrink: 0; }
+        .slider-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255, 255, 255, 0.8); color: var(--text-main); border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 20; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-size: 1rem; transition: all 0.2s; }
         .slider-arrow:active { transform: translateY(-50%) scale(0.9); }
         .slider-arrow.prev { left: 10px; }
         .slider-arrow.next { right: 10px; }
-        /* Ocultar flechas si no son necesarias */
         .slider-arrow.hidden { display: none; }
-
-        /* Contenedor de miniaturas */
-        .thumbs-container {
-            display: flex;
-            gap: 10px;
-            padding: 10px 25px 0 25px;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-        }
+        .thumbs-container { display: flex; gap: 10px; padding: 10px 25px 0 25px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
         .thumbs-container::-webkit-scrollbar { display: none; }
-        .thumb {
-            width: 60px; height: 60px;
-            border-radius: 8px;
-            border: 2px solid transparent;
-            object-fit: cover;
-            cursor: pointer;
-            opacity: 0.7;
-            transition: all 0.2s;
-            flex-shrink: 0;
-        }
-        .thumb.active {
-            border-color: var(--accent);
-            opacity: 1;
-            transform: scale(1.05);
-        }
-
+        .thumb { width: 60px; height: 60px; border-radius: 8px; border: 2px solid transparent; object-fit: cover; cursor: pointer; opacity: 0.7; transition: all 0.2s; flex-shrink: 0; }
+        .thumb.active { border-color: var(--accent); opacity: 1; transform: scale(1.05); }
         .detail-content { padding: 25px; }
         .close-detail { position: absolute; top: 15px; right: 15px; background: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; color: #333; z-index: 50; font-size: 1.2rem;}
         
-        /* GATILLOS MENTALES (PRECIO) */
         .price-trigger-container { margin: 15px 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .fake-price { color: #94a3b8; text-decoration: line-through; font-size: 1.1rem; font-weight: 500; }
         .real-price { color: var(--accent); font-size: 1.8rem; font-weight: 800; }
@@ -184,9 +115,38 @@
         .qr-full-img { width: 100%; border-radius: 12px; border: 2px solid #eee; margin-top: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .btn-open-qr { width: 100%; background: var(--accent); color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; margin-top: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1rem; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); }
         .btn-open-qr:active { transform: scale(0.98); }
+
+        /* --- BURBUJA DE INSTALACIÓN PWA --- */
+        #install-pwa-btn {
+            position: fixed;
+            top: 20px; /* Arriba */
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a1a1a;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: 600;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+            z-index: 5000; /* Por encima de todo */
+            display: none; /* Oculto por defecto */
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            animation: bounceIn 0.5s ease-out, pulse 2s infinite;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        @keyframes bounceIn { from { top: -60px; } to { top: 20px; } }
+        @keyframes pulse { 0% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.05); } 100% { transform: translateX(-50%) scale(1); } }
+
     </style>
 </head>
 <body>
+
+    <div id="install-pwa-btn" onclick="installPWA()">
+        <i class="fas fa-download"></i> Instalar App
+    </div>
 
    <div id="login-overlay" style="display: none;"> <div class="login-card">
         <h1 id="login-title" style="margin-bottom: 10px;">Bienvenido</h1>
@@ -218,9 +178,7 @@
 
     <div class="container">
         <h2 style="margin-bottom: 10px; font-weight: 300;">Catálogo</h2>
-        
         <div id="category-filter" class="category-scroll"></div>
-
         <div id="products-grid" class="grid"></div>
     </div>
 
@@ -282,9 +240,7 @@
                 <h3 style="margin-top:0; font-size:1rem; color:#2563eb; margin-bottom:10px;">
                     <i class="fas fa-wallet"></i> Datos para el Pago
                 </h3>
-                
                 <div id="pay-data-content"></div>
-                
                 <div id="pay-qr-container" style="text-align:center; margin-top:10px; display:none;"></div>
             </div>
 
@@ -299,28 +255,21 @@
     <div id="product-detail-modal" onclick="if(event.target === this) closeProductModal()">
         <div class="detail-card">
             <div class="close-detail" onclick="closeProductModal()"><i class="fas fa-times"></i></div>
-            
             <div class="slider-container" id="slider-container">
-                <div class="slider-track" id="slider-track">
-                    </div>
+                <div class="slider-track" id="slider-track"></div>
                 <button class="slider-arrow prev" id="slider-prev" onclick="prevSlide()"><i class="fas fa-chevron-left"></i></button>
                 <button class="slider-arrow next" id="slider-next" onclick="nextSlide()"><i class="fas fa-chevron-right"></i></button>
             </div>
-            
             <div id="detail-thumbs" class="thumbs-container"></div>
-
             <div class="detail-content">
                 <h2 id="detail-title" style="margin-bottom:5px;">Nombre Producto</h2>
                 <div id="detail-category" style="color: #64748b; font-size: 0.9rem; margin-bottom: 10px;">Categoría</div>
-                
                 <div class="price-trigger-container">
                     <span id="detail-fake-price" class="fake-price">$0.00</span>
                     <span id="detail-real-price" class="real-price">$0.00</span>
                     <span class="discount-badge">¡OFERTA FLASH!</span>
                 </div>
-                
                 <p id="detail-desc" style="line-height: 1.6; color: #475569; margin-bottom: 25px;">Descripción...</p>
-                
                 <button id="detail-add-btn" class="btn-add" style="width:100%; padding: 15px; font-size: 1.1rem;">
                     <i class="fas fa-cart-plus"></i> Agregar al Carrito
                 </button>
@@ -343,7 +292,54 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnJhcHl0bWJuamxoeHVua2FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NzAyMDAsImV4cCI6MjA3ODU0NjIwMH0.OtJiLGj1EvhPICFaA9ruL02Z9kSQ2jT0t3Smqph81C4';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Estado de la sesión
+    // --- REGISTRO DEL SERVICE WORKER (PWA) ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(registration => console.log('SW registrado:', registration.scope))
+                .catch(err => console.log('SW falló:', err));
+        });
+    }
+
+    // --- LOGICA DEL BOTÓN DE INSTALACIÓN ---
+    let deferredPrompt;
+    const installBtn = document.getElementById('install-pwa-btn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevenir que Chrome muestre su barra mini automáticamente
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // Verificar si ya está instalado (standalone)
+        if (!window.matchMedia('(display-mode: standalone)').matches) {
+            installBtn.style.display = 'flex'; // MOSTRAR BURBUJA
+        }
+    });
+
+    async function installPWA() {
+        if (!deferredPrompt) return;
+        
+        // Mostrar prompt nativo
+        deferredPrompt.prompt();
+        
+        // Esperar elección del usuario
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`Usuario eligió: ${outcome}`);
+        
+        // Ocultar botón si aceptó
+        if(outcome === 'accepted') {
+            installBtn.style.display = 'none';
+        }
+        deferredPrompt = null;
+    }
+
+    // Ocultar botón si la app se instaló exitosamente
+    window.addEventListener('appinstalled', () => {
+        installBtn.style.display = 'none';
+        console.log('PWA Instalada');
+    });
+
+    // --- VARIABLES DE SESIÓN ---
     let session = {
         storeId: localStorage.getItem('storeId'),
         storeCode: localStorage.getItem('storeCode'),
@@ -357,8 +353,6 @@
     let storePaymentInfo = null;
     let unreadCount = 0;
     let currentCategory = 'Todos'; 
-    
-    // --- NUEVAS VARIABLES PARA EL SLIDER ---
     let currentSlideIndex = 0;
     let currentSlideImages = [];
     let touchStartX = 0;
@@ -369,53 +363,95 @@
     // --- INICIO: LÓGICA DE ARRANQUE ---
     window.addEventListener('DOMContentLoaded', async () => {
         const params = new URLSearchParams(window.location.search);
-        const urlStoreCode = params.get('tienda');
+        const urlStoreCode = params.get('tienda') || params.get('u'); // Soporte para alias ?u=
 
         if (urlStoreCode) {
-            await resolveStore(urlStoreCode.toUpperCase());
+            // Buscamos por código O por slug (alias)
+            await resolveStore(urlStoreCode.toLowerCase());
         } else if (session.storeId) {
             initApp();
         } else {
             promptStoreCode();
         }
-        
-        // Inicializar listeners del slider (touch)
         initSliderTouch();
     });
 
     function initSliderTouch() {
         const track = document.getElementById('slider-track');
-        track.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX;
-        }, {passive: true});
-        
-        track.addEventListener('touchend', e => {
-            touchEndX = e.changedTouches[0].screenX;
-            handleGesture();
-        }, {passive: true});
+        track.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
+        track.addEventListener('touchend', e => { touchEndX = e.changedTouches[0].screenX; handleGesture(); }, {passive: true});
     }
     
     function handleGesture() {
         if (currentSlideImages.length <= 1) return;
-        if (touchEndX < touchStartX - 50) nextSlide(); // Deslizar izquierda -> Siguiente
-        if (touchEndX > touchStartX + 50) prevSlide(); // Deslizar derecha -> Anterior
+        if (touchEndX < touchStartX - 50) nextSlide();
+        if (touchEndX > touchStartX + 50) prevSlide();
     }
 
-    async function resolveStore(code) {
+    async function resolveStore(codeOrSlug) {
         try {
-            const { data: store, error } = await supabase.from('usuarios').select('id, codigo_tienda').eq('codigo_tienda', code).single();
+            // Intentar buscar por código de tienda exacto O por slug
+            const { data: store, error } = await supabase
+                .from('usuarios')
+                .select('id, codigo_tienda, nombre, logo_url, pwa_nombre_app, pwa_icono_b64')
+                .or(`codigo_tienda.eq.${codeOrSlug.toUpperCase()},slug.eq.${codeOrSlug}`)
+                .single();
+
             if (error || !store) throw new Error("Tienda no encontrada");
 
+            // Guardar datos
             localStorage.setItem('storeId', store.id);
             localStorage.setItem('storeCode', store.codigo_tienda);
             session.storeId = store.id;
             session.storeCode = store.codigo_tienda;
 
+            // --- INYECCIÓN DINÁMICA DE MANIFIESTO PWA ---
+            setDynamicManifest(store);
+
             initApp();
         } catch (e) {
-            alert("El código de tienda del enlace es inválido.");
+            console.error(e);
+            alert("Tienda no encontrada o enlace inválido.");
             promptStoreCode();
         }
+    }
+
+    function setDynamicManifest(store) {
+        // 1. Configurar título de la página
+        document.title = store.pwa_nombre_app || store.nombre || "Mi Tienda";
+        
+        // 2. Definir ícono por defecto si no hay personalizado
+        const defaultIcon = "https://cdn-icons-png.flaticon.com/512/1041/1041888.png";
+        const iconSrc = store.pwa_icono_b64 || (store.logo_url ? store.logo_url : defaultIcon);
+        const appName = store.pwa_nombre_app || "Tienda Online";
+
+        // 3. Crear el objeto Manifest
+        const dynamicManifest = {
+            "name": appName,
+            "short_name": appName.substring(0, 12),
+            "start_url": window.location.href, // Instala la URL actual exacta
+            "display": "standalone",
+            "background_color": "#f8f9fa",
+            "theme_color": "#ffffff",
+            "icons": [
+                {
+                    "src": iconSrc,
+                    "sizes": "192x192",
+                    "type": "image/png"
+                },
+                {
+                    "src": iconSrc,
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }
+            ]
+        };
+
+        // 4. Convertir a Blob y asignar al link HTML
+        const stringManifest = JSON.stringify(dynamicManifest);
+        const blob = new Blob([stringManifest], {type: 'application/json'});
+        const manifestURL = URL.createObjectURL(blob);
+        document.querySelector('#my-manifest-placeholder').setAttribute('href', manifestURL);
     }
 
     function promptStoreCode() {
@@ -440,21 +476,17 @@
         });
     }
 
-    function closeLoginModal() {
-        document.getElementById('login-overlay').style.display = 'none';
-    }
+    function closeLoginModal() { document.getElementById('login-overlay').style.display = 'none'; }
 
     document.getElementById('login-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btn-login-action');
         const err = document.getElementById('login-error');
-        
-        btn.disabled = true; 
-        err.textContent = "";
+        btn.disabled = true; err.textContent = "";
 
         try {
             if (document.getElementById('step-store').style.display === 'block') {
-                const code = document.getElementById('reg-code').value.trim().toUpperCase();
+                const code = document.getElementById('reg-code').value.trim();
                 if (!code) throw new Error("Ingresa un código.");
                 await resolveStore(code);
                 closeLoginModal();
@@ -462,16 +494,12 @@
             else if (document.getElementById('step-client').style.display === 'block') {
                 const name = document.getElementById('reg-name').value.trim();
                 const phone = document.getElementById('reg-phone').value.trim();
-                
                 if(!name || !phone) throw new Error("Todos los campos son obligatorios.");
 
                 let { data: client } = await supabase.from('clientes').select('id').eq('telefono', phone).single();
-                
                 if (!client) {
                     const { data: newClient, error: createErr } = await supabase.from('clientes').insert({ 
-                        nombre: name, 
-                        telefono: phone, 
-                        ultima_tienda_visitada: session.storeCode 
+                        nombre: name, telefono: phone, ultima_tienda_visitada: session.storeCode 
                     }).select().single();
                     if (createErr) throw createErr;
                     client = newClient;
@@ -486,15 +514,10 @@
 
                 document.getElementById('client-info').textContent = `Hola, ${name}`;
                 closeLoginModal();
-                
                 initChat();
                 alert("¡Registro exitoso! Ya puedes confirmar tu pedido.");
             }
-        } catch (error) {
-            err.textContent = error.message;
-        } finally {
-            btn.disabled = false;
-        }
+        } catch (error) { err.textContent = error.message; } finally { btn.disabled = false; }
     });
 
     function initApp() {
@@ -503,42 +526,32 @@
             document.getElementById('client-info').textContent = `Hola, ${session.clientName}`;
             initChat();
         } else {
-            document.getElementById('client-info').textContent = "Bienvenido a la tienda";
+            document.getElementById('client-info').textContent = "Bienvenido";
         }
-        
         loadCatalog();
     }
 
-    // --- CATÁLOGO Y RENDERIZADO ---
     async function loadCatalog() {
         const grid = document.getElementById('products-grid');
         grid.innerHTML = '<p style="text-align:center; width:100%;"><i class="fas fa-spinner fa-spin"></i> Cargando catálogo...</p>';
 
-        const { data } = await supabase
-            .from('productos')
-            .select('*')
-            .eq('creado_por', session.storeId)
-            .order('id', { ascending: false });
-
+        const { data } = await supabase.from('productos').select('*').eq('creado_por', session.storeId).order('id', { ascending: false });
         productsCache = data || [];
 
-        // 1. Extraer categorías únicas
         const rawCategories = productsCache.map(p => p.categoria).filter(c => c && c.trim() !== '');
         const uniqueCategories = ['Todos', ...new Set(rawCategories)];
-
-        // 2. Renderizar botones
         renderCategoryButtons(uniqueCategories);
-
-        // 3. Renderizar productos
         renderProducts(productsCache);
 
-        // Cargar datos de tienda
         const { data: storeData } = await supabase.from('usuarios').select('*').eq('id', session.storeId).single();
         if(storeData) {
             storePaymentInfo = storeData;
             renderPaymentInfo();
+            // Actualizar logo visual en Header
             if (storeData.logo_url) {
                 document.getElementById('store-branding').innerHTML = `<img src="${storeData.logo_url}" alt="Logo" style="height: 40px; max-width: 180px; object-fit: contain;">`;
+            } else {
+                document.getElementById('store-branding').innerHTML = `<i class="fas fa-store"></i> <span style="margin-left:5px;">${storeData.nombre || 'TIENDA'}</span>`;
             }
         }
     }
@@ -546,33 +559,20 @@
     function renderCategoryButtons(categories) {
         const container = document.getElementById('category-filter');
         if (categories.length <= 1) { container.style.display = 'none'; return; }
-
-        container.innerHTML = categories.map(cat => `
-            <button class="cat-pill ${cat === 'Todos' ? 'active' : ''}" 
-                    onclick="filterByCategory(this, '${cat}')">
-                ${cat}
-            </button>
-        `).join('');
+        container.innerHTML = categories.map(cat => `<button class="cat-pill ${cat === 'Todos' ? 'active' : ''}" onclick="filterByCategory(this, '${cat}')">${cat}</button>`).join('');
     }
 
     function filterByCategory(btnElement, category) {
         document.querySelectorAll('.cat-pill').forEach(btn => btn.classList.remove('active'));
         btnElement.classList.add('active');
-
         currentCategory = category;
         let filteredProducts = (category === 'Todos') ? productsCache : productsCache.filter(p => p.categoria === category);
-        
         renderProducts(filteredProducts);
     }
 
     function renderProducts(productsList) {
         const grid = document.getElementById('products-grid');
-        
-        if(!productsList || productsList.length === 0) { 
-            grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; padding: 40px; color: #94a3b8;">No hay productos en esta categoría.</p>'; 
-            return;
-        }
-
+        if(!productsList || productsList.length === 0) { grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; padding: 40px; color: #94a3b8;">No hay productos.</p>'; return; }
         grid.style.opacity = '0';
         setTimeout(() => {
             grid.innerHTML = productsList.map(p => `
@@ -581,9 +581,6 @@
                     <div class="card-body">
                         <div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div>
                         <div style="color:var(--accent); font-weight:bold; margin-bottom:5px;">$${p.precio}</div>
-                        <div style="font-size:0.75rem; color:#64748b; margin-bottom:10px;">
-                            ${p.descripcion ? p.descripcion.substring(0, 45) + (p.descripcion.length > 45 ? '...' : '') : 'Sin descripción'}
-                        </div>
                         <div class="btn-group">
                             <button class="btn-view" onclick="openProductModal(${p.id})"><i class="fas fa-eye"></i></button>
                             <button class="btn-add" onclick="addToCart(${p.id})">Agregar +</button>
@@ -594,121 +591,50 @@
         }, 100);
     }
 
-    // --- MODAL DE DETALLES CON SLIDER ---
     function openProductModal(productId) {
         const product = productsCache.find(p => p.id === productId);
         if (!product) return;
 
-        // 1. Obtener lista de imágenes
-        currentSlideImages = [];
-        if (product.galeria && Array.isArray(product.galeria) && product.galeria.length > 0) {
-            currentSlideImages = product.galeria;
-        } else if (product.imagen_url) {
-            currentSlideImages = [product.imagen_url];
-        } else {
-            currentSlideImages = ['https://via.placeholder.com/300'];
-        }
-
-        // 2. Resetear Slider
+        currentSlideImages = (product.galeria && Array.isArray(product.galeria) && product.galeria.length > 0) ? product.galeria : (product.imagen_url ? [product.imagen_url] : ['https://via.placeholder.com/300']);
         currentSlideIndex = 0;
+        
         const track = document.getElementById('slider-track');
-        track.innerHTML = currentSlideImages.map(imgUrl => `
-            <img src="${imgUrl}" class="slider-img">
-        `).join('');
-
-        // 3. Manejo de Flechas y Desplazamiento
+        track.innerHTML = currentSlideImages.map(imgUrl => `<img src="${imgUrl}" class="slider-img">`).join('');
+        
         const prevBtn = document.getElementById('slider-prev');
         const nextBtn = document.getElementById('slider-next');
-        
-        if (currentSlideImages.length > 1) {
-            prevBtn.classList.remove('hidden');
-            nextBtn.classList.remove('hidden');
-        } else {
-            prevBtn.classList.add('hidden');
-            nextBtn.classList.add('hidden');
-        }
-        
-        updateSliderUI(); // Mueve el track a la posición 0
+        if (currentSlideImages.length > 1) { prevBtn.classList.remove('hidden'); nextBtn.classList.remove('hidden'); } 
+        else { prevBtn.classList.add('hidden'); nextBtn.classList.add('hidden'); }
+        updateSliderUI();
 
-        // 4. Renderizar Miniaturas
         const thumbsContainer = document.getElementById('detail-thumbs');
         if (currentSlideImages.length > 1) {
             thumbsContainer.style.display = 'flex';
-            thumbsContainer.innerHTML = currentSlideImages.map((imgUrl, index) => `
-                <img src="${imgUrl}" 
-                     class="thumb ${index === 0 ? 'active' : ''}" 
-                     onclick="jumpToSlide(${index})">
-            `).join('');
-        } else {
-            thumbsContainer.style.display = 'none';
-        }
+            thumbsContainer.innerHTML = currentSlideImages.map((imgUrl, index) => `<img src="${imgUrl}" class="thumb ${index === 0 ? 'active' : ''}" onclick="jumpToSlide(${index})">`).join('');
+        } else { thumbsContainer.style.display = 'none'; }
 
-        // 5. Llenar textos y precios
         document.getElementById('detail-title').textContent = product.nombre;
         document.getElementById('detail-category').textContent = product.categoria || 'General';
         document.getElementById('detail-desc').textContent = product.descripcion || 'Sin descripción detallada.';
         
         const realPrice = parseFloat(product.precio);
-        const fakePrice = realPrice * 1.40;
         document.getElementById('detail-real-price').textContent = `$${realPrice.toFixed(2)}`;
-        document.getElementById('detail-fake-price').textContent = `$${fakePrice.toFixed(2)}`;
+        document.getElementById('detail-fake-price').textContent = `$${(realPrice * 1.40).toFixed(2)}`;
 
-        // 6. Configurar botón de agregar
-        const addBtn = document.getElementById('detail-add-btn');
-        addBtn.onclick = function() {
-            addToCart(product.id);
-            closeProductModal();
-        };
-
-        // 7. Mostrar modal
+        document.getElementById('detail-add-btn').onclick = function() { addToCart(product.id); closeProductModal(); };
         document.getElementById('product-detail-modal').classList.add('open');
     }
 
-    // Funciones del Slider
-    function nextSlide() {
-        if (currentSlideIndex < currentSlideImages.length - 1) {
-            currentSlideIndex++;
-            updateSliderUI();
-        } else {
-            // Loop opcional: volver al principio
-            currentSlideIndex = 0;
-            updateSliderUI();
-        }
-    }
-
-    function prevSlide() {
-        if (currentSlideIndex > 0) {
-            currentSlideIndex--;
-            updateSliderUI();
-        } else {
-            // Loop opcional: ir al final
-            currentSlideIndex = currentSlideImages.length - 1;
-            updateSliderUI();
-        }
-    }
-
-    function jumpToSlide(index) {
-        currentSlideIndex = index;
-        updateSliderUI();
-    }
-
+    function nextSlide() { if (currentSlideIndex < currentSlideImages.length - 1) { currentSlideIndex++; updateSliderUI(); } else { currentSlideIndex = 0; updateSliderUI(); } }
+    function prevSlide() { if (currentSlideIndex > 0) { currentSlideIndex--; updateSliderUI(); } else { currentSlideIndex = currentSlideImages.length - 1; updateSliderUI(); } }
+    function jumpToSlide(index) { currentSlideIndex = index; updateSliderUI(); }
+    
     function updateSliderUI() {
-        const track = document.getElementById('slider-track');
-        // Mover el track horizontalmente basado en el índice
-        track.style.transform = `translateX(-${currentSlideIndex * 100}%)`;
-
-        // Actualizar clase activa en miniaturas
-        document.querySelectorAll('.thumb').forEach((t, i) => {
-            if (i === currentSlideIndex) t.classList.add('active');
-            else t.classList.remove('active');
-        });
+        document.getElementById('slider-track').style.transform = `translateX(-${currentSlideIndex * 100}%)`;
+        document.querySelectorAll('.thumb').forEach((t, i) => { if (i === currentSlideIndex) t.classList.add('active'); else t.classList.remove('active'); });
     }
+    function closeProductModal() { document.getElementById('product-detail-modal').classList.remove('open'); }
 
-    function closeProductModal() {
-        document.getElementById('product-detail-modal').classList.remove('open');
-    }
-
-    // ... FUNCIONES DE PAGO ...
     function renderPaymentInfo() {
         if(!storePaymentInfo || !storePaymentInfo.banco_numero) return; 
         document.getElementById('payment-details').style.display = 'block'; 
@@ -732,210 +658,113 @@
     function openQRModal(url) { document.getElementById('modal-qr-img').src = url; document.getElementById('qr-modal').classList.add('open'); }
     function closeQRModal() { document.getElementById('qr-modal').classList.remove('open'); }
 
-    // ... CARRITO Y UI ...
     function addToCart(id) {
-        const product = productsCache.find(p => p.id === id);
-        if(!product) return;
-        cart.push(product);
-        updateCartUI();
+        const product = productsCache.find(p => p.id === id); if(!product) return;
+        cart.push(product); updateCartUI();
         if(navigator.vibrate) navigator.vibrate(50);
-        
-        const floatBtn = document.querySelector('.cart-float');
-        floatBtn.style.transform = 'scale(1.1)';
-        setTimeout(()=> floatBtn.style.transform = 'scale(1)', 200);
+        const floatBtn = document.querySelector('.cart-float'); floatBtn.style.transform = 'scale(1.1)'; setTimeout(()=> floatBtn.style.transform = 'scale(1)', 200);
     }
-
     function removeFromCart(index) { cart.splice(index, 1); updateCartUI(); }
 
     function updateCartUI() {
         const total = cart.reduce((sum, item) => sum + item.precio, 0);
         document.getElementById('cart-total-badge').textContent = `$${total.toFixed(2)}`;
         document.getElementById('cart-final-total').textContent = `$${total.toFixed(2)}`;
-
         const container = document.getElementById('cart-items-container');
-        if (cart.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:20px;">Tu carrito está vacío.</p>';
-        } else {
-            container.innerHTML = cart.map((item, index) => `
-                <div class="cart-item">
-                    <div class="cart-item-info">
-                        <div>${item.nombre}</div>
-                        <small style="color:#64748b;">$${item.precio}</small>
-                    </div>
-                    <button class="btn-remove" onclick="removeFromCart(${index})"><i class="fas fa-trash"></i></button>
-                </div>`).join('');
+        if (cart.length === 0) { container.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:20px;">Tu carrito está vacío.</p>'; } else {
+            container.innerHTML = cart.map((item, index) => `<div class="cart-item"><div class="cart-item-info"><div>${item.nombre}</div><small style="color:#64748b;">$${item.precio}</small></div><button class="btn-remove" onclick="removeFromCart(${index})"><i class="fas fa-trash"></i></button></div>`).join('');
         }
     }
-
     function toggleDeliveryFields() {
         const method = document.getElementById('delivery-method').value;
         document.getElementById('delivery-info').style.display = method === 'delivery' ? 'block' : 'none';
     }
-
     function getGeoLocation() {
-        const btn = document.querySelector('.btn-geo');
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando...';
+        const btn = document.querySelector('.btn-geo'); btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando...';
         if (!navigator.geolocation) return alert("Geolocalización no soportada.");
         navigator.geolocation.getCurrentPosition((position) => {
             const link = `http://maps.google.com/?q=${position.coords.latitude},${position.coords.longitude}`;
-            const textArea = document.getElementById('delivery-address');
-            textArea.value = `📍 GPS: ${link}\n` + textArea.value;
+            const textArea = document.getElementById('delivery-address'); textArea.value = `📍 GPS: ${link}\n` + textArea.value;
             btn.innerHTML = '<i class="fas fa-check"></i> Listo';
         }, () => { alert("Error al obtener ubicación"); btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Intentar de nuevo'; });
     }
 
     async function checkout() {
         if (cart.length === 0) return alert("Agrega productos primero.");
-
-        if (!session.clientId) {
-            toggleCart(); 
-            promptClientRegister();
-            return;
-        }
+        if (!session.clientId) { toggleCart(); promptClientRegister(); return; }
 
         const method = document.getElementById('delivery-method').value;
         const address = document.getElementById('delivery-address').value.trim();
         if (method === 'delivery' && !address) return alert("Ingresa dirección para Delivery.");
 
         const btn = document.querySelector('.btn-checkout');
-        const originalText = btn.textContent;
-        btn.disabled = true; btn.textContent = "Enviando...";
+        const originalText = btn.textContent; btn.disabled = true; btn.textContent = "Enviando...";
 
         const total = cart.reduce((sum, item) => sum + item.precio, 0);
         const orderMetadata = { items: cart.map(p => ({ id: p.id, name: p.nombre, price: p.precio })), delivery: { method, address: method === 'delivery' ? address : 'N/A' } };
 
         try {
             await supabase.from('pedidos').insert({ cliente_id: session.clientId, total: total, productos: orderMetadata, estado: 'pendiente', tienda_id: session.storeId });
-            
             let autoMsg = `✅ ¡Nuevo pedido! Total: $${total.toFixed(2)} (${cart.length} items).\n${method === 'delivery' ? '🛵 Delivery: ' + address : '📍 Retiro en Tienda.'}`;
             if(storePaymentInfo && storePaymentInfo.banco_numero) autoMsg += `\n\n💳 Envíame el comprobante por aquí.`;
-
             await supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: autoMsg });
             renderMsg({ contenido: autoMsg, enviado_por_rol: 'cliente' });
-            
-            cart = []; updateCartUI(); toggleCart();
-            alert("¡Pedido enviado correctamente!");
-            
-            const chatBox = document.getElementById('chat-box');
-            if(!chatBox.classList.contains('open')) toggleChat();
-
-        } catch (err) {
-            alert("Error: " + err.message);
-        } finally {
-            btn.disabled = false; btn.textContent = originalText;
-        }
+            cart = []; updateCartUI(); toggleCart(); alert("¡Pedido enviado correctamente!");
+            const chatBox = document.getElementById('chat-box'); if(!chatBox.classList.contains('open')) toggleChat();
+        } catch (err) { alert("Error: " + err.message); } finally { btn.disabled = false; btn.textContent = originalText; }
     }
 
-    // --- CHAT ---
     function toggleChat() { 
-        if (!session.clientId && !document.getElementById('chat-box').classList.contains('open')) {
-            promptClientRegister();
-            return;
-        }
-
-        const chatBox = document.getElementById('chat-box');
-        chatBox.classList.toggle('open'); 
-        
-        if (chatBox.classList.contains('open')) {
-            unreadCount = 0;
-            updateBadgeUI();
-            scrollToBottom();
-            if(!chatChannel) initChat(); 
-        }
+        if (!session.clientId && !document.getElementById('chat-box').classList.contains('open')) { promptClientRegister(); return; }
+        const chatBox = document.getElementById('chat-box'); chatBox.classList.toggle('open'); 
+        if (chatBox.classList.contains('open')) { unreadCount = 0; updateBadgeUI(); scrollToBottom(); if(!chatChannel) initChat(); }
     }
 
     async function initChat() {
         if(!session.clientId) return;
-
         const { data } = await supabase.from('mensajes').select('*').eq('tienda_id', session.storeId).eq('cliente_id', session.clientId).order('created_at', { ascending: true });
-        const msgContainer = document.getElementById('chat-msgs');
-        msgContainer.innerHTML = '';
-        if(data) data.forEach(renderMsg);
-        scrollToBottom();
-
+        const msgContainer = document.getElementById('chat-msgs'); msgContainer.innerHTML = '';
+        if(data) data.forEach(renderMsg); scrollToBottom();
         if(chatChannel) return;
-
-        chatChannel = supabase.channel(`chat_room_${session.storeId}_${session.clientId}`)
-            .on('broadcast', { event: 'typing' }, () => {
-                document.getElementById('typing-ind').textContent = "La tienda está escribiendo...";
-                setTimeout(() => document.getElementById('typing-ind').textContent = '', 3000);
+        chatChannel = supabase.channel(`chat_room_${session.storeId}_${session.clientId}`).on('broadcast', { event: 'typing' }, () => {
+                document.getElementById('typing-ind').textContent = "La tienda está escribiendo..."; setTimeout(() => document.getElementById('typing-ind').textContent = '', 3000);
             }).subscribe();
-
         supabase.channel('client-inbox-' + session.clientId).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `cliente_id=eq.${session.clientId}` }, payload => {
             if (payload.new.enviado_por_rol !== 'cliente') {
                 renderMsg(payload.new);
                 const chatBox = document.getElementById('chat-box');
-                if (!chatBox.classList.contains('open')) {
-                    unreadCount++;
-                    updateBadgeUI();
-                    try { msgSound.play().catch(e=>{}); } catch(e){}
-                }
+                if (!chatBox.classList.contains('open')) { unreadCount++; updateBadgeUI(); try { msgSound.play().catch(e=>{}); } catch(e){} }
             }
         }).subscribe();
     }
-
     function updateBadgeUI() {
         const badge = document.getElementById('unread-badge');
-        if (unreadCount > 0) {
-            badge.style.display = 'flex';
-            badge.textContent = unreadCount;
-        } else {
-            badge.style.display = 'none';
-        }
+        if (unreadCount > 0) { badge.style.display = 'flex'; badge.textContent = unreadCount; } else { badge.style.display = 'none'; }
     }
-
     function renderMsg(msg) {
-        const div = document.createElement('div');
-        div.className = `msg ${msg.enviado_por_rol === 'cliente' ? 'me' : 'store'}`;
+        const div = document.createElement('div'); div.className = `msg ${msg.enviado_por_rol === 'cliente' ? 'me' : 'store'}`;
         div.innerHTML = msg.contenido.replace(/\n/g, '<br>');
-        document.getElementById('chat-msgs').appendChild(div);
-        scrollToBottom();
+        document.getElementById('chat-msgs').appendChild(div); scrollToBottom();
     }
-
     async function uploadChatImage(inputElement) {
         if(!session.clientId) return; 
-        const file = inputElement.files[0];
-        if (!file) return;
-        const btnIcon = document.querySelector('label[for="chat-file"] i');
-        const originalClass = btnIcon.className;
-        btnIcon.className = "fas fa-spinner fa-spin"; 
-
+        const file = inputElement.files[0]; if (!file) return;
+        const btnIcon = document.querySelector('label[for="chat-file"] i'); const originalClass = btnIcon.className; btnIcon.className = "fas fa-spinner fa-spin"; 
         try {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${session.storeId}/${session.clientId}_${Date.now()}.${fileExt}`;
-            const { error: uploadErr } = await supabase.storage.from('chat-adjuntos').upload(fileName, file);
-            if (uploadErr) throw uploadErr;
+            const fileExt = file.name.split('.').pop(); const fileName = `${session.storeId}/${session.clientId}_${Date.now()}.${fileExt}`;
+            const { error: uploadErr } = await supabase.storage.from('chat-adjuntos').upload(fileName, file); if (uploadErr) throw uploadErr;
             const { data } = supabase.storage.from('chat-adjuntos').getPublicUrl(fileName);
             const imgContent = `Comprobante:<br><img src="${data.publicUrl}" class="chat-img" onclick="window.open(this.src, '_blank')">`;
-
-            await supabase.from('mensajes').insert({
-                tienda_id: session.storeId,
-                cliente_id: session.clientId,
-                enviado_por_rol: 'cliente',
-                contenido: imgContent
-            });
+            await supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: imgContent });
             renderMsg({ contenido: imgContent, enviado_por_rol: 'cliente' });
-        } catch (error) {
-            alert("Error al subir: " + error.message);
-        } finally {
-            btnIcon.className = originalClass;
-            inputElement.value = ''; 
-        }
+        } catch (error) { alert("Error al subir: " + error.message); } finally { btnIcon.className = originalClass; inputElement.value = ''; }
     }
-
     async function sendChatMsg(e) {
-        e.preventDefault();
-        if(!session.clientId) { promptClientRegister(); return; }
-
-        const input = document.getElementById('chat-input');
-        const text = input.value.trim();
-        if(!text) return;
-
-        input.value = '';
-        renderMsg({ contenido: text, enviado_por_rol: 'cliente' });
+        e.preventDefault(); if(!session.clientId) { promptClientRegister(); return; }
+        const input = document.getElementById('chat-input'); const text = input.value.trim(); if(!text) return;
+        input.value = ''; renderMsg({ contenido: text, enviado_por_rol: 'cliente' });
         await supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: text });
     }
-
     function notifyTyping() { if(chatChannel) chatChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); }
     function toggleCart() { document.getElementById('cart-overlay').classList.toggle('open'); }
     function scrollToBottom() { const d = document.getElementById('chat-msgs'); d.scrollTop = d.scrollHeight; }
