@@ -380,24 +380,31 @@
         </div>
 
         <div id="tab-config" class="panel-section">
-
-            <div class="card" id="install-card" style="display: none; border: 2px solid #6366f1; background: #eef2ff;">
-    <div style="display: flex; align-items: center; justify-content: space-between;">
-        <div>
-            <h3 style="color: #4338ca; margin: 0;"><i class="fas fa-mobile-alt"></i> Instalar App</h3>
-            <p style="font-size: 0.85rem; color: #4338ca; margin-top: 5px; margin-bottom: 0;">
-                Instala el panel en tu inicio para acceso rápido.
-            </p>
-        </div>
-        <button onclick="installPWA()" class="btn" style="background: #4338ca; color: white; width: auto; padding: 10px 20px;">
-            Instalar
-        </button>
-    </div>
-</div>
-            
             <div class="card">
-                <h3><i class="fas fa-image"></i> Identidad Visual</h3>
-                <p style="font-size:0.85rem; color:#64748b; margin-bottom:15px;">Sube tu logo. Se recortará automáticamente.</p>
+                <h3><i class="fas fa-mobile-alt"></i> Personalización de la App (PWA)</h3>
+                <p style="font-size:0.85rem; color:#64748b; margin-bottom:15px;">
+                    Configura cómo se verá tu tienda cuando los clientes la instalen en su celular.
+                </p>
+                
+                <div class="form-grid">
+                    <div>
+                        <label>Nombre de la App</label>
+                        <input type="text" id="conf-pwa-nombre" placeholder="Ej: Mi Boutique (Máx 12 letras)" maxlength="15">
+                    </div>
+                </div>
+
+                <label>Ícono de la App (Cuadrado)</label>
+                <div class="upload-zone" onclick="document.getElementById('pwa-icon-input').click()">
+                    <p id="pwa-text" style="margin:0; color:#64748b;">Toca para subir ícono (Se guardará como texto)</p>
+                    <img id="pwa-preview" style="display:none; width:80px; height:80px; margin:10px auto; border-radius:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                    <input type="file" id="pwa-icon-input" accept="image/*" style="display:none;" onchange="processPwaIcon(this)">
+                </div>
+                <input type="hidden" id="conf-pwa-b64">
+            </div>
+
+            <div class="card">
+                <h3><i class="fas fa-image"></i> Logo de la Tienda (Encabezado)</h3>
+                <p style="font-size:0.85rem; color:#64748b; margin-bottom:15px;">Este es el logo horizontal que se ve dentro de la página.</p>
                 <div class="logo-preview-container" onclick="document.getElementById('logo-input').click()">
                     <div id="logo-placeholder">
                         <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 10px;"></i>
@@ -426,9 +433,6 @@
                     <hr style="border:0; border-top:1px solid #e2e8f0; margin-bottom:20px;">
                     <div style="margin-bottom: 20px; padding: 15px; background: #f0fdf4; border: 1px dashed #22c55e; border-radius: 12px;">
                         <label style="color: #15803d;">🔗 Enlace Personalizado (Alias)</label>
-                        <p style="font-size: 0.8rem; color: #166534; margin-bottom: 8px;">
-                            Elige un nombre corto para tu tienda.
-                        </p>
                         <div style="display: flex; gap: 5px; align-items: center;">
                             <span style="font-weight: bold; color: #aaa;">?u=</span>
                             <input type="text" id="conf-alias" placeholder="ej: modas-ana" style="margin:0; text-transform: lowercase; font-weight: bold;" oninput="this.value = this.value.replace(/[^a-z0-9-]/g, '')">
@@ -462,17 +466,8 @@
                     <button type="submit" id="btn-save-config" class="btn btn-primary">Guardar Configuración</button>
                 </form>
             </div>
-            
-            <div class="card" style="border: 2px solid #fca5a5; background: #fff5f5;">
-                <h3 style="color: #dc2626;"><i class="fas fa-bell"></i> Notificaciones Push</h3>
-                <p style="font-size: 0.85rem; color: #7f1d1d; margin-bottom: 10px;">
-                    1. Acepta permisos.<br>2. Prueba la conexión.
-                </p>
-                <button onclick="testNotification()" class="btn" style="background: #dc2626; color: white;">🔔 PROBAR CONEXIÓN</button>
-            </div>
         </div>
-    </div>
-
+        
     <div id="crop-modal">
         <div class="crop-container"><img id="crop-image-target" src=""></div>
         <div class="crop-controls">
@@ -1100,6 +1095,115 @@ window.addEventListener('appinstalled', () => {
     document.getElementById('install-card').style.display = 'none';
     console.log('App instalada exitosamente');
 });
+
+        // --- PROCESAMIENTO DE IMAGEN PWA A BASE64 ---
+        function processPwaIcon(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Crear canvas para redimensionar (Máx 512x512 para no saturar la BD)
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxSize = 512;
+
+                    if (width > height) {
+                        if (width > maxSize) { height *= maxSize / width; width = maxSize; }
+                    } else {
+                        if (height > maxSize) { width *= maxSize / height; height = maxSize; }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Convertir a Base64 JPEG (calidad 0.7 para ahorrar espacio)
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    
+                    // Mostrar preview y guardar en input oculto
+                    document.getElementById('pwa-preview').src = dataUrl;
+                    document.getElementById('pwa-preview').style.display = 'block';
+                    document.getElementById('conf-pwa-b64').value = dataUrl;
+                    document.getElementById('pwa-text').textContent = "¡Ícono listo para guardar!";
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- ACTUALIZAR FUNCIÓN LOADCONFIG ---
+        // Busca tu función loadConfig existente y REEMPLÁZALA o actualízala con estas líneas nuevas:
+        async function loadConfig() {
+            const { data } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
+            if (!data) return;
+            
+            // Cargar datos existentes...
+            document.getElementById('conf-nombre-admin').value = data.nombre || '';
+            document.getElementById('conf-telefono').value = data.telefono || '';
+            document.getElementById('conf-banco').value = data.banco_nombre || '';
+            document.getElementById('conf-titular').value = data.banco_titular || '';
+            document.getElementById('conf-ci').value = data.banco_ci || '';
+            document.getElementById('conf-numero').value = data.banco_numero || '';
+            if(data.banco_tipo) document.getElementById('conf-tipo').value = data.banco_tipo;
+            if(data.logo_url) updateAdminLogoUI(data.logo_url);
+            if(data.slug) document.getElementById('conf-alias').value = data.slug;
+            if (data.qr_imagen_url) { document.getElementById('qr-preview').src = data.qr_imagen_url; document.getElementById('qr-preview').style.display = 'block'; }
+            
+            // NUEVO: Cargar datos PWA
+            if(data.pwa_nombre_app) document.getElementById('conf-pwa-nombre').value = data.pwa_nombre_app;
+            if(data.pwa_icono_b64) {
+                document.getElementById('conf-pwa-b64').value = data.pwa_icono_b64;
+                document.getElementById('pwa-preview').src = data.pwa_icono_b64;
+                document.getElementById('pwa-preview').style.display = 'block';
+            }
+        }
+
+        // --- ACTUALIZAR EL SUBMIT DEL FORMULARIO ---
+        // Busca tu event listener de 'config-form' y asegúrate que incluya los nuevos campos:
+        document.getElementById('config-form').addEventListener('submit', async (e) => {
+            e.preventDefault(); const btn = document.getElementById('btn-save-config'); btn.textContent = "Guardando..."; btn.disabled = true;
+            try {
+                // ... (tu lógica existente de QR) ...
+                const file = document.getElementById('qr-input').files[0]; let qrUrl = document.getElementById('qr-preview').src; 
+                if (file) {
+                    const fileName = `qr_${currentUser.id}_${Date.now()}.${file.name.split('.').pop()}`;
+                    await supabase.storage.from('imagenes-pagos').upload(fileName, file, { upsert: true });
+                    const { data } = supabase.storage.from('imagenes-pagos').getPublicUrl(fileName); qrUrl = data.publicUrl;
+                }
+
+                const aliasInput = document.getElementById('conf-alias').value.trim().toLowerCase();
+                
+                // ACTUALIZAMOS EL OBJETO UPDATES CON LOS CAMPOS PWA
+                const updates = {
+                    nombre: document.getElementById('conf-nombre-admin').value,
+                    telefono: document.getElementById('conf-telefono').value,
+                    banco_nombre: document.getElementById('conf-banco').value,
+                    banco_titular: document.getElementById('conf-titular').value,
+                    banco_ci: document.getElementById('conf-ci').value,
+                    banco_numero: document.getElementById('conf-numero').value,
+                    banco_tipo: document.getElementById('conf-tipo').value,
+                    slug: aliasInput || null, 
+                    qr_imagen_url: qrUrl && qrUrl.startsWith('http') ? qrUrl : null,
+                    
+                    // NUEVOS CAMPOS PWA
+                    pwa_nombre_app: document.getElementById('conf-pwa-nombre').value.trim(),
+                    pwa_icono_b64: document.getElementById('conf-pwa-b64').value // Aquí va el texto largo de la imagen
+                };
+                
+                const { error } = await supabase.from('usuarios').update(updates).eq('id', currentUser.id);
+                if (error) {
+                    if (error.code === '23505') throw new Error("¡Ese nombre de tienda ya existe!");
+                    throw error;
+                }
+
+                showToast("¡Configuración guardada!", "Datos actualizados.");
+            } catch (err) { showToast("Error", err.message); } finally { btn.disabled = false; btn.textContent = "Guardar Configuración"; }
+        });
     </script>
 </body>
 </html>
