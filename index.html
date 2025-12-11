@@ -80,32 +80,70 @@
         .payment-val { font-family: monospace; font-size: 1rem; color: #1e293b; font-weight: bold; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-        /* --- MODAL DETALLE DE PRODUCTO --- */
-        #product-detail-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 4000; display: none; justify-content: center; align-items: center; padding: 20px; opacity: 0; transition: opacity 0.3s; }
+        /* --- MODAL DETALLE DE PRODUCTO (OPTIMIZADO) --- */
+        #product-detail-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 4000; display: none; justify-content: center; align-items: center; padding: 15px; opacity: 0; transition: opacity 0.3s; }
         #product-detail-modal.open { display: flex; opacity: 1; }
-        .detail-card { background: white; border-radius: 20px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; position: relative; transform: scale(0.9); transition: transform 0.3s; display: flex; flex-direction: column; }
+        
+        /* Contenedor Flex para estructura App */
+        .detail-card { 
+            background: white; border-radius: 20px; width: 100%; max-width: 450px; 
+            max-height: 90vh; /* Máximo alto de pantalla */
+            height: 90vh;     /* Forzar altura en móviles para el layout sticky */
+            display: flex; flex-direction: column; 
+            position: relative; transform: scale(0.9); transition: transform 0.3s; 
+            overflow: hidden; /* Evitar scroll general, usaremos scroll interno */
+        }
         #product-detail-modal.open .detail-card { transform: scale(1); }
 
-        /* --- ESTILOS DEL SLIDER --- */
-        .slider-container { position: relative; width: 100%; aspect-ratio: 1/1; overflow: hidden; border-radius: 12px 12px 0 0; background: #eee; }
+        /* Sección Imagen (Fija arriba) */
+        .slider-container { 
+            position: relative; width: 100%; 
+            height: 45%; /* Ocupa el 45% de la altura de la tarjeta */
+            overflow: hidden; 
+            background: #f1f5f9; /* Fondo gris para imágenes PNG o de distintos tamaños */
+            flex-shrink: 0; /* No encoger */
+        }
         .slider-track { display: flex; height: 100%; transition: transform 0.3s ease-out; width: 100%; }
-        .slider-img { width: 100%; height: 100%; object-fit: cover; flex-shrink: 0; }
+        /* OBJECT-FIT: CONTAIN para que se vea la imagen completa */
+        .slider-img { width: 100%; height: 100%; object-fit: contain; flex-shrink: 0; }
+        
         .slider-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255, 255, 255, 0.8); color: var(--text-main); border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 20; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-size: 1rem; transition: all 0.2s; }
         .slider-arrow:active { transform: translateY(-50%) scale(0.9); }
         .slider-arrow.prev { left: 10px; }
         .slider-arrow.next { right: 10px; }
         .slider-arrow.hidden { display: none; }
-        .thumbs-container { display: flex; gap: 10px; padding: 10px 25px 0 25px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-        .thumbs-container::-webkit-scrollbar { display: none; }
-        .thumb { width: 60px; height: 60px; border-radius: 8px; border: 2px solid transparent; object-fit: cover; cursor: pointer; opacity: 0.7; transition: all 0.2s; flex-shrink: 0; }
-        .thumb.active { border-color: var(--accent); opacity: 1; transform: scale(1.05); }
-        .detail-content { padding: 25px; }
-        .close-detail { position: absolute; top: 15px; right: 15px; background: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; color: #333; z-index: 50; font-size: 1.2rem;}
         
-        .price-trigger-container { margin: 15px 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-        .fake-price { color: #94a3b8; text-decoration: line-through; font-size: 1.1rem; font-weight: 500; }
-        .real-price { color: var(--accent); font-size: 1.8rem; font-weight: 800; }
-        .discount-badge { background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; letter-spacing: 0.5px; border: 1px solid #fca5a5; }
+        .thumbs-container { display: flex; gap: 10px; padding: 10px 20px 0 20px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; }
+        .thumbs-container::-webkit-scrollbar { display: none; }
+        .thumb { width: 50px; height: 50px; border-radius: 8px; border: 2px solid transparent; object-fit: cover; cursor: pointer; opacity: 0.7; transition: all 0.2s; flex-shrink: 0; background: #eee; }
+        .thumb.active { border-color: var(--accent); opacity: 1; transform: scale(1.05); }
+
+        .close-detail { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer; color: #333; z-index: 50; font-size: 1.2rem;}
+
+        /* Sección Contenido Central (Scrollable) */
+        .detail-scroll-area {
+            flex: 1; /* Ocupa el espacio sobrante */
+            overflow-y: auto; /* Scroll solo aquí */
+            padding: 15px 20px;
+        }
+
+        /* Sección Footer (Sticky al fondo) */
+        .detail-footer-sticky {
+            padding: 15px 20px;
+            background: white;
+            border-top: 1px solid #f1f5f9;
+            flex-shrink: 0; /* No encoger */
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.03);
+        }
+        
+        .price-trigger-container { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 5px; }
+        .fake-price { color: #94a3b8; text-decoration: line-through; font-size: 1rem; font-weight: 500; }
+        .real-price { color: var(--accent); font-size: 1.6rem; font-weight: 800; }
+        .discount-badge { background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; letter-spacing: 0.5px; border: 1px solid #fca5a5; }
 
         /* Modal QR */
         #qr-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: none; justify-content: center; align-items: center; padding: 20px; opacity: 0; transition: opacity 0.3s; }
@@ -118,24 +156,12 @@
 
         /* --- BURBUJA DE INSTALACIÓN PWA --- */
         #install-pwa-btn {
-            position: fixed;
-            top: 20px; /* Arriba */
-            left: 50%;
-            transform: translateX(-50%);
-            background: #1a1a1a;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-weight: 600;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
-            z-index: 5000; /* Por encima de todo */
-            display: none; /* Oculto por defecto */
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            animation: bounceIn 0.5s ease-out, pulse 2s infinite;
-            font-size: 0.9rem;
-            white-space: nowrap;
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: #1a1a1a; color: white; padding: 10px 20px; border-radius: 30px;
+            font-weight: 600; box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+            z-index: 5000; display: none; align-items: center; gap: 10px;
+            cursor: pointer; animation: bounceIn 0.5s ease-out, pulse 2s infinite;
+            font-size: 0.9rem; white-space: nowrap;
         }
         @keyframes bounceIn { from { top: -60px; } to { top: 20px; } }
         @keyframes pulse { 0% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.05); } 100% { transform: translateX(-50%) scale(1); } }
@@ -255,22 +281,28 @@
     <div id="product-detail-modal" onclick="if(event.target === this) closeProductModal()">
         <div class="detail-card">
             <div class="close-detail" onclick="closeProductModal()"><i class="fas fa-times"></i></div>
+            
             <div class="slider-container" id="slider-container">
                 <div class="slider-track" id="slider-track"></div>
                 <button class="slider-arrow prev" id="slider-prev" onclick="prevSlide()"><i class="fas fa-chevron-left"></i></button>
                 <button class="slider-arrow next" id="slider-next" onclick="nextSlide()"><i class="fas fa-chevron-right"></i></button>
             </div>
+            
             <div id="detail-thumbs" class="thumbs-container"></div>
-            <div class="detail-content">
-                <h2 id="detail-title" style="margin-bottom:5px;">Nombre Producto</h2>
-                <div id="detail-category" style="color: #64748b; font-size: 0.9rem; margin-bottom: 10px;">Categoría</div>
+            
+            <div class="detail-scroll-area">
+                <div id="detail-category" style="color: #64748b; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Categoría</div>
+                <h2 id="detail-title" style="margin-bottom:10px; line-height: 1.3;">Nombre Producto</h2>
+                <p id="detail-desc" style="line-height: 1.6; color: #475569; font-size: 0.95rem;">Descripción...</p>
+            </div>
+
+            <div class="detail-footer-sticky">
                 <div class="price-trigger-container">
                     <span id="detail-fake-price" class="fake-price">$0.00</span>
                     <span id="detail-real-price" class="real-price">$0.00</span>
                     <span class="discount-badge">¡OFERTA FLASH!</span>
                 </div>
-                <p id="detail-desc" style="line-height: 1.6; color: #475569; margin-bottom: 25px;">Descripción...</p>
-                <button id="detail-add-btn" class="btn-add" style="width:100%; padding: 15px; font-size: 1.1rem;">
+                <button id="detail-add-btn" class="btn-add" style="width:100%; padding: 15px; font-size: 1.1rem; display: flex; justify-content: center; align-items: center; gap: 8px;">
                     <i class="fas fa-cart-plus"></i> Agregar al Carrito
                 </button>
             </div>
