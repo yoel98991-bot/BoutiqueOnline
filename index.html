@@ -18,14 +18,21 @@
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text-main); padding-bottom: 100px; }
 
-        /* Login Overlay & Avatar Upload */
+        /* Login Overlay Mejorado */
         #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
-        .login-card { width: 100%; max-width: 350px; text-align: center; }
-        .login-input { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #e5e7eb; border-radius: 12px; font-size: 1rem; background: #f9fafb; }
+        .login-card { width: 100%; max-width: 350px; text-align: center; animation: fadeIn 0.3s ease; }
+        .login-input { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #e5e7eb; border-radius: 12px; font-size: 1rem; background: #f9fafb; transition: 0.3s; }
+        .login-input:focus { border-color: var(--accent); outline: none; background: white; }
         
         .avatar-upload-container { position: relative; width: 100px; height: 100px; margin: 0 auto 20px auto; cursor: pointer; }
         .avatar-preview { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: #e2e8f0; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .avatar-edit-icon { position: absolute; bottom: 0; right: 0; background: var(--accent); color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; border: 2px solid white; }
+
+        /* Welcome Back Profile */
+        .welcome-profile { margin-bottom: 20px; }
+        .welcome-avatar { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid var(--accent); box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2); margin-bottom: 15px; }
+        .welcome-name { font-size: 1.5rem; font-weight: 800; color: var(--text-main); margin-bottom: 5px; }
+        .welcome-phone { color: #64748b; font-size: 0.9rem; margin-bottom: 20px; }
 
         /* Header & Grid */
         header { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 50; padding: 1rem; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
@@ -117,7 +124,7 @@
         .real-price { color: var(--accent); font-size: 1.6rem; font-weight: 800; }
         .discount-badge { background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; letter-spacing: 0.5px; border: 1px solid #fca5a5; }
 
-        /* --- SOCIAL PROOF STYLES (NUEVO) --- */
+        /* --- SOCIAL PROOF STYLES --- */
         .social-proof-section { margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 15px; }
         .reaction-bar { display: flex; gap: 15px; margin-bottom: 15px; }
         .reaction-btn { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; color: #64748b; }
@@ -138,6 +145,8 @@
         .star-selector i { color: #cbd5e1; font-size: 1.5rem; cursor: pointer; transition: color 0.2s; }
         .star-selector i.selected { color: #fbbf24; }
         .comment-input { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: inherit; margin-bottom: 10px; resize: none; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Modal QR */
         #qr-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: none; justify-content: center; align-items: center; padding: 20px; opacity: 0; transition: opacity 0.3s; }
@@ -170,30 +179,63 @@
 
    <div id="login-overlay" style="display: none;"> 
         <div class="login-card">
-            <h1 id="login-title" style="margin-bottom: 10px;">Bienvenido</h1>
-            <p id="login-desc" style="color:#6b7280; margin-bottom: 20px;">Necesitamos algunos datos para continuar.</p>
             
-            <form id="login-form">
-                <div id="step-store" style="display:none;">
-                    <input type="text" id="reg-code" class="login-input" placeholder="CÓDIGO DE TIENDA (Ej: TIENDA-XY12)" style="text-transform:uppercase; font-weight:bold; text-align:center; letter-spacing: 1px;">
-                </div>
+            <div id="step-store" style="display:none;">
+                <h1 style="margin-bottom: 10px;">Ingresar a Tienda</h1>
+                <p style="color:#6b7280; margin-bottom: 20px;">Introduce el código de la tienda.</p>
+                <form onsubmit="handleStoreSubmit(event)">
+                    <input type="text" id="reg-code" class="login-input" placeholder="CÓDIGO (Ej: TIENDA-123)" style="text-transform:uppercase; font-weight:bold; text-align:center; letter-spacing: 1px;" required>
+                    <button type="submit" class="btn-add" style="padding: 15px; font-size: 1rem; width:100%;">Ingresar</button>
+                </form>
+            </div>
 
-                <div id="step-client" style="display:none;">
+            <div id="step-phone" style="display:none;">
+                <h1 style="margin-bottom: 10px;">¡Hola! 👋</h1>
+                <p style="color:#6b7280; margin-bottom: 20px;">Escribe tu WhatsApp para identificarte.</p>
+                <form onsubmit="handlePhoneCheck(event)">
+                    <input type="tel" id="check-phone" class="login-input" placeholder="Tu número de WhatsApp" style="text-align:center; font-weight:600; font-size:1.1rem;" required>
+                    <button type="submit" id="btn-check-phone" class="btn-add" style="padding: 15px; font-size: 1rem; width:100%;">Continuar</button>
+                </form>
+            </div>
+
+            <div id="step-welcome-back" style="display:none;">
+                <div class="welcome-profile">
+                    <img id="welcome-avatar-img" src="" class="welcome-avatar">
+                    <div style="font-size:0.9rem; color:#2563eb; font-weight:600; text-transform:uppercase;">Hola de nuevo</div>
+                    <h2 id="welcome-name-display" class="welcome-name">Usuario</h2>
+                    <p id="welcome-phone-display" class="welcome-phone">+00 000000</p>
+                </div>
+                <button onclick="confirmLogin()" class="btn-add" style="padding: 15px; font-size: 1.1rem; width:100%; margin-bottom:10px;">
+                    <i class="fas fa-check-circle"></i> ¡Soy yo, entrar!
+                </button>
+                <button onclick="resetLogin()" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:0.9rem; text-decoration:underline;">
+                    No soy yo, cambiar número
+                </button>
+            </div>
+
+            <div id="step-register" style="display:none;">
+                <h2 style="margin-bottom: 5px;">Crear Perfil</h2>
+                <p style="color:#6b7280; margin-bottom: 20px; font-size:0.9rem;">Parece que eres nuevo. Sube una foto para que te reconozcan.</p>
+                
+                <form onsubmit="handleRegistration(event)">
                     <div class="avatar-upload-container" onclick="document.getElementById('client-avatar-input').click()">
                         <img id="avatar-preview-img" src="https://via.placeholder.com/100?text=Foto" class="avatar-preview">
                         <div class="avatar-edit-icon"><i class="fas fa-camera"></i></div>
                         <input type="file" id="client-avatar-input" accept="image/*" style="display:none;" onchange="handleAvatarUpload(this)">
                     </div>
 
-                    <input type="text" id="reg-name" class="login-input" placeholder="Tu Nombre">
-                    <input type="tel" id="reg-phone" class="login-input" placeholder="Tu WhatsApp">
+                    <input type="text" id="reg-name" class="login-input" placeholder="Tu Nombre y Apellido" required>
+                    <input type="tel" id="reg-phone-readonly" class="login-input" style="background:#f1f5f9; color:#64748b;" readonly>
+                    
                     <input type="hidden" id="client-avatar-b64">
-                </div>
+                    
+                    <button type="submit" id="btn-register" class="btn-add" style="padding: 15px; font-size: 1rem; width:100%;">Crear Perfil</button>
+                </form>
+                <button onclick="resetLogin()" style="background:none; border:none; color:#94a3b8; margin-top:15px; cursor:pointer; font-size:0.9rem;">Cancelar</button>
+            </div>
 
-                <button type="submit" id="btn-login-action" class="btn-add" style="padding: 15px; font-size: 1rem;">Continuar</button>
-            </form>
-            <p id="login-error" style="color: red; margin-top: 10px; font-size: 0.9rem;"></p>
-            <button id="btn-cancel-login" type="button" onclick="closeLoginModal()" style="background:none; border:none; color:#6b7280; margin-top:10px; cursor:pointer; display:none;">Cancelar</button>
+            <p id="login-error" style="color: #ef4444; margin-top: 15px; font-size: 0.9rem; font-weight:600;"></p>
+            <button id="btn-cancel-login" type="button" onclick="closeLoginModal()" style="background:none; border:none; color:#6b7280; margin-top:15px; cursor:pointer; display:none;">Cerrar sin identificar</button>
         </div>
     </div>
 
@@ -201,8 +243,8 @@
         <div id="store-branding" style="font-weight: 700; font-size: 1.2rem; display:flex; align-items:center;">
             <i class="fas fa-store"></i> <span style="margin-left:5px;">STUDIO</span>
         </div>
-        <div style="display: flex; align-items: center;">
-            <div id="client-info" style="font-size: 0.8rem; color: #6b7280;"></div>
+        <div style="display: flex; align-items: center; cursor:pointer;" onclick="if(session.clientId) promptClientRegister()">
+            <div id="client-info" style="font-size: 0.8rem; color: #6b7280; text-align:right; margin-right:5px;"></div>
             <img id="header-avatar" src="" class="client-avatar-small" style="display:none;">
         </div>
     </header>
@@ -415,6 +457,9 @@
     let currentProductId = null;
     let selectedStars = 5;
 
+    // LOGIN VARIABLES
+    let pendingClientData = null; // Almacena datos temporales del usuario encontrado
+
     const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
     // --- INIT ---
@@ -472,12 +517,20 @@
         document.querySelector('#my-manifest-placeholder').setAttribute('href', URL.createObjectURL(blob));
     }
 
-    // --- LOGIN & PROFILE IMAGE ---
+    // --- GESTIÓN DE MODALES DE LOGIN ---
+
+    function hideAllLoginSteps() {
+        document.getElementById('step-store').style.display = 'none';
+        document.getElementById('step-phone').style.display = 'none';
+        document.getElementById('step-welcome-back').style.display = 'none';
+        document.getElementById('step-register').style.display = 'none';
+        document.getElementById('login-error').textContent = '';
+    }
+
     function promptStoreCode() {
         document.getElementById('login-overlay').style.display = 'flex';
+        hideAllLoginSteps();
         document.getElementById('step-store').style.display = 'block';
-        document.getElementById('step-client').style.display = 'none';
-        document.getElementById('login-title').textContent = "Ingresar a Tienda";
         document.getElementById('btn-cancel-login').style.display = 'none';
     }
 
@@ -485,17 +538,142 @@
         return new Promise((resolve) => {
             const overlay = document.getElementById('login-overlay');
             overlay.style.display = 'flex';
-            document.getElementById('step-store').style.display = 'none';
-            document.getElementById('step-client').style.display = 'block';
-            document.getElementById('login-title').textContent = "Crea tu Perfil";
-            document.getElementById('login-desc').textContent = "Sube una foto y tus datos para participar.";
+            hideAllLoginSteps();
+            document.getElementById('step-phone').style.display = 'block';
             document.getElementById('btn-cancel-login').style.display = 'block';
+            document.getElementById('check-phone').focus();
         });
     }
 
-    function closeLoginModal() { document.getElementById('login-overlay').style.display = 'none'; }
+    function closeLoginModal() { 
+        document.getElementById('login-overlay').style.display = 'none'; 
+        hideAllLoginSteps();
+    }
 
-    // Compresión de imagen en cliente
+    async function handleStoreSubmit(e) {
+        e.preventDefault();
+        const code = document.getElementById('reg-code').value.trim();
+        if (!code) return;
+        await resolveStore(code);
+        closeLoginModal();
+    }
+
+    // PASO 1: VERIFICAR TELÉFONO
+    async function handlePhoneCheck(e) {
+        e.preventDefault();
+        const phone = document.getElementById('check-phone').value.trim();
+        const btn = document.getElementById('btn-check-phone');
+        const err = document.getElementById('login-error');
+
+        if (!phone) { err.textContent = "Ingresa un teléfono"; return; }
+        
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...'; err.textContent = "";
+
+        try {
+            // Buscamos si existe el cliente
+            const { data: client, error } = await supabase.from('clientes').select('*').eq('telefono', phone).single();
+
+            hideAllLoginSteps();
+
+            if (client) {
+                // CASO A: CLIENTE EXISTE -> MOSTRAR PERFIL
+                pendingClientData = client;
+                document.getElementById('step-welcome-back').style.display = 'block';
+                document.getElementById('welcome-name-display').textContent = client.nombre;
+                document.getElementById('welcome-phone-display').textContent = client.telefono;
+                
+                // Mostrar avatar si tiene
+                const avatarImg = document.getElementById('welcome-avatar-img');
+                if (client.foto_b64 && client.foto_b64.length > 50) {
+                    avatarImg.src = client.foto_b64;
+                } else {
+                    avatarImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(client.nombre)}&background=random&size=120`;
+                }
+
+            } else {
+                // CASO B: CLIENTE NO EXISTE -> MOSTRAR REGISTRO
+                document.getElementById('step-register').style.display = 'block';
+                document.getElementById('reg-phone-readonly').value = phone;
+                document.getElementById('reg-name').focus();
+            }
+
+        } catch (error) {
+            console.error(error);
+            err.textContent = "Error de conexión. Intenta de nuevo.";
+            document.getElementById('step-phone').style.display = 'block';
+        } finally {
+            btn.disabled = false; btn.textContent = "Continuar";
+        }
+    }
+
+    // PASO 2: CONFIRMAR LOGIN (SI EXISTE)
+    async function confirmLogin() {
+        if (!pendingClientData) return resetLogin();
+
+        // Actualizamos última visita
+        await supabase.from('clientes').update({ 
+            ultima_tienda_visitada: session.storeCode 
+        }).eq('id', pendingClientData.id);
+
+        completeLogin(pendingClientData);
+    }
+
+    function resetLogin() {
+        pendingClientData = null;
+        document.getElementById('reg-name').value = '';
+        document.getElementById('check-phone').value = '';
+        document.getElementById('client-avatar-b64').value = '';
+        document.getElementById('avatar-preview-img').src = 'https://via.placeholder.com/100?text=Foto';
+        
+        hideAllLoginSteps();
+        document.getElementById('step-phone').style.display = 'block';
+    }
+
+    // PASO 3: REGISTRO NUEVO
+    async function handleRegistration(e) {
+        e.preventDefault();
+        const name = document.getElementById('reg-name').value.trim();
+        const phone = document.getElementById('reg-phone-readonly').value.trim();
+        const avatarB64 = document.getElementById('client-avatar-b64').value;
+        const btn = document.getElementById('btn-register');
+
+        if(!name) return;
+
+        btn.disabled = true; btn.textContent = "Creando...";
+
+        try {
+            const newClientData = { 
+                nombre: name, 
+                telefono: phone, 
+                ultima_tienda_visitada: session.storeCode,
+                foto_b64: avatarB64 || null 
+            };
+
+            const { data: newClient, error } = await supabase.from('clientes').insert(newClientData).select().single();
+            if (error) throw error;
+
+            completeLogin(newClient);
+            alert("¡Bienvenido! Ya puedes comprar.");
+
+        } catch (error) {
+            document.getElementById('login-error').textContent = "Error al crear perfil: " + error.message;
+            btn.disabled = false; btn.textContent = "Crear Perfil";
+        }
+    }
+
+    function completeLogin(clientData) {
+        localStorage.setItem('clientId', clientData.id);
+        localStorage.setItem('clientName', clientData.nombre);
+        localStorage.setItem('clientAvatar', clientData.foto_b64 || '');
+        session.clientId = clientData.id;
+        session.clientName = clientData.nombre;
+        session.clientAvatar = clientData.foto_b64 || '';
+
+        updateHeaderUser();
+        closeLoginModal();
+    }
+
+    // Compresión de imagen
     function handleAvatarUpload(input) {
         const file = input.files[0];
         if (!file) return;
@@ -506,12 +684,10 @@
             img.onload = function() {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                // Redimensionar a 150x150
                 const size = 150;
                 canvas.width = size;
                 canvas.height = size;
                 
-                // Recorte cuadrado simple (centro)
                 let sWidth = img.width;
                 let sHeight = img.height;
                 let sx = 0; let sy = 0;
@@ -525,8 +701,6 @@
                 }
                 
                 ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, size, size);
-                
-                // Output Base64
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
                 document.getElementById('avatar-preview-img').src = dataUrl;
                 document.getElementById('client-avatar-b64').value = dataUrl;
@@ -536,68 +710,20 @@
         reader.readAsDataURL(file);
     }
 
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById('btn-login-action');
-        const err = document.getElementById('login-error');
-        btn.disabled = true; err.textContent = "";
-
-        try {
-            if (document.getElementById('step-store').style.display === 'block') {
-                const code = document.getElementById('reg-code').value.trim();
-                if (!code) throw new Error("Ingresa un código.");
-                await resolveStore(code);
-                closeLoginModal();
-            } 
-            else if (document.getElementById('step-client').style.display === 'block') {
-                const name = document.getElementById('reg-name').value.trim();
-                const phone = document.getElementById('reg-phone').value.trim();
-                const avatarB64 = document.getElementById('client-avatar-b64').value; // Imagen comprimida
-
-                if(!name || !phone) throw new Error("Nombre y teléfono obligatorios.");
-
-                let { data: client } = await supabase.from('clientes').select('id').eq('telefono', phone).single();
-                
-                const updates = { 
-                    nombre: name, 
-                    telefono: phone, 
-                    ultima_tienda_visitada: session.storeCode,
-                    foto_b64: avatarB64 || null 
-                };
-
-                if (!client) {
-                    const { data: newClient, error } = await supabase.from('clientes').insert(updates).select().single();
-                    if (error) throw error;
-                    client = newClient;
-                } else {
-                    await supabase.from('clientes').update(updates).eq('id', client.id);
-                }
-
-                localStorage.setItem('clientId', client.id);
-                localStorage.setItem('clientName', name);
-                localStorage.setItem('clientAvatar', avatarB64 || '');
-                session.clientId = client.id;
-                session.clientName = name;
-                session.clientAvatar = avatarB64 || '';
-
-                updateHeaderUser();
-                closeLoginModal();
-                alert("¡Perfil creado! Ahora puedes comprar y comentar.");
-            }
-        } catch (error) { err.textContent = error.message; } finally { btn.disabled = false; }
-    });
-
     function updateHeaderUser() {
         if(session.clientName) {
-            document.getElementById('client-info').textContent = `Hola, ${session.clientName}`;
+            document.getElementById('client-info').textContent = `Hola, ${session.clientName.split(' ')[0]}`;
+            const img = document.getElementById('header-avatar');
             if(session.clientAvatar) {
-                const img = document.getElementById('header-avatar');
                 img.src = session.clientAvatar;
-                img.style.display = 'block';
+            } else {
+                img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(session.clientName)}&background=random`;
             }
+            img.style.display = 'block';
             initChat();
         } else {
-            document.getElementById('client-info').textContent = "Bienvenido";
+            document.getElementById('client-info').textContent = "Iniciar Sesión";
+            document.getElementById('header-avatar').style.display = 'none';
         }
     }
 
@@ -730,7 +856,7 @@
 
             // Renderizar lista
             comments.forEach(c => {
-                const avatarSrc = c.clientes?.foto_b64 || 'https://via.placeholder.com/35?text=U';
+                const avatarSrc = c.clientes?.foto_b64 || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.clientes?.nombre || 'U')}&background=random`;
                 const starsHtml = Array(5).fill(0).map((_, i) => `<i class="${i < c.estrellas ? 'fas' : 'far'} fa-star"></i>`).join('');
                 
                 const item = document.createElement('div');
