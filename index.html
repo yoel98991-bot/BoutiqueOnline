@@ -2140,32 +2140,62 @@
         });
     }
 
-    async function submitReview() {
+ async function submitReview() {
         const text = document.getElementById('review-text-input').value.trim();
+        
+        // Validación básica
         if (!text) {
             showNotification('Por favor escribe un comentario', 'error');
             return;
         }
+        if (!session.clientId) {
+            showNotification('Debes iniciar sesión para comentar', 'error');
+            promptClientRegister(); // Reutilizamos tu lógica de login
+            return;
+        }
+
+        const btnSubmit = document.querySelector('.btn-submit-review'); //
+        const originalText = btnSubmit.textContent;
+        btnSubmit.textContent = "Publicando...";
+        btnSubmit.disabled = true;
         
+        console.log("Intentando enviar comentario:", {
+            producto_id: currentProductId, //
+            cliente_id: session.clientId,  //
+            texto: text,
+            estrellas: selectedStars       //
+        });
+
         try {
-            const { error } = await supabase.from('comentarios').insert({
+            const { data, error } = await supabase.from('comentarios').insert({
                 producto_id: currentProductId,
                 cliente_id: session.clientId,
                 texto: text,
                 estrellas: selectedStars
-            });
+            }).select(); // .select() es importante para confirmar que se guardó
 
-            if (error) throw error;
+            if (error) {
+                console.error("Error Supabase:", error); // Verás el error exacto en la consola (F12)
+                throw error;
+            }
             
             showNotification('¡Opinión publicada exitosamente!', 'success');
-            closeReviewModal();
+            closeReviewModal(); //
             
-            // Recargar comentarios
-            loadProductSocialProof(currentProductId);
+            // Recargar comentarios inmediatamente
+            await loadProductSocialProof(currentProductId); //
             
         } catch (error) {
-            console.error('Error al publicar comentario:', error);
-            showNotification('Error al publicar la opinión', 'error');
+            console.error('Error crítico al publicar:', error);
+            // Mensaje más descriptivo si es error de permisos
+            if(error.code === '42501' || error.message.includes('row-level security')) {
+                 showNotification('Error de permisos en la base de datos (RLS)', 'error');
+            } else {
+                 showNotification('Error al guardar: ' + error.message, 'error');
+            }
+        } finally {
+            btnSubmit.textContent = originalText;
+            btnSubmit.disabled = false;
         }
     }
 
