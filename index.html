@@ -1741,7 +1741,7 @@
 // Variable global para guardar estadísticas calculadas (estrellas y ventas)
     let productStatsCache = {};
         
-    // --- CATALOG & UI ---
+   // --- CATALOG & UI ---
     async function loadCatalog() {
         const grid = document.getElementById('products-grid');
         grid.innerHTML = '<p style="text-align:center; width:100%; margin-top:50px;"><i class="fas fa-spinner fa-spin"></i> Cargando catálogo...</p>';
@@ -1825,7 +1825,8 @@
         renderProducts(cat === 'Todos' ? productsCache : productsCache.filter(p => p.categoria === cat));
     }
     
- function renderProducts(list) {
+
+function renderProducts(list) {
         const grid = document.getElementById('products-grid');
         if(!list.length) { 
             grid.innerHTML = '<p style="text-align:center; color:#94a3b8; grid-column:1/-1;">No hay productos.</p>'; 
@@ -1833,21 +1834,26 @@
         }
 
         grid.innerHTML = list.map(p => {
-            // Obtener stats calculadas previamente
+            // Obtener stats calculadas
             const stats = productStatsCache[p.id] || { totalStars: 0, countReviews: 0, sales: 0 };
             
-            // Calcular promedio visual
+            // Calcular promedio estrellas
             const avg = stats.countReviews > 0 ? (stats.totalStars / stats.countReviews).toFixed(1) : 0;
             
-            // Generar HTML de estrellas (rellenas vs vacías)
+            // Generar HTML de estrellas
             let starsHtml = '';
             for(let i=1; i<=5; i++) {
                 if(i <= Math.round(avg)) starsHtml += '<i class="fas fa-star"></i>';
                 else starsHtml += '<i class="far fa-star" style="color:#cbd5e1;"></i>';
             }
 
-            // Texto de ventas (Si es 0, mostramos "Nuevo")
-            const salesText = stats.sales > 0 ? `<b>${stats.sales}</b> vendidos` : 'Nuevo';
+            // --- LÓGICA DE VISUALIZACIÓN DE VENTAS ---
+            // Si tiene ventas, muestra el icono de fuego y la cantidad.
+            // Si no tiene ventas, no muestra nada (espacio en blanco) o puedes poner "Nuevo".
+            let salesBadgeHtml = '';
+            if (stats.sales > 0) {
+                salesBadgeHtml = `<div class="card-sold-count"><i class="fas fa-fire-alt"></i> ${stats.sales} vendidas</div>`;
+            }
 
             return `
             <div class="card">
@@ -1855,12 +1861,14 @@
                      class="card-img" 
                      onclick="openProductPage(${p.id})">
                 <div class="card-body">
-                    <div style="font-weight:600; font-size:0.9rem; margin-bottom: 5px; line-height:1.3;">${p.nombre}</div>
+                    <div style="font-weight:600; font-size:0.95rem; margin-bottom: 5px; line-height:1.3; color:#0f172a;">${p.nombre}</div>
                     
                     <div class="card-reputation">
-                        <div class="card-stars">${starsHtml}</div>
-                        <div style="font-size:0.7rem; color:#64748b; font-weight:600;">(${stats.countReviews})</div>
-                        <div class="card-sold-count">${salesText}</div>
+                        <div class="card-stars">
+                            ${starsHtml} 
+                            <span style="color:#94a3b8; font-size:0.7rem; margin-left:3px;">(${stats.countReviews})</span>
+                        </div>
+                        ${salesBadgeHtml}
                     </div>
 
                     <div style="color:var(--accent); font-weight:800; font-size:1.1rem; margin-bottom: 10px;">$${p.precio}</div>
@@ -1876,8 +1884,7 @@
                 </div>
             </div>`;
         }).join('');
-    }
-
+}
     // --- PÁGINA COMPLETA DE PRODUCTO ---
     function openProductPage(productId) {
         const product = productsCache.find(p => p.id === productId);
