@@ -950,13 +950,37 @@
     color: #fbbf24; /* Color amarillo estrella */
     display: flex;
 }
+.card-reputation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Separa estrellas y ventas */
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+    margin-top: 4px;
+}
+
+.card-stars {
+    color: #fbbf24;
+    display: flex;
+    font-size: 0.8rem;
+}
+
+/* Nuevo estilo destacado para las ventas */
 .card-sold-count {
-    color: #94a3b8; /* Gris suave */
+    background: #fff7ed; /* Fondo naranja muy claro */
+    color: #ea580c;      /* Texto naranja oscuro */
     font-size: 0.75rem;
-    margin-left: auto; /* Empuja el texto a la derecha */
-    background: #f1f5f9;
-    padding: 2px 6px;
-    border-radius: 4px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-weight: 700;
+    border: 1px solid #ffedd5;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.card-sold-count i {
+    font-size: 0.7rem;
 }
 
     </style>
@@ -1720,14 +1744,15 @@
     // --- CATALOG & UI ---
     async function loadCatalog() {
         const grid = document.getElementById('products-grid');
-        grid.innerHTML = '<p style="text-align:center; width:100%; margin-top:50px;"><i class="fas fa-spinner fa-spin"></i> Cargando catálogo y reputación...</p>';
+        grid.innerHTML = '<p style="text-align:center; width:100%; margin-top:50px;"><i class="fas fa-spinner fa-spin"></i> Cargando catálogo...</p>';
         
         try {
-            // 1. Cargar Productos, Comentarios y Pedidos Completados en paralelo (para velocidad)
+            // 1. Cargar Productos, Comentarios y Pedidos Completados
             const [productsRes, commentsRes, ordersRes] = await Promise.all([
                 supabase.from('productos').select('*').eq('creado_por', session.storeId).order('id', { ascending: false }),
-                supabase.from('comentarios').select('producto_id, estrellas'), // Traemos solo lo necesario
-                supabase.from('pedidos').select('productos').eq('tienda_id', session.storeId).eq('estado', 'completado') // Solo ventas reales
+                supabase.from('comentarios').select('producto_id, estrellas'),
+                // Traemos TODOS los pedidos completados para sumar cantidades reales
+                supabase.from('pedidos').select('productos').eq('tienda_id', session.storeId).eq('estado', 'completado')
             ]);
 
             const products = productsRes.data || [];
@@ -1736,15 +1761,15 @@
 
             productsCache = products;
 
-            // 2. Procesar Estadísticas (Calculadora de Social Proof)
+            // 2. Procesar Estadísticas
             productStatsCache = {};
             
-            // A) Inicializar
+            // A) Inicializar cache
             products.forEach(p => {
                 productStatsCache[p.id] = { totalStars: 0, countReviews: 0, sales: 0 };
             });
 
-            // B) Calcular Promedio de Estrellas
+            // B) Calcular Estrellas
             comments.forEach(c => {
                 if (productStatsCache[c.producto_id]) {
                     productStatsCache[c.producto_id].totalStars += c.estrellas;
@@ -1752,18 +1777,20 @@
                 }
             });
 
-            // C) Calcular Ventas Totales (Recorriendo el JSON de pedidos)
+            // C) Calcular Ventas Totales (SUMANDO CANTIDADES)
             orders.forEach(order => {
                 let items = [];
-                // Manejo de compatibilidad: a veces 'productos' es array directo, a veces objeto {items: [...]}
+                // Tu sistema guarda arrays planos (ej: si compro 2 del mismo, aparecen 2 objetos en el array)
+                // Por lo tanto, iterar el array completo cuenta las cantidades correctamente.
                 if (Array.isArray(order.productos)) items = order.productos;
                 else if (order.productos && order.productos.items) items = order.productos.items;
 
                 items.forEach(item => {
-                    // item puede ser solo el ID o un objeto {id: 1, ...}
+                    // item puede ser el ID directo o un objeto {id: 1, ...}
                     const pId = typeof item === 'object' ? item.id : item;
+                    
                     if (productStatsCache[pId]) {
-                        productStatsCache[pId].sales++; 
+                        productStatsCache[pId].sales++; // Suma +1 por cada unidad encontrada
                     }
                 });
             });
@@ -1773,7 +1800,7 @@
             renderCategoryButtons(cats);
             renderProducts(products);
 
-            // Cargar datos de la tienda (logo, pagos)
+            // Cargar datos extra de la tienda
             const { data: storeData } = await supabase.from('usuarios').select('*').eq('id', session.storeId).single();
             if(storeData) {
                 storePaymentInfo = storeData;
