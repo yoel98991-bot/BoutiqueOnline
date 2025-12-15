@@ -210,6 +210,57 @@
         .modal-type-danger .modal-btn-confirm { background: #dc2626; color: white; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); }
         .modal-type-info .modal-btn-confirm { background: #4f46e5; color: white; }
 
+        /* ONBOARDING STYLES (NUEVO) */
+        .onboarding-card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: white;
+            padding: 25px;
+            border-radius: var(--radius);
+            margin-bottom: 25px;
+            box-shadow: 0 10px 25px rgba(30, 41, 59, 0.3);
+            position: relative;
+            overflow: hidden;
+            display: none; /* Se muestra con JS si es necesario */
+        }
+        .onboarding-card::before {
+            content: ''; position: absolute; top: -50px; right: -50px;
+            width: 150px; height: 150px; background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+        }
+        .onboarding-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
+        .onboarding-title { font-size: 1.2rem; font-weight: 700; margin: 0; }
+        .onboarding-subtitle { opacity: 0.8; font-size: 0.9rem; margin-top: 5px; }
+        
+        .progress-container { margin: 15px 0; }
+        .progress-bar-bg { height: 8px; background: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #22c55e; width: 0%; transition: width 0.5s ease; box-shadow: 0 0 10px rgba(34, 197, 94, 0.5); }
+        .progress-text { font-size: 0.8rem; font-weight: 600; text-align: right; margin-top: 5px; color: #4ade80; }
+
+        .steps-list { display: flex; flex-direction: column; gap: 10px; }
+        .step-item { 
+            background: rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 12px; 
+            display: flex; align-items: center; justify-content: space-between;
+            transition: 0.2s; border: 1px solid rgba(255,255,255,0.05);
+        }
+        .step-item:hover { background: rgba(255,255,255,0.15); }
+        .step-info { display: flex; align-items: center; gap: 12px; }
+        .step-icon { 
+            width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+        }
+        .step-item.done .step-icon { background: #22c55e; color: white; }
+        .step-item.done .step-text { text-decoration: line-through; opacity: 0.6; }
+        .step-action { 
+            padding: 6px 12px; font-size: 0.8rem; background: white; color: #1e293b; 
+            border-radius: 20px; font-weight: 600; border: none; cursor: pointer;
+        }
+        .step-action:hover { transform: scale(1.05); }
+        .close-onboarding {
+            background: none; border: none; color: rgba(255,255,255,0.5); 
+            cursor: pointer; font-size: 1.1rem;
+        }
+        .close-onboarding:hover { color: white; }
+
     </style>
 </head>
 <body>
@@ -264,6 +315,46 @@
             <button onclick="logout()" class="btn btn-outline"><i class="fas fa-sign-out-alt"></i></button>
         </div>
 
+        <div id="onboarding-card" class="onboarding-card">
+            <div class="onboarding-header">
+                <div>
+                    <h3 class="onboarding-title">¡Bienvenido a tu Tienda! 🚀</h3>
+                    <div class="onboarding-subtitle">Completa estos 3 pasos para empezar a vender.</div>
+                </div>
+                <button class="close-onboarding" onclick="hideOnboarding()" title="Ocultar"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="progress-container">
+                <div class="progress-bar-bg">
+                    <div id="ob-progress-fill" class="progress-fill"></div>
+                </div>
+                <div id="ob-progress-text" class="progress-text">0% Completado</div>
+            </div>
+
+            <div class="steps-list">
+                <div id="step-1" class="step-item">
+                    <div class="step-info">
+                        <div class="step-icon"><i class="fas fa-box"></i></div>
+                        <span class="step-text">Crea tu primer producto</span>
+                    </div>
+                    <button class="step-action" onclick="goToAddProduct()">Crear</button>
+                </div>
+                <div id="step-2" class="step-item">
+                    <div class="step-info">
+                        <div class="step-icon"><i class="fas fa-share-alt"></i></div>
+                        <span class="step-text">Comparte tu enlace</span>
+                    </div>
+                    <button class="step-action" onclick="completeShareStep()">Compartir</button>
+                </div>
+                <div id="step-3" class="step-item">
+                    <div class="step-info">
+                        <div class="step-icon"><i class="fas fa-star"></i></div>
+                        <span class="step-text">Recibe tu primer pedido</span>
+                    </div>
+                    <span style="font-size:0.75rem; opacity:0.8;">Esperando ventas...</span>
+                </div>
+            </div>
+        </div>
         <div class="nav-tabs">
             <button class="tab" onclick="switchTab('resumen')"><i class="fas fa-chart-pie"></i> Resumen</button>
             <button class="tab active" onclick="switchTab('productos')"><i class="fas fa-box"></i> Productos</button>
@@ -495,6 +586,103 @@
         let modalCallback = null;
         let galleryFiles = [];
 
+        // --- ONBOARDING LOGIC ---
+        function checkOnboarding() {
+            if(!currentUser) return;
+            // Verificar si el usuario ya ocultó permanentemente el onboarding
+            if(localStorage.getItem(`hideOnboarding_${currentUser.id}`) === 'true') {
+                document.getElementById('onboarding-card').style.display = 'none';
+                return;
+            }
+
+            // Paso 1: Productos
+            const hasProducts = productsCache.length > 0;
+            const step1 = document.getElementById('step-1');
+            const btn1 = step1.querySelector('.step-action');
+            if(hasProducts) {
+                step1.classList.add('done');
+                step1.querySelector('.step-icon').innerHTML = '<i class="fas fa-check"></i>';
+                btn1.style.display = 'none'; // Ocultar botón si ya está listo
+            } else {
+                step1.classList.remove('done');
+                step1.querySelector('.step-icon').innerHTML = '<i class="fas fa-box"></i>';
+                btn1.style.display = 'block';
+            }
+
+            // Paso 2: Compartir
+            const hasShared = localStorage.getItem(`hasSharedLink_${currentUser.id}`) === 'true';
+            const step2 = document.getElementById('step-2');
+            const btn2 = step2.querySelector('.step-action');
+            if(hasShared) {
+                step2.classList.add('done');
+                step2.querySelector('.step-icon').innerHTML = '<i class="fas fa-check"></i>';
+                btn2.textContent = "Listo";
+                btn2.disabled = true;
+                btn2.style.background = 'none'; btn2.style.color = '#fff';
+            } else {
+                step2.classList.remove('done');
+                step2.querySelector('.step-icon').innerHTML = '<i class="fas fa-share-alt"></i>';
+                btn2.textContent = "Compartir";
+                btn2.disabled = false;
+            }
+
+            // Paso 3: Ventas
+            const hasSales = ordersCache.length > 0;
+            const step3 = document.getElementById('step-3');
+            if(hasSales) {
+                step3.classList.add('done');
+                step3.querySelector('.step-icon').innerHTML = '<i class="fas fa-check"></i>';
+                step3.querySelector('span:last-child').textContent = "¡Primera venta lograda!";
+            } else {
+                step3.classList.remove('done');
+                step3.querySelector('.step-icon').innerHTML = '<i class="fas fa-star"></i>';
+                step3.querySelector('span:last-child').textContent = "Esperando ventas...";
+            }
+
+            // Calcular Progreso
+            let completed = 0;
+            if(hasProducts) completed++;
+            if(hasShared) completed++;
+            if(hasSales) completed++;
+            
+            const pct = Math.floor((completed / 3) * 100);
+            document.getElementById('ob-progress-fill').style.width = pct + '%';
+            document.getElementById('ob-progress-text').textContent = pct + '% Completado';
+
+            // Mostrar tarjeta si no está completa o si no la han cerrado
+            document.getElementById('onboarding-card').style.display = 'block';
+
+            // Mensaje de éxito si llega al 100%
+            if(pct === 100) {
+                 document.getElementById('ob-progress-text').textContent = "¡Increíble! 🎉 Tienda activa.";
+                 // Opcional: Ocultar automáticamente después de un tiempo si se desea
+            }
+        }
+
+        function goToAddProduct() {
+            switchTab('productos');
+            document.getElementById('form-card').scrollIntoView({ behavior: 'smooth' });
+            // Efecto visual para resaltar el formulario
+            const form = document.getElementById('form-card');
+            form.style.border = "2px solid var(--accent)";
+            setTimeout(() => form.style.border = "none", 2000);
+        }
+
+        function completeShareStep() {
+            shareStoreLink(); // Llamar a la función existente
+            // Marcar como hecho
+            localStorage.setItem(`hasSharedLink_${currentUser.id}`, 'true');
+            checkOnboarding(); // Actualizar UI
+            showToast("¡Paso completado!", "Enlace compartido.");
+        }
+
+        function hideOnboarding() {
+            if(confirm("¿Ocultar la guía de inicio?")) {
+                document.getElementById('onboarding-card').style.display = 'none';
+                if(currentUser) localStorage.setItem(`hideOnboarding_${currentUser.id}`, 'true');
+            }
+        }
+
         // --- SISTEMA DE MODALES PERSONALIZADO ---
         function customConfirm(title, message, type = 'info', callback) {
             const modal = document.getElementById('app-modal');
@@ -565,20 +753,6 @@
             }
         }
 
-        async function testNotification() {
-            const btn = event.target; const txtOriginal = btn.innerText;
-            if(!currentUser) { showToast("Error", "Inicia sesión primero"); return; }
-            btn.disabled = true; btn.innerText = "⏳ Configurando...";
-            try {
-                await subscribeUser();
-                btn.innerText = "🚀 Enviando...";
-                const { error } = await supabase.functions.invoke('push-notifier', { body: { type: 'TEST', user_id: currentUser.id } });
-                if(error) throw error; 
-                showToast("¡Enviado!", "Revisa tus notificaciones");
-            } catch (e) { console.error(e); showToast("Error", e.message); } 
-            finally { btn.disabled = false; btn.innerText = txtOriginal; }
-        }
-
         // --- AUTH Y CARGA ---
         supabase.auth.onAuthStateChange((event, session) => {
             if (session) {
@@ -604,7 +778,10 @@
             document.getElementById('login-container').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             
-            loadProducts();
+            await loadProducts(); // Esperar para checkear onboarding
+            await loadOrders();   // Esperar para checkear onboarding
+            checkOnboarding();    // <--- EJECUTAR ONBOARDING CHECK AL INICIO
+            
             updateDashboardCounters();
             setTimeout(() => setupGlobalRealtime(), 2000);
         }
@@ -703,6 +880,7 @@
                 if (payload.new.tienda_id !== currentUser.id) return; 
                 showToast('Nuevo Pedido', '¡Revisa la lista!'); updateDashboardCounters();
                 if(document.getElementById('tab-pedidos').classList.contains('active')) loadOrders();
+                checkOnboarding(); // Actualizar onboarding si llega el primer pedido
             })
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') { isReconnecting = false; document.getElementById('store-code-display').style.borderColor = '#22c55e'; }
@@ -723,6 +901,10 @@
             const shareData = { title: 'Mi Boutique Online', text: '¡Hola! Te invito a visitar mi catálogo online:', url: promoUrl };
             if (navigator.share) { try { await navigator.share(shareData); } catch (err) {} } 
             else { try { await navigator.clipboard.writeText(promoUrl); showToast("¡Enlace Copiado!", "Link: " + promoUrl); } catch (err) { alert("Tu enlace es: " + promoUrl); } }
+            
+            // Marcar onboarding
+            if(currentUser) localStorage.setItem(`hasSharedLink_${currentUser.id}`, 'true');
+            checkOnboarding();
         }
 
         function copyCode() { navigator.clipboard.writeText(storeCode); showToast("Código Copiado", storeCode); }
@@ -792,6 +974,7 @@
                 if (editingId) { await supabase.from('productos').update(productData).eq('id', editingId); } 
                 else { await supabase.from('productos').insert([productData]); }
                 resetForm(); loadProducts(); showToast("Éxito", "Producto guardado con fotos.");
+                checkOnboarding(); // Actualizar progreso
             } catch (error) { alert("Error: " + error.message); } 
             finally { btn.disabled = false; btn.textContent = "Publicar"; }
         });
@@ -807,8 +990,9 @@
             const { data } = await supabase.from('productos').select('*').eq('creado_por', currentUser.id).order('id', {ascending:false});
             productsCache = data || []; updateCategoryDatalist(); 
             const table = document.getElementById('products-table');
-            if(!data || data.length === 0) { table.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Sin productos.</td></tr>'; return; }
+            if(!data || data.length === 0) { table.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Sin productos.</td></tr>'; checkOnboarding(); return; }
             table.innerHTML = `<thead><tr><th>FOTO</th><th>DETALLE</th><th>$</th><th>ACCIONES</th></tr></thead><tbody>${data.map(p => `<tr><td><img src="${p.imagen_url || 'https://via.placeholder.com/50'}" class="product-img"></td><td><div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div><div style="font-size:0.75rem; color:#94a3b8;">Stock: ${p.stock}</div></td><td style="font-weight:bold;">${p.precio}</td><td><button class="btn-icon btn-edit" onclick="startEdit(${p.id})"><i class="fas fa-pen"></i></button><button class="btn-icon btn-danger" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>`;
+            checkOnboarding(); // Actualizar onboarding al cargar
         }
 
         function startEdit(id) {
@@ -839,6 +1023,7 @@
         async function loadOrders() {
             const { data } = await supabase.from('pedidos').select('*, clientes(nombre, telefono)').eq('tienda_id', currentUser.id).order('fecha', {ascending:false});
             ordersCache = data || []; updateDashboardCounters(); renderOrders();
+            checkOnboarding(); // Checkear si hay ventas
         }
 
         function renderOrders() {
@@ -990,6 +1175,66 @@
             if(url) { preview.src = url; preview.style.display = 'block'; placeholder.style.display = 'none'; }
         }
 
+        // --- PROCESAMIENTO DE IMAGEN PWA A BASE64 ---
+        function processPwaIcon(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxSize = 512;
+
+                    if (width > height) {
+                        if (width > maxSize) { height *= maxSize / width; width = maxSize; }
+                    } else {
+                        if (height > maxSize) { width *= maxSize / height; height = maxSize; }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    
+                    document.getElementById('pwa-preview').src = dataUrl;
+                    document.getElementById('pwa-preview').style.display = 'block';
+                    document.getElementById('conf-pwa-b64').value = dataUrl;
+                    document.getElementById('pwa-text').textContent = "¡Ícono listo para guardar!";
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function loadConfig() {
+            const { data } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
+            if (!data) return;
+            
+            document.getElementById('conf-nombre-admin').value = data.nombre || '';
+            document.getElementById('conf-telefono').value = data.telefono || '';
+            document.getElementById('conf-banco').value = data.banco_nombre || '';
+            document.getElementById('conf-titular').value = data.banco_titular || '';
+            document.getElementById('conf-ci').value = data.banco_ci || '';
+            document.getElementById('conf-numero').value = data.banco_numero || '';
+            if(data.banco_tipo) document.getElementById('conf-tipo').value = data.banco_tipo;
+            if(data.logo_url) updateAdminLogoUI(data.logo_url);
+            if(data.slug) document.getElementById('conf-alias').value = data.slug;
+            if (data.qr_imagen_url) { document.getElementById('qr-preview').src = data.qr_imagen_url; document.getElementById('qr-preview').style.display = 'block'; }
+            
+            if(data.pwa_nombre_app) document.getElementById('conf-pwa-nombre').value = data.pwa_nombre_app;
+            if(data.pwa_icono_b64) {
+                document.getElementById('conf-pwa-b64').value = data.pwa_icono_b64;
+                document.getElementById('pwa-preview').src = data.pwa_icono_b64;
+                document.getElementById('pwa-preview').style.display = 'block';
+            }
+        }
+
         document.getElementById('config-form').addEventListener('submit', async (e) => {
             e.preventDefault(); const btn = document.getElementById('btn-save-config'); btn.textContent = "Guardando..."; btn.disabled = true;
             try {
@@ -999,10 +1244,9 @@
                     await supabase.storage.from('imagenes-pagos').upload(fileName, file, { upsert: true });
                     const { data } = supabase.storage.from('imagenes-pagos').getPublicUrl(fileName); qrUrl = data.publicUrl;
                 }
-                
+
                 const aliasInput = document.getElementById('conf-alias').value.trim().toLowerCase();
                 
-                // ACTUALIZADO: AHORA GUARDA NOMBRE Y TELEFONO
                 const updates = {
                     nombre: document.getElementById('conf-nombre-admin').value,
                     telefono: document.getElementById('conf-telefono').value,
@@ -1012,7 +1256,9 @@
                     banco_numero: document.getElementById('conf-numero').value,
                     banco_tipo: document.getElementById('conf-tipo').value,
                     slug: aliasInput || null, 
-                    qr_imagen_url: qrUrl && qrUrl.startsWith('http') ? qrUrl : null
+                    qr_imagen_url: qrUrl && qrUrl.startsWith('http') ? qrUrl : null,
+                    pwa_nombre_app: document.getElementById('conf-pwa-nombre').value.trim(),
+                    pwa_icono_b64: document.getElementById('conf-pwa-b64').value
                 };
                 
                 const { error } = await supabase.from('usuarios').update(updates).eq('id', currentUser.id);
@@ -1022,27 +1268,31 @@
                 }
 
                 showToast("¡Configuración guardada!", "Datos actualizados.");
-                if(qrUrl.startsWith('http')) { document.getElementById('qr-preview').src = qrUrl; document.getElementById('qr-preview').style.display = 'block'; }
+                // Si cambiaron alias, checkear onboarding
+                if(aliasInput) { localStorage.setItem(`hasSharedLink_${currentUser.id}`, 'true'); checkOnboarding(); }
+
             } catch (err) { showToast("Error", err.message); } finally { btn.disabled = false; btn.textContent = "Guardar Configuración"; }
         });
-        
-        async function loadConfig() {
-            const { data } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
-            if (!data) return;
-            
-            // ACTUALIZADO: CARGA NOMBRE Y TELEFONO
-            document.getElementById('conf-nombre-admin').value = data.nombre || '';
-            document.getElementById('conf-telefono').value = data.telefono || '';
 
-            document.getElementById('conf-banco').value = data.banco_nombre || '';
-            document.getElementById('conf-titular').value = data.banco_titular || '';
-            document.getElementById('conf-ci').value = data.banco_ci || '';
-            document.getElementById('conf-numero').value = data.banco_numero || '';
-            if(data.banco_tipo) document.getElementById('conf-tipo').value = data.banco_tipo;
-            if (data.qr_imagen_url) { document.getElementById('qr-preview').src = data.qr_imagen_url; document.getElementById('qr-preview').style.display = 'block'; }
-            if(data.logo_url) updateAdminLogoUI(data.logo_url);
-            if(data.slug) document.getElementById('conf-alias').value = data.slug;
+        // PWA INSTALL LOGIC
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log("App lista para instalar");
+        });
+
+        async function installPWA() {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`El usuario decidió: ${outcome}`);
+            deferredPrompt = null;
         }
+
+        window.addEventListener('appinstalled', () => {
+            console.log('App instalada exitosamente');
+        });
 
         function updateCategoryDatalist() {
             const rawCategories = productsCache.map(p => p.categoria).filter(c => c && c.trim() !== '');
@@ -1052,267 +1302,6 @@
                 `<option value="${cat}">`
             ).join('');
         }
-
-        // --- LÓGICA DE INSTALACIÓN PWA ---
-let deferredPrompt;
-
-// 1. Escuchar el evento que dispara el navegador cuando la app es instalable
-window.addEventListener('beforeinstallprompt', (e) => {
-    // Prevenir que el navegador muestre su banner nativo antiguo
-    e.preventDefault();
-    // Guardar el evento para dispararlo cuando queramos (al dar clic al botón)
-    deferredPrompt = e;
-    
-    // Mostrar la tarjeta que creamos en el HTML (estaba oculta)
-    const installCard = document.getElementById('install-card');
-    if(installCard) installCard.style.display = 'block';
-    
-    console.log("App lista para instalar");
-});
-
-// 2. Función que se ejecuta al dar clic en el botón "Instalar"
-async function installPWA() {
-    if (!deferredPrompt) return;
-
-    // Mostrar el prompt nativo del sistema
-    deferredPrompt.prompt();
-
-    // Esperar a ver qué decide el usuario
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`El usuario decidió: ${outcome}`);
-
-    // Limpiar la variable, ya no se puede usar de nuevo
-    deferredPrompt = null;
-    
-    // Si aceptó, ocultamos la tarjeta
-    if(outcome === 'accepted'){
-        document.getElementById('install-card').style.display = 'none';
-    }
-}
-
-// 3. Detectar si ya se instaló exitosamente para ocultar el botón
-window.addEventListener('appinstalled', () => {
-    document.getElementById('install-card').style.display = 'none';
-    console.log('App instalada exitosamente');
-});
-
-        // --- PROCESAMIENTO DE IMAGEN PWA A BASE64 ---
-        function processPwaIcon(input) {
-            const file = input.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    // Crear canvas para redimensionar (Máx 512x512 para no saturar la BD)
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
-                    const maxSize = 512;
-
-                    if (width > height) {
-                        if (width > maxSize) { height *= maxSize / width; width = maxSize; }
-                    } else {
-                        if (height > maxSize) { width *= maxSize / height; height = maxSize; }
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    // Convertir a Base64 JPEG (calidad 0.7 para ahorrar espacio)
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                    
-                    // Mostrar preview y guardar en input oculto
-                    document.getElementById('pwa-preview').src = dataUrl;
-                    document.getElementById('pwa-preview').style.display = 'block';
-                    document.getElementById('conf-pwa-b64').value = dataUrl;
-                    document.getElementById('pwa-text').textContent = "¡Ícono listo para guardar!";
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // --- ACTUALIZAR FUNCIÓN LOADCONFIG ---
-        // Busca tu función loadConfig existente y REEMPLÁZALA o actualízala con estas líneas nuevas:
-        async function loadConfig() {
-            const { data } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
-            if (!data) return;
-            
-            // Cargar datos existentes...
-            document.getElementById('conf-nombre-admin').value = data.nombre || '';
-            document.getElementById('conf-telefono').value = data.telefono || '';
-            document.getElementById('conf-banco').value = data.banco_nombre || '';
-            document.getElementById('conf-titular').value = data.banco_titular || '';
-            document.getElementById('conf-ci').value = data.banco_ci || '';
-            document.getElementById('conf-numero').value = data.banco_numero || '';
-            if(data.banco_tipo) document.getElementById('conf-tipo').value = data.banco_tipo;
-            if(data.logo_url) updateAdminLogoUI(data.logo_url);
-            if(data.slug) document.getElementById('conf-alias').value = data.slug;
-            if (data.qr_imagen_url) { document.getElementById('qr-preview').src = data.qr_imagen_url; document.getElementById('qr-preview').style.display = 'block'; }
-            
-            // NUEVO: Cargar datos PWA
-            if(data.pwa_nombre_app) document.getElementById('conf-pwa-nombre').value = data.pwa_nombre_app;
-            if(data.pwa_icono_b64) {
-                document.getElementById('conf-pwa-b64').value = data.pwa_icono_b64;
-                document.getElementById('pwa-preview').src = data.pwa_icono_b64;
-                document.getElementById('pwa-preview').style.display = 'block';
-            }
-        }
-
-        // --- ACTUALIZAR EL SUBMIT DEL FORMULARIO ---
-        // Busca tu event listener de 'config-form' y asegúrate que incluya los nuevos campos:
-        document.getElementById('config-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); const btn = document.getElementById('btn-save-config'); btn.textContent = "Guardando..."; btn.disabled = true;
-            try {
-                // ... (tu lógica existente de QR) ...
-                const file = document.getElementById('qr-input').files[0]; let qrUrl = document.getElementById('qr-preview').src; 
-                if (file) {
-                    const fileName = `qr_${currentUser.id}_${Date.now()}.${file.name.split('.').pop()}`;
-                    await supabase.storage.from('imagenes-pagos').upload(fileName, file, { upsert: true });
-                    const { data } = supabase.storage.from('imagenes-pagos').getPublicUrl(fileName); qrUrl = data.publicUrl;
-                }
-
-                const aliasInput = document.getElementById('conf-alias').value.trim().toLowerCase();
-                
-                // ACTUALIZAMOS EL OBJETO UPDATES CON LOS CAMPOS PWA
-                const updates = {
-                    nombre: document.getElementById('conf-nombre-admin').value,
-                    telefono: document.getElementById('conf-telefono').value,
-                    banco_nombre: document.getElementById('conf-banco').value,
-                    banco_titular: document.getElementById('conf-titular').value,
-                    banco_ci: document.getElementById('conf-ci').value,
-                    banco_numero: document.getElementById('conf-numero').value,
-                    banco_tipo: document.getElementById('conf-tipo').value,
-                    slug: aliasInput || null, 
-                    qr_imagen_url: qrUrl && qrUrl.startsWith('http') ? qrUrl : null,
-                    
-                    // NUEVOS CAMPOS PWA
-                    pwa_nombre_app: document.getElementById('conf-pwa-nombre').value.trim(),
-                    pwa_icono_b64: document.getElementById('conf-pwa-b64').value // Aquí va el texto largo de la imagen
-                };
-                
-                const { error } = await supabase.from('usuarios').update(updates).eq('id', currentUser.id);
-                if (error) {
-                    if (error.code === '23505') throw new Error("¡Ese nombre de tienda ya existe!");
-                    throw error;
-                }
-
-                showToast("¡Configuración guardada!", "Datos actualizados.");
-            } catch (err) { showToast("Error", err.message); } finally { btn.disabled = false; btn.textContent = "Guardar Configuración"; }
-        });
-
-        // --- PROCESAMIENTO DE IMAGEN PWA A BASE64 ---
-        function processPwaIcon(input) {
-            const file = input.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    // Crear canvas para redimensionar (Máx 512x512 para no saturar la BD)
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
-                    const maxSize = 512;
-
-                    if (width > height) {
-                        if (width > maxSize) { height *= maxSize / width; width = maxSize; }
-                    } else {
-                        if (height > maxSize) { width *= maxSize / height; height = maxSize; }
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    // Convertir a Base64 JPEG (calidad 0.7 para ahorrar espacio)
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                    
-                    // Mostrar preview y guardar en input oculto
-                    document.getElementById('pwa-preview').src = dataUrl;
-                    document.getElementById('pwa-preview').style.display = 'block';
-                    document.getElementById('conf-pwa-b64').value = dataUrl;
-                    document.getElementById('pwa-text').textContent = "¡Ícono listo para guardar!";
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // --- ACTUALIZAR FUNCIÓN LOADCONFIG ---
-        // Busca tu función loadConfig existente y REEMPLÁZALA o actualízala con estas líneas nuevas:
-        async function loadConfig() {
-            const { data } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
-            if (!data) return;
-            
-            // Cargar datos existentes...
-            document.getElementById('conf-nombre-admin').value = data.nombre || '';
-            document.getElementById('conf-telefono').value = data.telefono || '';
-            document.getElementById('conf-banco').value = data.banco_nombre || '';
-            document.getElementById('conf-titular').value = data.banco_titular || '';
-            document.getElementById('conf-ci').value = data.banco_ci || '';
-            document.getElementById('conf-numero').value = data.banco_numero || '';
-            if(data.banco_tipo) document.getElementById('conf-tipo').value = data.banco_tipo;
-            if(data.logo_url) updateAdminLogoUI(data.logo_url);
-            if(data.slug) document.getElementById('conf-alias').value = data.slug;
-            if (data.qr_imagen_url) { document.getElementById('qr-preview').src = data.qr_imagen_url; document.getElementById('qr-preview').style.display = 'block'; }
-            
-            // NUEVO: Cargar datos PWA
-            if(data.pwa_nombre_app) document.getElementById('conf-pwa-nombre').value = data.pwa_nombre_app;
-            if(data.pwa_icono_b64) {
-                document.getElementById('conf-pwa-b64').value = data.pwa_icono_b64;
-                document.getElementById('pwa-preview').src = data.pwa_icono_b64;
-                document.getElementById('pwa-preview').style.display = 'block';
-            }
-        }
-
-        // --- ACTUALIZAR EL SUBMIT DEL FORMULARIO ---
-        // Busca tu event listener de 'config-form' y asegúrate que incluya los nuevos campos:
-        document.getElementById('config-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); const btn = document.getElementById('btn-save-config'); btn.textContent = "Guardando..."; btn.disabled = true;
-            try {
-                // ... (tu lógica existente de QR) ...
-                const file = document.getElementById('qr-input').files[0]; let qrUrl = document.getElementById('qr-preview').src; 
-                if (file) {
-                    const fileName = `qr_${currentUser.id}_${Date.now()}.${file.name.split('.').pop()}`;
-                    await supabase.storage.from('imagenes-pagos').upload(fileName, file, { upsert: true });
-                    const { data } = supabase.storage.from('imagenes-pagos').getPublicUrl(fileName); qrUrl = data.publicUrl;
-                }
-
-                const aliasInput = document.getElementById('conf-alias').value.trim().toLowerCase();
-                
-                // ACTUALIZAMOS EL OBJETO UPDATES CON LOS CAMPOS PWA
-                const updates = {
-                    nombre: document.getElementById('conf-nombre-admin').value,
-                    telefono: document.getElementById('conf-telefono').value,
-                    banco_nombre: document.getElementById('conf-banco').value,
-                    banco_titular: document.getElementById('conf-titular').value,
-                    banco_ci: document.getElementById('conf-ci').value,
-                    banco_numero: document.getElementById('conf-numero').value,
-                    banco_tipo: document.getElementById('conf-tipo').value,
-                    slug: aliasInput || null, 
-                    qr_imagen_url: qrUrl && qrUrl.startsWith('http') ? qrUrl : null,
-                    
-                    // NUEVOS CAMPOS PWA
-                    pwa_nombre_app: document.getElementById('conf-pwa-nombre').value.trim(),
-                    pwa_icono_b64: document.getElementById('conf-pwa-b64').value // Aquí va el texto largo de la imagen
-                };
-                
-                const { error } = await supabase.from('usuarios').update(updates).eq('id', currentUser.id);
-                if (error) {
-                    if (error.code === '23505') throw new Error("¡Ese nombre de tienda ya existe!");
-                    throw error;
-                }
-
-                showToast("¡Configuración guardada!", "Datos actualizados.");
-            } catch (err) { showToast("Error", err.message); } finally { btn.disabled = false; btn.textContent = "Guardar Configuración"; }
-        });
     </script>
 </body>
 </html>
