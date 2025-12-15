@@ -576,23 +576,23 @@
         }
 
         /* MODAL PARA ESCRIBIR COMENTARIO */
-        #review-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            z-index: 2000;
-            display: none; 
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
+#review-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 2000;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
 
-        #review-modal-overlay.open {
-            display: flex;
-        }
+#review-modal-overlay.open {
+    display: flex;
+}
 
         .review-modal {
             background: white;
@@ -937,39 +937,54 @@
             }
         }
 
-        /* --- ESTILOS ACTUALIZADOS PARA REPUTACIÓN Y VENTAS --- */
-        .card-reputation {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 0.8rem;
-            margin-bottom: 8px;
-            margin-top: 4px;
-        }
+        /* --- NUEVOS ESTILOS PARA REPUTACIÓN EN TARJETA --- */
+.card-reputation {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 8px;
+    flex-wrap: wrap;
+}
 
-        .card-stars {
-            color: #fbbf24;
-            display: flex;
-            font-size: 0.8rem;
-        }
+.card-stars-container {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
 
-        /* Nuevo estilo destacado para las ventas */
-        .card-sold-count {
-            background: #fff7ed;
-            color: #ea580c;
-            font-size: 0.75rem;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-weight: 700;
-            border: 1px solid #ffedd5;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
+.card-stars-container i.fa-star,
+.card-stars-container i.fa-star-half-alt {
+    color: #fbbf24;
+    font-size: 0.8rem;
+}
 
-        .card-sold-count i {
-            font-size: 0.7rem;
-        }
+.card-stars-container i.far.fa-star {
+    color: #cbd5e1;
+    font-size: 0.8rem;
+}
+
+.card-rating-number {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-left: 4px;
+    font-weight: 600;
+}
+
+.card-review-count {
+    font-size: 0.7rem;
+    color: #64748b;
+}
+
+.card-sales-badge {
+    background: #dcfce7;
+    color: #16a34a;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: auto;
+}
+
     </style>
 </head>
 <body>
@@ -1083,7 +1098,9 @@
         <div id="products-grid" class="grid"></div>
     </div>
 
+    <!-- NUEVA PÁGINA DE PRODUCTO -->
     <div id="product-page">
+        <!-- Header fijo con botón volver -->
         <div class="product-page-header">
             <button onclick="goBackToCatalog()" class="back-btn">
                 <i class="fas fa-arrow-left"></i>
@@ -1095,14 +1112,18 @@
             </button>
         </div>
 
+        <!-- Contenido con scroll -->
         <div class="product-page-content">
+            <!-- Slider principal -->
             <div class="page-slider-container" id="page-slider-container">
                 <div class="page-slider-track" id="page-slider-track"></div>
                 <div class="slider-indicators" id="page-slider-indicators"></div>
             </div>
 
+            <!-- Mini galería (thumbnails) -->
             <div class="page-thumbs-container" id="page-thumbs"></div>
 
+            <!-- Información principal -->
             <div class="product-main-info">
                 <div class="category-badge" id="page-category"></div>
                 <h1 class="product-page-name" id="page-product-name"></h1>
@@ -1122,6 +1143,7 @@
                     <div class="discount-badge-page" id="page-discount">-25%</div>
                 </div>
 
+                <!-- Descripción expandible -->
                 <div class="description-section">
                     <h3>Descripción</h3>
                     <div class="description-text" id="page-description"></div>
@@ -1130,12 +1152,14 @@
                     </button>
                 </div>
 
+                <!-- Especificaciones -->
                 <div class="specs-section">
                     <h3>Detalles</h3>
                     <div class="specs-grid" id="page-specs"></div>
                 </div>
             </div>
 
+            <!-- Sección Social Proof (Reacciones y Comentarios) -->
             <div class="social-proof-page">
                 <div class="social-header">
                     <h3>Opiniones de clientes</h3>
@@ -1146,6 +1170,7 @@
                     </div>
                 </div>
 
+                <!-- Barra de reacciones mejorada -->
                 <div class="reactions-bar">
                     <div class="reaction-item active" onclick="setReactionFilter('all')">
                         <span>Todas</span>
@@ -1165,20 +1190,25 @@
                     </div>
                 </div>
 
+                <!-- Botón para escribir opinión -->
                 <button class="write-review-btn" onclick="openReviewForm()">
                     <i class="fas fa-pen"></i> Escribir tu opinión
                 </button>
 
+                <!-- Lista de comentarios -->
                 <div class="reviews-container" id="page-reviews-list">
-                    </div>
+                    <!-- Los comentarios se cargan aquí -->
+                </div>
             </div>
 
+            <!-- Productos relacionados -->
             <div class="related-products" id="related-products-section">
                 <h3>Productos relacionados</h3>
                 <div class="related-grid" id="page-related-products"></div>
             </div>
         </div>
 
+        <!-- Footer fijo con CTA -->
         <div class="product-page-footer">
             <div class="footer-actions">
                 <button class="btn-favorite" onclick="toggleFavorite()">
@@ -1201,6 +1231,7 @@
         </div>
     </div>
 
+    <!-- MODAL PARA ESCRIBIR RESEÑA -->
     <div id="review-modal-overlay">
         <div class="review-modal">
             <div class="review-modal-header">
@@ -1361,7 +1392,7 @@
     
     // Variable global para guardar estadísticas calculadas (estrellas y ventas)
     let productStatsCache = {};
-
+    
     const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
     // --- INIT ---
@@ -1456,6 +1487,9 @@
         
         // Cargar datos actuales
         document.getElementById('edit-name-input').value = session.clientName || '';
+        // Obtenemos el teléfono (no está en session, lo pedimos a localStorage o BD, pero simplificamos)
+        // Nota: session no guarda el telefono, así que lo consultamos rapido o lo dejamos vacío si queremos.
+        // Consultamos a Supabase para tener datos frescos
         const { data: userData } = await supabase.from('clientes').select('*').eq('id', session.clientId).single();
         if(userData) {
             document.getElementById('edit-name-input').value = userData.nombre;
@@ -1707,18 +1741,18 @@
         updateHeaderUser();
         loadCatalog();
     }
-        
-    // --- CATALOG & UI (ACTUALIZADO PARA CONTAR CANTIDADES) ---
+
+    // --- CATALOG & UI ---
     async function loadCatalog() {
         const grid = document.getElementById('products-grid');
-        grid.innerHTML = '<p style="text-align:center; width:100%; margin-top:50px;"><i class="fas fa-spinner fa-spin"></i> Cargando catálogo...</p>';
+        grid.innerHTML = '<p style="text-align:center; width:100%; margin-top:50px;"><i class="fas fa-spinner fa-spin"></i> Cargando catálogo y reputación...</p>';
         
         try {
-            // 1. Cargar Productos, Comentarios y Pedidos Completados
+            // 1. Cargar Productos, Comentarios y Pedidos Completados en paralelo (para velocidad)
             const [productsRes, commentsRes, ordersRes] = await Promise.all([
                 supabase.from('productos').select('*').eq('creado_por', session.storeId).order('id', { ascending: false }),
-                supabase.from('comentarios').select('producto_id, estrellas'),
-                supabase.from('pedidos').select('productos').eq('tienda_id', session.storeId).eq('estado', 'completado')
+                supabase.from('comentarios').select('producto_id, estrellas'), // Traemos solo lo necesario
+                supabase.from('pedidos').select('productos').eq('tienda_id', session.storeId).eq('estado', 'completado') // Solo ventas reales
             ]);
 
             const products = productsRes.data || [];
@@ -1727,15 +1761,15 @@
 
             productsCache = products;
 
-            // 2. Procesar Estadísticas
+            // 2. Procesar Estadísticas (Calculadora de Social Proof)
             productStatsCache = {};
             
-            // A) Inicializar cache
+            // A) Inicializar
             products.forEach(p => {
                 productStatsCache[p.id] = { totalStars: 0, countReviews: 0, sales: 0 };
             });
 
-            // B) Calcular Estrellas
+            // B) Calcular Promedio de Estrellas
             comments.forEach(c => {
                 if (productStatsCache[c.producto_id]) {
                     productStatsCache[c.producto_id].totalStars += c.estrellas;
@@ -1743,19 +1777,18 @@
                 }
             });
 
-            // C) Calcular Ventas Totales (SUMANDO CANTIDADES REALES)
+            // C) Calcular Ventas Totales (Recorriendo el JSON de pedidos)
             orders.forEach(order => {
                 let items = [];
-                // Manejo de compatibilidad: tu sistema guarda arrays planos (ej: si compro 2, aparecen 2 items en el array)
+                // Manejo de compatibilidad: a veces 'productos' es array directo, a veces objeto {items: [...]}
                 if (Array.isArray(order.productos)) items = order.productos;
                 else if (order.productos && order.productos.items) items = order.productos.items;
 
                 items.forEach(item => {
                     // item puede ser solo el ID o un objeto {id: 1, ...}
                     const pId = typeof item === 'object' ? item.id : item;
-                    
                     if (productStatsCache[pId]) {
-                        productStatsCache[pId].sales++; // Suma +1 por cada unidad encontrada
+                        productStatsCache[pId].sales++; 
                     }
                 });
             });
@@ -1765,7 +1798,7 @@
             renderCategoryButtons(cats);
             renderProducts(products);
 
-            // Cargar datos extra de la tienda
+            // Cargar datos de la tienda (logo, pagos)
             const { data: storeData } = await supabase.from('usuarios').select('*').eq('id', session.storeId).single();
             if(storeData) {
                 storePaymentInfo = storeData;
@@ -1790,7 +1823,6 @@
         renderProducts(cat === 'Todos' ? productsCache : productsCache.filter(p => p.categoria === cat));
     }
     
-    // --- RENDERIZADO DE PRODUCTOS (ACTUALIZADO CON UI DE VENTAS) ---
     function renderProducts(list) {
         const grid = document.getElementById('products-grid');
         if(!list.length) { 
@@ -1799,24 +1831,29 @@
         }
 
         grid.innerHTML = list.map(p => {
-            // Obtener stats calculadas
+            // Obtener stats calculadas previamente
             const stats = productStatsCache[p.id] || { totalStars: 0, countReviews: 0, sales: 0 };
             
-            // Calcular promedio estrellas
+            // Calcular promedio visual
             const avg = stats.countReviews > 0 ? (stats.totalStars / stats.countReviews).toFixed(1) : 0;
             
-            // Generar HTML de estrellas
+            // Generar HTML de estrellas (rellenas vs vacías)
             let starsHtml = '';
+            const filledStars = Math.floor(avg);
+            const hasHalfStar = (avg % 1) >= 0.5;
+            
             for(let i=1; i<=5; i++) {
-                if(i <= Math.round(avg)) starsHtml += '<i class="fas fa-star"></i>';
-                else starsHtml += '<i class="far fa-star" style="color:#cbd5e1;"></i>';
+                if(i <= filledStars) {
+                    starsHtml += '<i class="fas fa-star" style="color:#fbbf24;"></i>';
+                } else if(i === filledStars + 1 && hasHalfStar) {
+                    starsHtml += '<i class="fas fa-star-half-alt" style="color:#fbbf24;"></i>';
+                } else {
+                    starsHtml += '<i class="far fa-star" style="color:#cbd5e1;"></i>';
+                }
             }
 
-            // --- LÓGICA DE VISUALIZACIÓN DE VENTAS ---
-            let salesBadgeHtml = '';
-            if (stats.sales > 0) {
-                salesBadgeHtml = `<div class="card-sold-count"><i class="fas fa-fire-alt"></i> ${stats.sales} vendidas</div>`;
-            }
+            // Texto de ventas - Mostrar correctamente
+            const salesText = stats.sales > 0 ? `${stats.sales} vendidos` : 'Nuevo';
 
             return `
             <div class="card">
@@ -1824,14 +1861,16 @@
                      class="card-img" 
                      onclick="openProductPage(${p.id})">
                 <div class="card-body">
-                    <div style="font-weight:600; font-size:0.95rem; margin-bottom: 5px; line-height:1.3; color:#0f172a;">${p.nombre}</div>
+                    <div style="font-weight:600; font-size:0.9rem; margin-bottom: 5px; line-height:1.3;">${p.nombre}</div>
                     
+                    <!-- REPUTACIÓN MEJORADA -->
                     <div class="card-reputation">
-                        <div class="card-stars">
-                            ${starsHtml} 
-                            <span style="color:#94a3b8; font-size:0.7rem; margin-left:3px;">(${stats.countReviews})</span>
+                        <div class="card-stars-container">
+                            ${starsHtml}
+                            <span class="card-rating-number">${avg}</span>
                         </div>
-                        ${salesBadgeHtml}
+                        <span class="card-review-count">(${stats.countReviews})</span>
+                        <span class="card-sales-badge">${salesText}</span>
                     </div>
 
                     <div style="color:var(--accent); font-weight:800; font-size:1.1rem; margin-bottom: 10px;">$${p.precio}</div>
@@ -2257,37 +2296,43 @@
         }
         if (!session.clientId) {
             showNotification('Debes iniciar sesión para comentar', 'error');
-            promptClientRegister(); // Reutilizamos tu lógica de login
+            promptClientRegister();
             return;
         }
 
-        const btnSubmit = document.querySelector('.btn-submit-review'); //
+        const btnSubmit = document.querySelector('.btn-submit-review');
         const originalText = btnSubmit.textContent;
         btnSubmit.textContent = "Publicando...";
         btnSubmit.disabled = true;
         
+        console.log("Intentando enviar comentario:", {
+            producto_id: currentProductId,
+            cliente_id: session.clientId,
+            texto: text,
+            estrellas: selectedStars
+        });
+
         try {
             const { data, error } = await supabase.from('comentarios').insert({
                 producto_id: currentProductId,
                 cliente_id: session.clientId,
                 texto: text,
                 estrellas: selectedStars
-            }).select(); // .select() es importante para confirmar que se guardó
+            }).select();
 
             if (error) {
-                console.error("Error Supabase:", error); // Verás el error exacto en la consola (F12)
+                console.error("Error Supabase:", error);
                 throw error;
             }
             
             showNotification('¡Opinión publicada exitosamente!', 'success');
-            closeReviewModal(); //
+            closeReviewModal();
             
             // Recargar comentarios inmediatamente
-            await loadProductSocialProof(currentProductId); //
+            await loadProductSocialProof(currentProductId);
             
         } catch (error) {
             console.error('Error crítico al publicar:', error);
-            // Mensaje más descriptivo si es error de permisos
             if(error.code === '42501' || error.message.includes('row-level security')) {
                  showNotification('Error de permisos en la base de datos (RLS)', 'error');
             } else {
