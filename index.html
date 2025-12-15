@@ -576,24 +576,23 @@
         }
 
         /* MODAL PARA ESCRIBIR COMENTARIO */
-#review-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.7);
-    z-index: 2000;
-    display: none; /* <--- ESTO LO MANTIENE OCULTO SIEMPRE */
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-}
+        #review-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 2000;
+            display: none; 
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
 
-/* --- AGREGA ESTA REGLA CSS FALTANTE --- */
-#review-modal-overlay.open {
-    display: flex;
-}
+        #review-modal-overlay.open {
+            display: flex;
+        }
 
         .review-modal {
             background: white;
@@ -938,51 +937,39 @@
             }
         }
 
-        /* --- NUEVOS ESTILOS PARA REPUTACIÓN EN TARJETA --- */
-.card-reputation {
-    display: flex;
-    align-items: center;
-    font-size: 0.8rem;
-    margin-bottom: 8px;
-    gap: 4px;
-}
-.card-stars {
-    color: #fbbf24; /* Color amarillo estrella */
-    display: flex;
-}
-.card-reputation {
-    display: flex;
-    align-items: center;
-    justify-content: space-between; /* Separa estrellas y ventas */
-    font-size: 0.8rem;
-    margin-bottom: 8px;
-    margin-top: 4px;
-}
+        /* --- ESTILOS ACTUALIZADOS PARA REPUTACIÓN Y VENTAS --- */
+        .card-reputation {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+            margin-top: 4px;
+        }
 
-.card-stars {
-    color: #fbbf24;
-    display: flex;
-    font-size: 0.8rem;
-}
+        .card-stars {
+            color: #fbbf24;
+            display: flex;
+            font-size: 0.8rem;
+        }
 
-/* Nuevo estilo destacado para las ventas */
-.card-sold-count {
-    background: #fff7ed; /* Fondo naranja muy claro */
-    color: #ea580c;      /* Texto naranja oscuro */
-    font-size: 0.75rem;
-    padding: 3px 8px;
-    border-radius: 12px;
-    font-weight: 700;
-    border: 1px solid #ffedd5;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
+        /* Nuevo estilo destacado para las ventas */
+        .card-sold-count {
+            background: #fff7ed;
+            color: #ea580c;
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 700;
+            border: 1px solid #ffedd5;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
 
-.card-sold-count i {
-    font-size: 0.7rem;
-}
-
+        .card-sold-count i {
+            font-size: 0.7rem;
+        }
     </style>
 </head>
 <body>
@@ -1096,9 +1083,7 @@
         <div id="products-grid" class="grid"></div>
     </div>
 
-    <!-- NUEVA PÁGINA DE PRODUCTO -->
     <div id="product-page">
-        <!-- Header fijo con botón volver -->
         <div class="product-page-header">
             <button onclick="goBackToCatalog()" class="back-btn">
                 <i class="fas fa-arrow-left"></i>
@@ -1110,18 +1095,14 @@
             </button>
         </div>
 
-        <!-- Contenido con scroll -->
         <div class="product-page-content">
-            <!-- Slider principal -->
             <div class="page-slider-container" id="page-slider-container">
                 <div class="page-slider-track" id="page-slider-track"></div>
                 <div class="slider-indicators" id="page-slider-indicators"></div>
             </div>
 
-            <!-- Mini galería (thumbnails) -->
             <div class="page-thumbs-container" id="page-thumbs"></div>
 
-            <!-- Información principal -->
             <div class="product-main-info">
                 <div class="category-badge" id="page-category"></div>
                 <h1 class="product-page-name" id="page-product-name"></h1>
@@ -1141,7 +1122,6 @@
                     <div class="discount-badge-page" id="page-discount">-25%</div>
                 </div>
 
-                <!-- Descripción expandible -->
                 <div class="description-section">
                     <h3>Descripción</h3>
                     <div class="description-text" id="page-description"></div>
@@ -1150,14 +1130,12 @@
                     </button>
                 </div>
 
-                <!-- Especificaciones -->
                 <div class="specs-section">
                     <h3>Detalles</h3>
                     <div class="specs-grid" id="page-specs"></div>
                 </div>
             </div>
 
-            <!-- Sección Social Proof (Reacciones y Comentarios) -->
             <div class="social-proof-page">
                 <div class="social-header">
                     <h3>Opiniones de clientes</h3>
@@ -1168,7 +1146,6 @@
                     </div>
                 </div>
 
-                <!-- Barra de reacciones mejorada -->
                 <div class="reactions-bar">
                     <div class="reaction-item active" onclick="setReactionFilter('all')">
                         <span>Todas</span>
@@ -1188,25 +1165,20 @@
                     </div>
                 </div>
 
-                <!-- Botón para escribir opinión -->
                 <button class="write-review-btn" onclick="openReviewForm()">
                     <i class="fas fa-pen"></i> Escribir tu opinión
                 </button>
 
-                <!-- Lista de comentarios -->
                 <div class="reviews-container" id="page-reviews-list">
-                    <!-- Los comentarios se cargan aquí -->
-                </div>
+                    </div>
             </div>
 
-            <!-- Productos relacionados -->
             <div class="related-products" id="related-products-section">
                 <h3>Productos relacionados</h3>
                 <div class="related-grid" id="page-related-products"></div>
             </div>
         </div>
 
-        <!-- Footer fijo con CTA -->
         <div class="product-page-footer">
             <div class="footer-actions">
                 <button class="btn-favorite" onclick="toggleFavorite()">
@@ -1229,7 +1201,6 @@
         </div>
     </div>
 
-    <!-- MODAL PARA ESCRIBIR RESEÑA -->
     <div id="review-modal-overlay">
         <div class="review-modal">
             <div class="review-modal-header">
@@ -1388,6 +1359,9 @@
     let selectedStars = 5;
     let myReaction = null;
     
+    // Variable global para guardar estadísticas calculadas (estrellas y ventas)
+    let productStatsCache = {};
+
     const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
     // --- INIT ---
@@ -1482,9 +1456,6 @@
         
         // Cargar datos actuales
         document.getElementById('edit-name-input').value = session.clientName || '';
-        // Obtenemos el teléfono (no está en session, lo pedimos a localStorage o BD, pero simplificamos)
-        // Nota: session no guarda el telefono, así que lo consultamos rapido o lo dejamos vacío si queremos.
-        // Consultamos a Supabase para tener datos frescos
         const { data: userData } = await supabase.from('clientes').select('*').eq('id', session.clientId).single();
         if(userData) {
             document.getElementById('edit-name-input').value = userData.nombre;
@@ -1736,12 +1707,8 @@
         updateHeaderUser();
         loadCatalog();
     }
-
-
-// Variable global para guardar estadísticas calculadas (estrellas y ventas)
-    let productStatsCache = {};
         
-   // --- CATALOG & UI ---
+    // --- CATALOG & UI (ACTUALIZADO PARA CONTAR CANTIDADES) ---
     async function loadCatalog() {
         const grid = document.getElementById('products-grid');
         grid.innerHTML = '<p style="text-align:center; width:100%; margin-top:50px;"><i class="fas fa-spinner fa-spin"></i> Cargando catálogo...</p>';
@@ -1751,7 +1718,6 @@
             const [productsRes, commentsRes, ordersRes] = await Promise.all([
                 supabase.from('productos').select('*').eq('creado_por', session.storeId).order('id', { ascending: false }),
                 supabase.from('comentarios').select('producto_id, estrellas'),
-                // Traemos TODOS los pedidos completados para sumar cantidades reales
                 supabase.from('pedidos').select('productos').eq('tienda_id', session.storeId).eq('estado', 'completado')
             ]);
 
@@ -1777,16 +1743,15 @@
                 }
             });
 
-            // C) Calcular Ventas Totales (SUMANDO CANTIDADES)
+            // C) Calcular Ventas Totales (SUMANDO CANTIDADES REALES)
             orders.forEach(order => {
                 let items = [];
-                // Tu sistema guarda arrays planos (ej: si compro 2 del mismo, aparecen 2 objetos en el array)
-                // Por lo tanto, iterar el array completo cuenta las cantidades correctamente.
+                // Manejo de compatibilidad: tu sistema guarda arrays planos (ej: si compro 2, aparecen 2 items en el array)
                 if (Array.isArray(order.productos)) items = order.productos;
                 else if (order.productos && order.productos.items) items = order.productos.items;
 
                 items.forEach(item => {
-                    // item puede ser el ID directo o un objeto {id: 1, ...}
+                    // item puede ser solo el ID o un objeto {id: 1, ...}
                     const pId = typeof item === 'object' ? item.id : item;
                     
                     if (productStatsCache[pId]) {
@@ -1825,8 +1790,8 @@
         renderProducts(cat === 'Todos' ? productsCache : productsCache.filter(p => p.categoria === cat));
     }
     
-
-function renderProducts(list) {
+    // --- RENDERIZADO DE PRODUCTOS (ACTUALIZADO CON UI DE VENTAS) ---
+    function renderProducts(list) {
         const grid = document.getElementById('products-grid');
         if(!list.length) { 
             grid.innerHTML = '<p style="text-align:center; color:#94a3b8; grid-column:1/-1;">No hay productos.</p>'; 
@@ -1848,8 +1813,6 @@ function renderProducts(list) {
             }
 
             // --- LÓGICA DE VISUALIZACIÓN DE VENTAS ---
-            // Si tiene ventas, muestra el icono de fuego y la cantidad.
-            // Si no tiene ventas, no muestra nada (espacio en blanco) o puedes poner "Nuevo".
             let salesBadgeHtml = '';
             if (stats.sales > 0) {
                 salesBadgeHtml = `<div class="card-sold-count"><i class="fas fa-fire-alt"></i> ${stats.sales} vendidas</div>`;
@@ -1884,7 +1847,8 @@ function renderProducts(list) {
                 </div>
             </div>`;
         }).join('');
-}
+    }
+
     // --- PÁGINA COMPLETA DE PRODUCTO ---
     function openProductPage(productId) {
         const product = productsCache.find(p => p.id === productId);
@@ -2283,7 +2247,7 @@ function renderProducts(list) {
         });
     }
 
- async function submitReview() {
+    async function submitReview() {
         const text = document.getElementById('review-text-input').value.trim();
         
         // Validación básica
@@ -2302,13 +2266,6 @@ function renderProducts(list) {
         btnSubmit.textContent = "Publicando...";
         btnSubmit.disabled = true;
         
-        console.log("Intentando enviar comentario:", {
-            producto_id: currentProductId, //
-            cliente_id: session.clientId,  //
-            texto: text,
-            estrellas: selectedStars       //
-        });
-
         try {
             const { data, error } = await supabase.from('comentarios').insert({
                 producto_id: currentProductId,
