@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#f8f9fa">
+    <meta property="og:title" content="Catálogo Online">
+<meta property="og:description" content="Visita mi tienda y mira nuestros productos disponibles.">
+<meta property="og:image" content="https://tu-dominio.com/imagen-portada-tienda.jpg">
+<meta property="og:type" content="website">
     <title>Tienda</title>
     
     <link rel="manifest" id="my-manifest-placeholder">
@@ -1820,7 +1824,7 @@ async function loadCatalog() {
                 });
             });
 
-            // 3. Renderizar
+         // 3. Renderizar
             const cats = ['Todos', ...new Set(products.map(p => p.categoria).filter(c=>c))];
             renderCategoryButtons(cats);
             renderProducts(products);
@@ -1832,6 +1836,23 @@ async function loadCatalog() {
                 renderPaymentInfo();
                 if (storeData.logo_url) document.getElementById('store-branding').innerHTML = `<img src="${storeData.logo_url}" alt="Logo" style="height: 40px; max-width: 180px; object-fit: contain;">`;
             }
+
+            // --- NUEVO BLOQUE: ABRIR PRODUCTO DESDE URL ---
+            const params = new URLSearchParams(window.location.search);
+            const urlProductId = params.get('product');
+            
+            if (urlProductId) {
+                const productToOpen = products.find(p => p.id == urlProductId);
+                if (productToOpen) {
+                    openProductPage(productToOpen.id);
+                } else {
+                    // Si el ID no existe, limpiamos la URL para que no confunda
+                    const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?u=" + session.storeCode;
+                    window.history.replaceState({path:newUrl},'',newUrl);
+                    showNotification("El producto del enlace no está disponible", "error");
+                }
+            }
+            // ----------------------------------------------
 
         } catch (error) {
             console.error("Error cargando catálogo:", error);
@@ -1921,7 +1942,11 @@ async function loadCatalog() {
         
         currentProductPageData = product;
         currentProductId = productId;
+
+        document.title = `${product.nombre} - $${product.precio}`;
+        
         currentProductQuantity = 1;
+
         
         // Ocultar catálogo, mostrar página de producto
         document.querySelector('.container').style.display = 'none';
@@ -1942,14 +1967,28 @@ async function loadCatalog() {
         updatePageCartCount();
     }
 
-    function goBackToCatalog() {
+function goBackToCatalog() {
         document.getElementById('product-page').style.display = 'none';
         document.querySelector('.container').style.display = 'block';
+        
+        // Restaura elementos UI
         document.querySelector('.chat-btn').style.display = 'flex';
         document.querySelector('.cart-float').style.display = 'flex';
+        
+        // --- NUEVO: RESTAURAR TÍTULO Y URL LIMPIA ---
+        // Recuperamos el nombre de la tienda del manifest o sesión
+        const storeName = localStorage.getItem('storeName') || "Tienda"; // Asegúrate de guardar el nombre en loadCatalog si quieres
+        document.title = storeName; 
+        
+        // Limpiar el parámetro ?product=X de la URL sin recargar
+        const url = new URL(window.location.href);
+        url.searchParams.delete('product');
+        window.history.pushState({}, '', url);
+        // --------------------------------------------
+
         currentProductPageData = null;
         currentProductId = null;
-    }
+}
 
     function loadProductPageData(product) {
         // Configurar slider
@@ -2516,17 +2555,30 @@ async function loadCatalog() {
         }
     }
 
-    function shareProduct() {
+   function shareProduct() {
+        // 1. Construir la URL base correctamente
+        const urlObj = new URL(window.location.href);
+        
+        // 2. Asegurar que tenemos el parámetro de la tienda (u o tienda)
+        // Nota: urlObj.searchParams mantiene los parámetros actuales (?u=tienda)
+        
+        // 3. Agregar o actualizar el parámetro del producto
+        urlObj.searchParams.set('product', currentProductPageData.id);
+        
+        const cleanUrl = urlObj.toString();
+
+        // 4. Datos para compartir
+        const shareData = {
+            title: currentProductPageData.nombre,
+            text: `¡Mira este producto! ${currentProductPageData.nombre} - $${currentProductPageData.precio}`,
+            url: cleanUrl
+        };
+
+        // 5. Intentar compartir nativamente o copiar
         if (navigator.share) {
-            navigator.share({
-                title: currentProductPageData.nombre,
-                text: `¡Mira este producto! ${currentProductPageData.descripcion?.substring(0, 100)}...`,
-                url: window.location.href + `?product=${currentProductPageData.id}`
-            });
+            navigator.share(shareData).catch(console.error);
         } else {
-            // Copiar enlace al portapapeles
-            const link = `${window.location.origin}?product=${currentProductPageData.id}`;
-            navigator.clipboard.writeText(link);
+            navigator.clipboard.writeText(cleanUrl);
             showNotification('Enlace copiado al portapapeles', 'success');
         }
     }
