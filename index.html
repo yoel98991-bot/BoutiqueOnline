@@ -4,20 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#f8f9fa">
-    <meta property="og:title" content="Catálogo Online">
-<meta property="og:title" content="__OG_TITLE__">
-<meta property="og:description" content="__OG_DESCRIPTION__">
-<meta property="og:image" content="__OG_IMAGE__">
-<meta property="og:type" content="website">
-
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="__OG_TITLE__">
-<meta name="twitter:description" content="__OG_DESCRIPTION__">
-<meta name="twitter:image" content="__OG_IMAGE__">
-    <title>Tienda</title>
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="__OG_URL__">
+    <meta property="og:title" content="__OG_TITLE__">
+    <meta property="og:description" content="__OG_DESCRIPTION__">
+    <meta property="og:image" content="__OG_IMAGE__">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:locale" content="es_ES">
+    <meta property="og:site_name" content="Mi Tienda Online">
+    <meta property="og:image:type" content="image/jpeg">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="__OG_URL__">
+    <meta property="twitter:title" content="__TWITTER_TITLE__">
+    <meta property="twitter:description" content="__TWITTER_DESCRIPTION__">
+    <meta property="twitter:image" content="__TWITTER_IMAGE__">
+    
+    <!-- WhatsApp específico -->
+    <meta property="og:site_name" content="Mi Tienda Online">
+    
+    <title>__OG_TITLE__</title>
     
     <link rel="manifest" id="my-manifest-placeholder">
-
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2561,34 +2573,44 @@ function goBackToCatalog() {
         }
     }
 
-   function shareProduct() {
-        // TU URL DE SUPABASE EDGE FUNCTION
-        const EDGE_FUNC_URL = "https://cirrapytmbnjlhxunkaq.supabase.co/functions/v1/product-preview";
+ function shareProduct() {
+    if (!currentProductPageData) return;
+    
+    // URL de tu Vercel
+    const vercelUrl = "https://boutique-online-nine.vercel.app";
+    const storeCode = session.storeCode || new URL(window.location.href).searchParams.get('u');
+    const product = currentProductPageData.id;
+    
+    // Nueva URL limpia usando tu propio dominio
+    const cleanUrl = `${vercelUrl}/api/preview?u=${storeCode}&product=${product}`;
+    
+    // Datos para compartir
+    const shareData = {
+        title: `${currentProductPageData.nombre} - $${currentProductPageData.precio}`,
+        text: `¡Mira ${currentProductPageData.nombre} por solo $${currentProductPageData.precio}!`,
+        url: cleanUrl
+    };
+
+    // Intentar compartir nativamente
+    if (navigator.share && navigator.canShare(shareData)) {
+        navigator.share(shareData)
+            .then(() => console.log('Compartido exitosamente'))
+            .catch((error) => {
+                console.log('Error al compartir:', error);
+                // Fallback: copiar al portapapeles
+                navigator.clipboard.writeText(cleanUrl);
+                showNotification('✅ Enlace copiado', 'Pega en WhatsApp para ver el preview');
+            });
+    } else {
+        // Fallback para navegadores sin Web Share API
+        navigator.clipboard.writeText(cleanUrl);
+        showNotification('✅ Enlace copiado', 'Pega en WhatsApp para ver el preview');
         
-        // Construir parámetros
-        const params = new URLSearchParams();
-        // Usamos el código de tienda de la sesión o de la URL actual
-        const storeCode = session.storeCode || new URL(window.location.href).searchParams.get('u');
-        
-        if(storeCode) params.set('u', storeCode);
-        params.set('product', currentProductPageData.id);
-
-        // El enlace mágico
-        const smartLink = `${EDGE_FUNC_URL}?${params.toString()}`;
-
-        const shareData = {
-            title: currentProductPageData.nombre,
-            text: `¡Mira ${currentProductPageData.nombre}!`,
-            url: smartLink 
-        };
-
-        if (navigator.share) {
-            navigator.share(shareData).catch(console.error);
-        } else {
-            navigator.clipboard.writeText(smartLink);
-            showNotification('Enlace copiado con vista previa 📸', 'success');
-        }
+        // Opcional: abrir WhatsApp directamente
+        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Mira este producto: ${cleanUrl}`)}`;
+        window.open(whatsappUrl, '_blank');
     }
+}
 
     function toggleDescription() {
         const desc = document.getElementById('page-description');
