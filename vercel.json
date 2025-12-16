@@ -1,6 +1,6 @@
 {
   "functions": {
-    "api/product-preview.js": {
+    "api/preview.js": {
       "maxDuration": 10,
       "memory": 1024
     }
@@ -18,19 +18,19 @@
   "rewrites": [
     {
       "source": "/p/:product",
-      "destination": "/api/product-preview?product=:product"
+      "destination": "/api/preview?product=:product"
     },
     {
       "source": "/tienda/:store/:product",
-      "destination": "/api/product-preview?u=:store&product=:product"
+      "destination": "/api/preview?u=:store&product=:product"
     },
     {
       "source": "/producto/:product",
-      "destination": "/api/product-preview?product=:product"
+      "destination": "/api/preview?product=:product"
     },
     {
       "source": "/tienda/:store",
-      "destination": "/api/product-preview?u=:store"
+      "destination": "/api/preview?u=:store"
     }
   ]
 }
