@@ -8,6 +8,13 @@
 <meta property="og:description" content="Visita mi tienda y mira nuestros productos disponibles.">
 <meta property="og:image" content="https://tu-dominio.com/imagen-portada-tienda.jpg">
 <meta property="og:type" content="website">
+    <meta property="og:title" content="__OG_TITLE__">
+<meta property="og:description" content="__OG_DESCRIPTION__">
+<meta property="og:image" content="__OG_IMAGE__">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="__OG_TITLE__">
+<meta name="twitter:description" content="__OG_DESCRIPTION__">
+<meta name="twitter:image" content="__OG_IMAGE__">
     <title>Tienda</title>
     
     <link rel="manifest" id="my-manifest-placeholder">
@@ -2556,30 +2563,31 @@ function goBackToCatalog() {
     }
 
    function shareProduct() {
-        // 1. Construir la URL base correctamente
-        const urlObj = new URL(window.location.href);
+        // TU URL DE SUPABASE EDGE FUNCTION
+        const EDGE_FUNC_URL = "https://cirrapytmbnjlhxunkaq.supabase.co/functions/v1/product-preview";
         
-        // 2. Asegurar que tenemos el parámetro de la tienda (u o tienda)
-        // Nota: urlObj.searchParams mantiene los parámetros actuales (?u=tienda)
+        // Construir parámetros
+        const params = new URLSearchParams();
+        // Usamos el código de tienda de la sesión o de la URL actual
+        const storeCode = session.storeCode || new URL(window.location.href).searchParams.get('u');
         
-        // 3. Agregar o actualizar el parámetro del producto
-        urlObj.searchParams.set('product', currentProductPageData.id);
-        
-        const cleanUrl = urlObj.toString();
+        if(storeCode) params.set('u', storeCode);
+        params.set('product', currentProductPageData.id);
 
-        // 4. Datos para compartir
+        // El enlace mágico
+        const smartLink = `${EDGE_FUNC_URL}?${params.toString()}`;
+
         const shareData = {
             title: currentProductPageData.nombre,
-            text: `¡Mira este producto! ${currentProductPageData.nombre} - $${currentProductPageData.precio}`,
-            url: cleanUrl
+            text: `¡Mira ${currentProductPageData.nombre}!`,
+            url: smartLink 
         };
 
-        // 5. Intentar compartir nativamente o copiar
         if (navigator.share) {
             navigator.share(shareData).catch(console.error);
         } else {
-            navigator.clipboard.writeText(cleanUrl);
-            showNotification('Enlace copiado al portapapeles', 'success');
+            navigator.clipboard.writeText(smartLink);
+            showNotification('Enlace copiado con vista previa 📸', 'success');
         }
     }
 
