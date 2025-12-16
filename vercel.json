@@ -27,11 +27,10 @@
     {
       "source": "/producto/:product",
       "destination": "/api/product-preview?product=:product"
-    }
-        {
+    },
+    {
       "source": "/tienda/:store",
       "destination": "/api/product-preview?u=:store"
     }
-    
   ]
 }
