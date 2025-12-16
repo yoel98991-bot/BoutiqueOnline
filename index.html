@@ -2573,43 +2573,73 @@ function goBackToCatalog() {
         }
     }
 
- function shareProduct() {
+function shareProduct() {
     if (!currentProductPageData) return;
     
-    // URL de tu Vercel
     const vercelUrl = "https://boutique-online-nine.vercel.app";
     const storeCode = session.storeCode || new URL(window.location.href).searchParams.get('u');
     const product = currentProductPageData.id;
     
-    // Nueva URL limpia usando tu propio dominio
-    const cleanUrl = `${vercelUrl}/api/preview?u=${storeCode}&product=${product}`;
+    // Opción A: URL corta y limpia (recomendada)
+    const cleanUrl = `${vercelUrl}/tienda/${storeCode}/${product}`;
     
-    // Datos para compartir
+    // Opción B: URL con parámetros
+    // const cleanUrl = `${vercelUrl}/api/product-preview?u=${storeCode}&product=${product}`;
+    
+    const productName = currentProductPageData.nombre;
+    const productPrice = currentProductPageData.precio;
+    
     const shareData = {
-        title: `${currentProductPageData.nombre} - $${currentProductPageData.precio}`,
-        text: `¡Mira ${currentProductPageData.nombre} por solo $${currentProductPageData.precio}!`,
+        title: `${productName} - $${productPrice} | Tienda Online`,
+        text: `¡Mira ${productName} por solo $${productPrice}! Disponible en mi tienda online. ${cleanUrl}`,
         url: cleanUrl
     };
 
-    // Intentar compartir nativamente
-    if (navigator.share && navigator.canShare(shareData)) {
+    // Intentar compartir nativamente (Web Share API)
+    if (navigator.share) {
         navigator.share(shareData)
-            .then(() => console.log('Compartido exitosamente'))
+            .then(() => {
+                console.log('✅ Compartido exitosamente');
+                // Registrar el share para estadísticas
+                if (session.clientId) {
+                    supabase.from('product_shares').insert({
+                        producto_id: product,
+                        cliente_id: session.clientId,
+                        tienda_id: session.storeId
+                    }).catch(e => console.error('Error registrando share:', e));
+                }
+            })
             .catch((error) => {
-                console.log('Error al compartir:', error);
-                // Fallback: copiar al portapapeles
-                navigator.clipboard.writeText(cleanUrl);
-                showNotification('✅ Enlace copiado', 'Pega en WhatsApp para ver el preview');
+                if (error.name !== 'AbortError') {
+                    console.log('Fallback a copiar enlace:', error);
+                    copyToClipboardWithFeedback(cleanUrl);
+                }
             });
     } else {
         // Fallback para navegadores sin Web Share API
-        navigator.clipboard.writeText(cleanUrl);
-        showNotification('✅ Enlace copiado', 'Pega en WhatsApp para ver el preview');
-        
-        // Opcional: abrir WhatsApp directamente
-        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Mira este producto: ${cleanUrl}`)}`;
-        window.open(whatsappUrl, '_blank');
+        copyToClipboardWithFeedback(cleanUrl);
     }
+}
+
+function copyToClipboardWithFeedback(url) {
+    navigator.clipboard.writeText(url).then(() => {
+        // Mostrar notificación de éxito
+        showNotification('✅ Enlace copiado', 'Pega en WhatsApp/Facebook para ver el preview');
+        
+        // Vibrar si es posible
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        
+        // Opcional: abrir WhatsApp Web
+        setTimeout(() => {
+            if (confirm('¿Quieres abrir WhatsApp para compartir el enlace?')) {
+                const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Mira este producto: ${url}`)}`;
+                window.open(whatsappUrl, '_blank');
+            }
+        }, 500);
+    }).catch(err => {
+        console.error('Error al copiar:', err);
+        showNotification('⚠️ Error', 'No se pudo copiar el enlace');
+    });
 }
 
     function toggleDescription() {
