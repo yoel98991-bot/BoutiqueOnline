@@ -36,7 +36,8 @@ export default async function handler(req, res) {
         description = `Precio: $${prodData.precio} - ${prodData.descripcion || 'Ver detalles'}`;
         image = prodData.imagen_url;
         // Mantenemos la estructura de URL que ya te funciona
-        finalUrl = `https://boutique-online-nine.vercel.app/?u=${u || prodData.usuario_id}&p=${product}`;
+        // Cambia por tu dominio correcto
+finalUrl = `https://boutique-online-pink.vercel.app/?u=${u || prodData.usuario_id}&p=${product}`;
     } 
     
     // =================================================================
@@ -119,7 +120,8 @@ export default async function handler(req, res) {
   } catch (error) {
     // Fallback de seguridad
     console.error(error);
-    res.setHeader('Location', `https://boutique-online-nine.vercel.app/?u=${u || ''}`);
+    // Cambia por tu dominio correcto
+res.setHeader('Location', `https://boutique-online-pink.vercel.app/?u=${u || ''}`);
     return res.status(302).send('Redirigiendo...');
   }
 }
