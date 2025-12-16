@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#f8f9fa">
     
-    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="__OG_URL__">
     <meta property="og:title" content="__OG_TITLE__">
@@ -17,14 +16,12 @@
     <meta property="og:site_name" content="Mi Tienda Online">
     <meta property="og:image:type" content="image/jpeg">
     
-    <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="__OG_URL__">
     <meta property="twitter:title" content="__TWITTER_TITLE__">
     <meta property="twitter:description" content="__TWITTER_DESCRIPTION__">
     <meta property="twitter:image" content="__TWITTER_IMAGE__">
     
-    <!-- WhatsApp específico -->
     <meta property="og:site_name" content="Mi Tienda Online">
     
     <title>__OG_TITLE__</title>
@@ -32,6 +29,7 @@
     <link rel="manifest" id="my-manifest-placeholder">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -1083,7 +1081,7 @@
                 
                 <form onsubmit="handleRegistration(event)">
                     <div class="avatar-upload-container" onclick="document.getElementById('client-avatar-input').click()">
-                        <img id="avatar-preview-img" src="https://via.placeholder.com/100?text=Foto" class="avatar-preview">
+                        <img id="avatar-preview-img" src="https://placehold.co/100x100?text=Foto" class="avatar-preview">
                         <div class="avatar-edit-icon"><i class="fas fa-camera"></i></div>
                         <input type="file" id="client-avatar-input" accept="image/*" style="display:none;" onchange="handleAvatarUpload(this, 'avatar-preview-img', 'client-avatar-b64')">
                     </div>
@@ -1146,9 +1144,7 @@
         <div id="products-grid" class="grid"></div>
     </div>
 
-    <!-- NUEVA PÁGINA DE PRODUCTO -->
     <div id="product-page">
-        <!-- Header fijo con botón volver -->
         <div class="product-page-header">
             <button onclick="goBackToCatalog()" class="back-btn">
                 <i class="fas fa-arrow-left"></i>
@@ -1160,18 +1156,14 @@
             </button>
         </div>
 
-        <!-- Contenido con scroll -->
         <div class="product-page-content">
-            <!-- Slider principal -->
             <div class="page-slider-container" id="page-slider-container">
                 <div class="page-slider-track" id="page-slider-track"></div>
                 <div class="slider-indicators" id="page-slider-indicators"></div>
             </div>
 
-            <!-- Mini galería (thumbnails) -->
             <div class="page-thumbs-container" id="page-thumbs"></div>
 
-            <!-- Información principal -->
             <div class="product-main-info">
                 <div class="category-badge" id="page-category"></div>
                 <h1 class="product-page-name" id="page-product-name"></h1>
@@ -1191,7 +1183,6 @@
                     <div class="discount-badge-page" id="page-discount">-25%</div>
                 </div>
 
-                <!-- Descripción expandible -->
                 <div class="description-section">
                     <h3>Descripción</h3>
                     <div class="description-text" id="page-description"></div>
@@ -1200,14 +1191,12 @@
                     </button>
                 </div>
 
-                <!-- Especificaciones -->
                 <div class="specs-section">
                     <h3>Detalles</h3>
                     <div class="specs-grid" id="page-specs"></div>
                 </div>
             </div>
 
-            <!-- Sección Social Proof (Reacciones y Comentarios) -->
             <div class="social-proof-page">
                 <div class="social-header">
                     <h3>Opiniones de clientes</h3>
@@ -1218,7 +1207,6 @@
                     </div>
                 </div>
 
-                <!-- Barra de reacciones mejorada -->
                 <div class="reactions-bar">
                     <div class="reaction-item active" onclick="setReactionFilter('all')">
                         <span>Todas</span>
@@ -1238,25 +1226,20 @@
                     </div>
                 </div>
 
-                <!-- Botón para escribir opinión -->
                 <button class="write-review-btn" onclick="openReviewForm()">
                     <i class="fas fa-pen"></i> Escribir tu opinión
                 </button>
 
-                <!-- Lista de comentarios -->
                 <div class="reviews-container" id="page-reviews-list">
-                    <!-- Los comentarios se cargan aquí -->
-                </div>
+                    </div>
             </div>
 
-            <!-- Productos relacionados -->
             <div class="related-products" id="related-products-section">
                 <h3>Productos relacionados</h3>
                 <div class="related-grid" id="page-related-products"></div>
             </div>
         </div>
 
-        <!-- Footer fijo con CTA -->
         <div class="product-page-footer">
             <div class="footer-actions">
                 <button class="btn-favorite" onclick="toggleFavorite()">
@@ -1279,7 +1262,6 @@
         </div>
     </div>
 
-    <!-- MODAL PARA ESCRIBIR RESEÑA -->
     <div id="review-modal-overlay">
         <div class="review-modal">
             <div class="review-modal-header">
@@ -1387,6 +1369,8 @@
     <script>
     const SUPABASE_URL = 'https://cirrapytmbnjlhxunkaq.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnJhcHl0bWJuamxoeHVua2FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NzAyMDAsImV4cCI6MjA3ODU0NjIwMH0.OtJiLGj1EvhPICFaA9ruL02Z9kSQ2jT0t3Smqph81C4';
+    
+    // CORRECCIÓN: Usamos _supabase para evitar conflicto con la librería global 'supabase'
     const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // --- SERVICE WORKER (PWA) ---
@@ -1456,7 +1440,7 @@
     // --- AUTH & SETUP ---
     async function resolveStore(codeOrSlug) {
         try {
-            const { data: store, error } = await supabase
+            const { data: store, error } = await _supabase
                 .from('usuarios')
                 .select('id, codigo_tienda, nombre, logo_url, pwa_nombre_app, pwa_icono_b64')
                 .or(`codigo_tienda.eq.${codeOrSlug.toUpperCase()},slug.eq.${codeOrSlug}`)
@@ -1538,7 +1522,7 @@
         // Obtenemos el teléfono (no está en session, lo pedimos a localStorage o BD, pero simplificamos)
         // Nota: session no guarda el telefono, así que lo consultamos rapido o lo dejamos vacío si queremos.
         // Consultamos a Supabase para tener datos frescos
-        const { data: userData } = await supabase.from('clientes').select('*').eq('id', session.clientId).single();
+        const { data: userData } = await _supabase.from('clientes').select('*').eq('id', session.clientId).single();
         if(userData) {
             document.getElementById('edit-name-input').value = userData.nombre;
             document.getElementById('edit-phone-input').value = userData.telefono;
@@ -1563,7 +1547,7 @@
         btn.disabled = true; btn.innerHTML = "Guardando...";
 
         try {
-            const { error } = await supabase.from('clientes').update({
+            const { error } = await _supabase.from('clientes').update({
                 nombre: name,
                 telefono: phone,
                 foto_b64: avatar || null
@@ -1626,7 +1610,7 @@
 
         try {
             // Buscamos si existe el cliente
-            const { data: client, error } = await supabase.from('clientes').select('*').eq('telefono', phone).single();
+            const { data: client, error } = await _supabase.from('clientes').select('*').eq('telefono', phone).single();
 
             hideAllLoginSteps();
 
@@ -1666,7 +1650,7 @@
         if (!pendingClientData) return resetLogin();
 
         // Actualizamos última visita
-        await supabase.from('clientes').update({ 
+        await _supabase.from('clientes').update({ 
             ultima_tienda_visitada: session.storeCode 
         }).eq('id', pendingClientData.id);
 
@@ -1680,7 +1664,7 @@
         document.getElementById('reg-name').value = '';
         document.getElementById('check-phone').value = '';
         document.getElementById('client-avatar-b64').value = '';
-        document.getElementById('avatar-preview-img').src = 'https://via.placeholder.com/100?text=Foto';
+        document.getElementById('avatar-preview-img').src = 'https://placehold.co/100x100?text=Foto';
         
         hideAllLoginSteps();
         document.getElementById('step-phone').style.display = 'block';
@@ -1706,7 +1690,7 @@
                 foto_b64: avatarB64 || null 
             };
 
-            const { data: newClient, error } = await supabase.from('clientes').insert(newClientData).select().single();
+            const { data: newClient, error } = await _supabase.from('clientes').insert(newClientData).select().single();
             if (error) throw error;
 
             completeLogin(newClient);
@@ -1796,9 +1780,9 @@ async function loadCatalog() {
         try {
             // 1. Cargar Productos, Comentarios y Pedidos Completados
             const [productsRes, commentsRes, ordersRes] = await Promise.all([
-                supabase.from('productos').select('*').eq('creado_por', session.storeId).order('id', { ascending: false }),
-                supabase.from('comentarios').select('producto_id, estrellas'),
-                supabase.from('pedidos').select('productos').eq('tienda_id', session.storeId).eq('estado', 'completado')
+                _supabase.from('productos').select('*').eq('creado_por', session.storeId).order('id', { ascending: false }),
+                _supabase.from('comentarios').select('producto_id, estrellas'),
+                _supabase.from('pedidos').select('productos').eq('tienda_id', session.storeId).eq('estado', 'completado')
             ]);
 
             const products = productsRes.data || [];
@@ -1848,7 +1832,7 @@ async function loadCatalog() {
             renderProducts(products);
 
             // Cargar datos de la tienda
-            const { data: storeData } = await supabase.from('usuarios').select('*').eq('id', session.storeId).single();
+            const { data: storeData } = await _supabase.from('usuarios').select('*').eq('id', session.storeId).single();
             if(storeData) {
                 storePaymentInfo = storeData;
                 renderPaymentInfo();
@@ -1924,7 +1908,7 @@ async function loadCatalog() {
 
             return `
             <div class="card">
-                <img src="${p.imagen_url || 'https://via.placeholder.com/300'}" 
+                <img src="${p.imagen_url || 'https://placehold.co/300'}" 
                      class="card-img" 
                      onclick="openProductPage(${p.id})">
                 <div class="card-body">
@@ -2011,14 +1995,14 @@ function goBackToCatalog() {
     function loadProductPageData(product) {
         // Configurar slider
         const images = product.galeria && product.galeria.length ? product.galeria : 
-                       (product.imagen_url ? [product.imagen_url] : ['https://via.placeholder.com/400']);
+                       (product.imagen_url ? [product.imagen_url] : ['https://placehold.co/400']);
         
         const sliderTrack = document.getElementById('page-slider-track');
         const indicators = document.getElementById('page-slider-indicators');
         const thumbs = document.getElementById('page-thumbs');
         
         sliderTrack.innerHTML = images.map(img => 
-            `<img src="${img}" alt="${product.nombre}" onerror="this.src='https://via.placeholder.com/400'">`
+            `<img src="${img}" alt="${product.nombre}" onerror="this.src='https://placehold.co/400'">`
         ).join('');
         
         indicators.innerHTML = images.map((_, i) => 
@@ -2163,7 +2147,7 @@ function goBackToCatalog() {
     async function loadProductSocialProof(productId) {
         try {
             // Cargar reacciones
-            const { data: reactions } = await supabase
+            const { data: reactions } = await _supabase
                 .from('reacciones')
                 .select('*')
                 .eq('producto_id', productId);
@@ -2192,7 +2176,7 @@ function goBackToCatalog() {
             updateReactionButtonsUI();
             
             // Cargar comentarios
-            const { data: comments } = await supabase
+            const { data: comments } = await _supabase
                 .from('comentarios')
                 .select('*, clientes(nombre, foto_b64)')
                 .eq('producto_id', productId)
@@ -2301,7 +2285,7 @@ function goBackToCatalog() {
         
         try {
             // Buscar si ya existe una reacción
-            const { data: existing } = await supabase
+            const { data: existing } = await _supabase
                 .from('reacciones')
                 .select('id, tipo')
                 .eq('producto_id', currentProductId)
@@ -2311,16 +2295,16 @@ function goBackToCatalog() {
             if (existing) {
                 if (existing.tipo === type) {
                     // Eliminar reacción (toggle off)
-                    await supabase.from('reacciones').delete().eq('id', existing.id);
+                    await _supabase.from('reacciones').delete().eq('id', existing.id);
                     myReaction = null;
                 } else {
                     // Cambiar reacción
-                    await supabase.from('reacciones').update({ tipo: type }).eq('id', existing.id);
+                    await _supabase.from('reacciones').update({ tipo: type }).eq('id', existing.id);
                     myReaction = type;
                 }
             } else {
                 // Nueva reacción
-                await supabase.from('reacciones').insert({
+                await _supabase.from('reacciones').insert({
                     producto_id: currentProductId,
                     cliente_id: session.clientId,
                     tipo: type
@@ -2396,7 +2380,7 @@ function goBackToCatalog() {
         });
 
         try {
-            const { data, error } = await supabase.from('comentarios').insert({
+            const { data, error } = await _supabase.from('comentarios').insert({
                 producto_id: currentProductId,
                 cliente_id: session.clientId,
                 texto: text,
@@ -2445,7 +2429,7 @@ function goBackToCatalog() {
         relatedSection.style.display = 'block';
         relatedGrid.innerHTML = related.map(p => `
             <div class="related-card" onclick="openProductPage(${p.id})">
-                <img src="${p.imagen_url || 'https://via.placeholder.com/200'}" class="related-img">
+                <img src="${p.imagen_url || 'https://placehold.co/200'}" class="related-img">
                 <div class="related-info">
                     <div class="related-name">${p.nombre}</div>
                     <div class="related-price">$${p.precio}</div>
@@ -2602,7 +2586,7 @@ function shareProduct() {
                 console.log('✅ Compartido exitosamente');
                 // Registrar el share para estadísticas
                 if (session.clientId) {
-                    supabase.from('product_shares').insert({
+                    _supabase.from('product_shares').insert({
                         producto_id: product,
                         cliente_id: session.clientId,
                         tienda_id: session.storeId
@@ -2792,9 +2776,9 @@ function copyToClipboardWithFeedback(url) {
 
         const total = cart.reduce((s,i) => s + i.precio, 0);
         try {
-            await supabase.from('pedidos').insert({ cliente_id: session.clientId, total: total, productos: cart.map(p=>({id:p.id,name:p.nombre,price:p.precio})), estado: 'pendiente', tienda_id: session.storeId });
+            await _supabase.from('pedidos').insert({ cliente_id: session.clientId, total: total, productos: cart.map(p=>({id:p.id,name:p.nombre,price:p.precio})), estado: 'pendiente', tienda_id: session.storeId });
             let msg = `✅ ¡Pedido Nuevo! Total: $${total.toFixed(2)}\n${method==='delivery'?'🛵 Delivery: '+address:'📍 Retiro en Tienda'}`;
-            await supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: msg });
+            await _supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: msg });
             renderMsg({ contenido: msg, enviado_por_rol: 'cliente' });
             cart=[]; updateCartUI(); toggleCart(); 
             const cb = document.getElementById('chat-box'); if(!cb.classList.contains('open')) toggleChat();
@@ -2810,11 +2794,11 @@ function copyToClipboardWithFeedback(url) {
     
     async function initChat() {
         if(!session.clientId) return;
-        const { data } = await supabase.from('mensajes').select('*').eq('tienda_id', session.storeId).eq('cliente_id', session.clientId).order('created_at', { ascending: true });
+        const { data } = await _supabase.from('mensajes').select('*').eq('tienda_id', session.storeId).eq('cliente_id', session.clientId).order('created_at', { ascending: true });
         document.getElementById('chat-msgs').innerHTML = ''; if(data) data.forEach(renderMsg); scrollToBottom();
         
         if(chatChannel) return;
-        chatChannel = supabase.channel(`chat_${session.storeId}_${session.clientId}`)
+        chatChannel = _supabase.channel(`chat_${session.storeId}_${session.clientId}`)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `cliente_id=eq.${session.clientId}` }, p => {
                 if (p.new.enviado_por_rol !== 'cliente') {
                     renderMsg(p.new);
@@ -2838,17 +2822,17 @@ function copyToClipboardWithFeedback(url) {
         e.preventDefault(); if(!session.clientId) { promptClientRegister(); return; }
         const i = document.getElementById('chat-input'); const txt = i.value.trim(); if(!txt) return;
         i.value=''; renderMsg({ contenido: txt, enviado_por_rol: 'cliente' });
-        await supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: txt });
+        await _supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: txt });
     }
     
     async function uploadChatImage(input) {
         if(!session.clientId) return; const file=input.files[0]; if(!file) return;
         try {
             const ext = file.name.split('.').pop(); const name = `${session.storeId}/${session.clientId}_${Date.now()}.${ext}`;
-            await supabase.storage.from('chat-adjuntos').upload(name, file);
-            const { data } = supabase.storage.from('chat-adjuntos').getPublicUrl(name);
+            await _supabase.storage.from('chat-adjuntos').upload(name, file);
+            const { data } = _supabase.storage.from('chat-adjuntos').getPublicUrl(name);
             const c = `Comprobante:<br><img src="${data.publicUrl}" class="chat-img" onclick="window.open(this.src)">`;
-            await supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: c });
+            await _supabase.from('mensajes').insert({ tienda_id: session.storeId, cliente_id: session.clientId, enviado_por_rol: 'cliente', contenido: c });
             renderMsg({ contenido: c, enviado_por_rol: 'cliente' });
         } catch (e) { alert("Error imagen"); } finally { input.value=''; }
     }
