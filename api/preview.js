@@ -1,12 +1,14 @@
-
 import { createClient } from '@supabase/supabase-js';
 
-// TUS CREDENCIALES (Se mantienen igual)
+// TUS CREDENCIALES (Están correctas)
 const SUPABASE_URL = 'https://cirrapytmbnjlhxunkaq.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnJhcHl0bWJuamxoeHVua2FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NzAyMDAsImV4cCI6MjA3ODU0NjIwMH0.OtJiLGj1EvhPICFaA9ruL02Z9kSQ2jT0t3Smqph81C4';
 
+// DOMINIO CORRECTO
+const MY_DOMAIN = 'https://boutique-online-pink.vercel.app';
+
 export default async function handler(req, res) {
-  // Manejar CORS (Igual que antes)
+  // Manejo de CORS
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -21,62 +23,62 @@ export default async function handler(req, res) {
 
   try {
     // =================================================================
-    // CASO A: ES UN PRODUCTO (TU LÓGICA ORIGINAL)
+    // CASO A: ES UN PRODUCTO
     // =================================================================
     if (product) {
+        // CORRECCIÓN: Usamos 'creado_por' en lugar de 'usuario_id'
         const { data: prodData, error } = await supabase
             .from('productos')
-            .select('titulo, precio, imagen_url, descripcion, usuario_id')
+            .select('nombre, precio, imagen_url, descripcion, creado_por') 
             .eq('id', product)
             .single();
 
         if (error || !prodData) throw new Error('Producto no encontrado');
 
-        title = prodData.titulo;
+        title = prodData.nombre; // CORRECCIÓN: 'nombre' en vez de 'titulo'
         description = `Precio: $${prodData.precio} - ${prodData.descripcion || 'Ver detalles'}`;
         image = prodData.imagen_url;
-        // Mantenemos la estructura de URL que ya te funciona
-        // Cambia por tu dominio correcto
-finalUrl = `https://boutique-online-pink.vercel.app/?u=${u || prodData.usuario_id}&p=${product}`;
+        
+        // URL FINAL CORREGIDA
+        finalUrl = `${MY_DOMAIN}/?u=${u || prodData.creado_por}&product=${product}`;
     } 
     
     // =================================================================
-    // CASO B: ES UNA TIENDA (NUEVA LÓGICA)
-    // Se ejecuta solo si NO hay producto, pero SÍ hay usuario (u)
+    // CASO B: ES UNA TIENDA
     // =================================================================
     else if (u) {
-        // Buscamos en la tabla 'perfiles' usando el ID o el ALIAS
+        // CORRECCIÓN: Tabla 'usuarios' en lugar de 'perfiles'
+        // CORRECCIÓN: Columnas 'nombre', 'logo_url', 'slug'
         const { data: storeData, error } = await supabase
-            .from('perfiles')
-            .select('nombre_negocio, bio, avatar_url, alias, id')
-            .or(`id.eq.${u},alias.eq.${u}`)
+            .from('usuarios')
+            .select('nombre, pwa_nombre_app, logo_url, slug, id, codigo_tienda')
+            .or(`id.eq.${u},slug.eq.${u},codigo_tienda.eq.${u}`)
             .single();
 
         if (error || !storeData) {
-            // Si falla, mandamos valores por defecto para que no rompa
             title = "Mi Tienda Online"; 
             description = "Visita mi catálogo";
-            finalUrl = `https://boutique-online-nine.vercel.app/?u=${u}`;
+            finalUrl = `${MY_DOMAIN}/?u=${u}`;
         } else {
-            title = storeData.nombre_negocio || "Mi Tienda";
-            description = storeData.bio || "¡Mira mis productos disponibles!";
-            image = storeData.avatar_url; // Si es null, el HTML abajo manejará un fallback visual, pero los meta tags quedarán vacíos (no rompe)
+            title = storeData.pwa_nombre_app || storeData.nombre || "Mi Tienda";
+            description = `Visita la tienda de ${storeData.nombre}`;
+            image = storeData.logo_url;
             
-            // Usamos el alias si existe para la URL final, si no el ID
-            const identifier = storeData.alias || storeData.id;
-            finalUrl = `https://boutique-online-nine.vercel.app/?u=${identifier}`;
+            // Usamos el código de tienda o slug para la URL
+            const identifier = storeData.slug || storeData.codigo_tienda || storeData.id;
+            finalUrl = `${MY_DOMAIN}/?u=${identifier}`;
         }
     }
 
     // =================================================================
-    // CASO C: NO HAY DATOS (REDIRIGIR)
+    // CASO C: REDIRECCIÓN DEFAULT
     // =================================================================
     else {
-        res.setHeader('Location', `https://boutique-online-nine.vercel.app/`);
+        res.setHeader('Location', `${MY_DOMAIN}/`);
         return res.status(302).send('Redirigiendo...');
     }
 
-    // GENERACIÓN DEL HTML (Sirve para ambos casos)
+    // GENERACIÓN DEL HTML
     const html = `
     <!DOCTYPE html>
     <html lang="es">
@@ -89,12 +91,12 @@ finalUrl = `https://boutique-online-pink.vercel.app/?u=${u || prodData.usuario_i
         <meta property="og:url" content="${finalUrl}">
         <meta property="og:title" content="${title}">
         <meta property="og:description" content="${description}">
-        <meta property="og:image" content="${image || 'https://boutique-online-nine.vercel.app/icon-512.png'}">
+        <meta property="og:image" content="${image || `${MY_DOMAIN}/icon-512.png`}">
         
         <meta property="twitter:card" content="summary_large_image">
         <meta property="twitter:title" content="${title}">
         <meta property="twitter:description" content="${description}">
-        <meta property="twitter:image" content="${image || 'https://boutique-online-nine.vercel.app/icon-512.png'}">
+        <meta property="twitter:image" content="${image || `${MY_DOMAIN}/icon-512.png`}">
 
         <style>
             body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f0f2f5; }
@@ -118,10 +120,8 @@ finalUrl = `https://boutique-online-pink.vercel.app/?u=${u || prodData.usuario_i
     return res.status(200).send(html);
 
   } catch (error) {
-    // Fallback de seguridad
     console.error(error);
-    // Cambia por tu dominio correcto
-res.setHeader('Location', `https://boutique-online-pink.vercel.app/?u=${u || ''}`);
+    res.setHeader('Location', `${MY_DOMAIN}/?u=${u || ''}`);
     return res.status(302).send('Redirigiendo...');
   }
 }
