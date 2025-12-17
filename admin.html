@@ -7,9 +7,11 @@
     <title>Admin</title>
 
     <link rel="manifest" href="./manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Studio">
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -570,7 +572,10 @@
     <script>
         const SUPABASE_URL = 'https://cirrapytmbnjlhxunkaq.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnJhcHl0bWJuamxoeHVua2FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NzAyMDAsImV4cCI6MjA3ODU0NjIwMH0.OtJiLGj1EvhPICFaA9ruL02Z9kSQ2jT0t3Smqph81C4';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // CORRECCIÓN: Usamos _supabase en lugar de supabase para evitar conflicto global
+        const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
         const VAPID_PUBLIC_KEY = "BCkvES3UU5IUHo52kr0VegCslrRYrCo7LcgfJTFAfU-x8g7Ioca5Q-WHU8qyMPDhee6Lbls-l_cjqNQxQuUpoJw";
 
         let currentUser = null;
@@ -744,7 +749,7 @@
             });
             if (currentUser) {
                 const subData = JSON.parse(JSON.stringify(subscription));
-                await supabase.from('push_subscriptions').upsert({
+                await _supabase.from('push_subscriptions').upsert({
                     user_id: currentUser.id,
                     endpoint: subData.endpoint,
                     p256dh: subData.keys.p256dh,
@@ -754,7 +759,7 @@
         }
 
         // --- AUTH Y CARGA ---
-        supabase.auth.onAuthStateChange((event, session) => {
+        _supabase.auth.onAuthStateChange((event, session) => {
             if (session) {
                 currentUser = session.user;
                 initAdmin(session.user);
@@ -766,13 +771,13 @@
         });
 
         async function initAdmin(user) {
-            let { data: userData } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
+            let { data: userData } = await _supabase.from('usuarios').select('*').eq('id', user.id).single();
             if (!userData) {
                 userData = { id: user.id, email: user.email, nombre: 'Admin', rol: 'dueño' };
-                await supabase.from('usuarios').insert(userData);
+                await _supabase.from('usuarios').insert(userData);
             }
             storeCode = userData.codigo_tienda || 'TIENDA-' + Math.random().toString(36).substring(2, 6).toUpperCase();
-            if (!userData.codigo_tienda) await supabase.from('usuarios').update({ codigo_tienda: storeCode }).eq('id', user.id);
+            if (!userData.codigo_tienda) await _supabase.from('usuarios').update({ codigo_tienda: storeCode }).eq('id', user.id);
 
             document.getElementById('store-code-display').textContent = "CÓDIGO: " + storeCode;
             document.getElementById('login-container').style.display = 'none';
@@ -831,9 +836,9 @@
             try {
                 let result;
                 if (isLoginMode) {
-                    result = await supabase.auth.signInWithPassword({ email, password });
+                    result = await _supabase.auth.signInWithPassword({ email, password });
                 } else {
-                    result = await supabase.auth.signUp({ email, password });
+                    result = await _supabase.auth.signUp({ email, password });
                 }
 
                 if (result.error) throw result.error;
@@ -854,15 +859,15 @@
         });
 
         async function logout() {
-            if (globalChannel) await supabase.removeChannel(globalChannel);
-            await supabase.auth.signOut(); window.location.reload();
+            if (globalChannel) await _supabase.removeChannel(globalChannel);
+            await _supabase.auth.signOut(); window.location.reload();
         }
 
         // --- REALTIME ---
         async function setupGlobalRealtime() {
             if (globalChannel && ['SUBSCRIBED', 'JOINED'].includes(globalChannel.state)) return;
-            if (globalChannel) await supabase.removeChannel(globalChannel);
-            globalChannel = supabase.channel(`admin-global-${currentUser.id}-${Date.now()}`)
+            if (globalChannel) await _supabase.removeChannel(globalChannel);
+            globalChannel = _supabase.channel(`admin-global-${currentUser.id}-${Date.now()}`)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `tienda_id=eq.${currentUser.id}` }, payload => {
                 if(payload.new.tienda_id != currentUser.id) return;
                 if(payload.new.enviado_por_rol === 'cliente') {
@@ -975,9 +980,9 @@ async function shareStoreLink() {
                     } else if (item.type === 'file') {
                         const file = item.data;
                         const fileName = `${currentUser.id}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                        const { error: uploadErr } = await supabase.storage.from('imagenes-productos').upload(fileName, file);
+                        const { error: uploadErr } = await _supabase.storage.from('imagenes-productos').upload(fileName, file);
                         if (uploadErr) throw uploadErr;
-                        const { data } = supabase.storage.from('imagenes-productos').getPublicUrl(fileName);
+                        const { data } = _supabase.storage.from('imagenes-productos').getPublicUrl(fileName);
                         uploadedUrls.push(data.publicUrl);
                     }
                 }
@@ -993,8 +998,8 @@ async function shareStoreLink() {
                     imagen_url: mainImage,
                     galeria: uploadedUrls
                 };
-                if (editingId) { await supabase.from('productos').update(productData).eq('id', editingId); } 
-                else { await supabase.from('productos').insert([productData]); }
+                if (editingId) { await _supabase.from('productos').update(productData).eq('id', editingId); } 
+                else { await _supabase.from('productos').insert([productData]); }
                 resetForm(); loadProducts(); showToast("Éxito", "Producto guardado con fotos.");
                 checkOnboarding(); // Actualizar progreso
             } catch (error) { alert("Error: " + error.message); } 
@@ -1009,7 +1014,7 @@ async function shareStoreLink() {
         }
 
         async function loadProducts() {
-            const { data } = await supabase.from('productos').select('*').eq('creado_por', currentUser.id).order('id', {ascending:false});
+            const { data } = await _supabase.from('productos').select('*').eq('creado_por', currentUser.id).order('id', {ascending:false});
             productsCache = data || []; updateCategoryDatalist(); 
             const table = document.getElementById('products-table');
             if(!data || data.length === 0) { table.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Sin productos.</td></tr>'; checkOnboarding(); return; }
@@ -1036,14 +1041,14 @@ async function shareStoreLink() {
 
         async function deleteProduct(id) { 
             customConfirm("¿Eliminar Producto?", "Esta acción borrará el producto permanentemente del catálogo.", "danger",
-                async () => { await supabase.from('productos').delete().eq('id', id); loadProducts(); showToast("Eliminado", "Producto borrado correctamente"); }
+                async () => { await _supabase.from('productos').delete().eq('id', id); loadProducts(); showToast("Eliminado", "Producto borrado correctamente"); }
             );
         }
 
         // --- PEDIDOS ---
         let showingHistory = false; 
         async function loadOrders() {
-            const { data } = await supabase.from('pedidos').select('*, clientes(nombre, telefono)').eq('tienda_id', currentUser.id).order('fecha', {ascending:false});
+            const { data } = await _supabase.from('pedidos').select('*, clientes(nombre, telefono)').eq('tienda_id', currentUser.id).order('fecha', {ascending:false});
             ordersCache = data || []; updateDashboardCounters(); renderOrders();
             checkOnboarding(); // Checkear si hay ventas
         }
@@ -1070,10 +1075,10 @@ async function shareStoreLink() {
                     let items = []; if (order.productos && order.productos.items) items = order.productos.items; else if (Array.isArray(order.productos)) items = order.productos;
                     try {
                         for (const item of items) { 
-                            const { data: curr } = await supabase.from('productos').select('stock').eq('id', item.id).single(); 
-                            if (curr) await supabase.from('productos').update({ stock: curr.stock - 1 }).eq('id', item.id); 
+                            const { data: curr } = await _supabase.from('productos').select('stock').eq('id', item.id).single(); 
+                            if (curr) await _supabase.from('productos').update({ stock: curr.stock - 1 }).eq('id', item.id); 
                         }
-                        await supabase.from('pedidos').update({ estado: 'completado' }).eq('id', orderId); 
+                        await _supabase.from('pedidos').update({ estado: 'completado' }).eq('id', orderId); 
                         showToast("¡Venta Registrada!", "Sumado al resumen.");
                         loadOrders(); loadSummary(); loadProducts();
                     } catch (e) { showToast("Error", e.message); }
@@ -1082,7 +1087,7 @@ async function shareStoreLink() {
         }
 
         async function loadSummary() {
-            const { data: orders, error } = await supabase.from('pedidos').select('total, fecha, cliente_id, clientes(nombre)').eq('tienda_id', currentUser.id).eq('estado', 'completado').order('fecha', { ascending: false });
+            const { data: orders, error } = await _supabase.from('pedidos').select('total, fecha, cliente_id, clientes(nombre)').eq('tienda_id', currentUser.id).eq('estado', 'completado').order('fecha', { ascending: false });
             if (error) { console.error(error); return; }
             let totalIncome = 0; let totalCount = orders.length; const clientMap = {}; 
             orders.forEach(o => {
@@ -1100,7 +1105,7 @@ async function shareStoreLink() {
             document.getElementById('stat-top-spent').textContent = `Ha comprado: $${topClientAmount.toFixed(2)}`;
             const recentBody = document.getElementById('recent-sales-body');
             if(orders.length === 0) { recentBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px; color:#94a3b8;">Sin ventas registradas</td></tr>'; } 
-            else { recentBody.innerHTML = orders.slice(0, 5).map(o => `<tr><td>${o.clientes?.nombre || 'Anon'}</td><td style="color:#22c55e; font-weight:bold;">+$${o.total}</td><td style="color:#64748b; font-size:0.85rem;">${new Date(o.fecha).toLocaleDateString()}</td></tr>`).join(''); }
+            else { recentBody.innerHTML = orders.slice(0, 5).map(o => `<tr><td>${o.clientes?.nombre || 'Anon'}</td><td style="color:#22c55e; font-weight:bold;">+$${o.total}</td><td style="color:#64748b; font-size:0.85rem;">${new Date(o.fecha).toLocaleDateString()</td></tr>`).join(''); }
         }
 
         // --- UI & CHATS ---
@@ -1112,8 +1117,8 @@ async function shareStoreLink() {
             setTimeout(() => { toast.remove(); }, 4000);
         }
         async function updateDashboardCounters() {
-            const { count: unreadMsgs } = await supabase.from('mensajes').select('*', { count: 'exact', head: true }).eq('tienda_id', currentUser.id).eq('leido', false).eq('enviado_por_rol', 'cliente');
-            const { count: pendingOrders } = await supabase.from('pedidos').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente'); 
+            const { count: unreadMsgs } = await _supabase.from('mensajes').select('*', { count: 'exact', head: true }).eq('tienda_id', currentUser.id).eq('leido', false).eq('enviado_por_rol', 'cliente');
+            const { count: pendingOrders } = await _supabase.from('pedidos').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente'); 
             const bChat = document.getElementById('badge-chats'); const bOrd = document.getElementById('badge-orders');
             bChat.textContent = unreadMsgs; bChat.style.display = unreadMsgs > 0 ? 'block' : 'none';
             bOrd.textContent = pendingOrders; bOrd.style.display = pendingOrders > 0 ? 'block' : 'none';
@@ -1128,7 +1133,7 @@ async function shareStoreLink() {
         }
 
         async function loadChatsList() {
-            const { data } = await supabase.from('mensajes').select('*, clientes(id, nombre)').eq('tienda_id', currentUser.id).order('created_at', { ascending: false }).limit(200);
+            const { data } = await _supabase.from('mensajes').select('*, clientes(id, nombre)').eq('tienda_id', currentUser.id).order('created_at', { ascending: false }).limit(200);
             const grouped = {};
             data.forEach(msg => { if (!grouped[msg.cliente_id]) { grouped[msg.cliente_id] = { client: msg.clientes, lastMsg: msg }; } });
             updateDashboardCounters();
@@ -1142,17 +1147,17 @@ async function shareStoreLink() {
             document.getElementById('chats-inbox').style.display = 'none'; document.getElementById('chat-interface').classList.add('active');
             document.getElementById('current-chat-name').textContent = clientName; document.getElementById('current-chat-avatar').textContent = clientName.substring(0,2).toUpperCase();
             document.getElementById('messages-container').innerHTML = 'Cargando...';
-            const { data } = await supabase.from('mensajes').select('*').eq('tienda_id', currentUser.id).eq('cliente_id', clientId).order('created_at', { ascending: true });
+            const { data } = await _supabase.from('mensajes').select('*').eq('tienda_id', currentUser.id).eq('cliente_id', clientId).order('created_at', { ascending: true });
             document.getElementById('messages-container').innerHTML = ''; if(data) data.forEach(renderMessage);
-            await supabase.from('mensajes').update({ leido: true }).eq('cliente_id', clientId).eq('enviado_por_rol', 'cliente');
+            await _supabase.from('mensajes').update({ leido: true }).eq('cliente_id', clientId).eq('enviado_por_rol', 'cliente');
             updateDashboardCounters();
-            if (activeChannel) await supabase.removeChannel(activeChannel);
-            activeChannel = supabase.channel(`typing_${currentUser.id}_${clientId}`).on('broadcast', { event: 'typing' }, () => {
+            if (activeChannel) await _supabase.removeChannel(activeChannel);
+            activeChannel = _supabase.channel(`typing_${currentUser.id}_${clientId}`).on('broadcast', { event: 'typing' }, () => {
                 const ind = document.getElementById('typing-indicator'); ind.textContent = `${clientName} escribe...`; setTimeout(() => ind.textContent = '', 3000);
             }).subscribe();
         }
         function closeChat() {
-            activeChatClientId = null; if (activeChannel) { supabase.removeChannel(activeChannel); activeChannel = null; }
+            activeChatClientId = null; if (activeChannel) { _supabase.removeChannel(activeChannel); activeChannel = null; }
             document.getElementById('chat-interface').classList.remove('active'); document.getElementById('chats-inbox').style.display = 'block'; loadChatsList();
         }
         function renderMessage(msg) {
@@ -1166,7 +1171,7 @@ async function shareStoreLink() {
             e.preventDefault(); const input = document.getElementById('msg-input'); const text = input.value.trim();
             if(!text || !activeChatClientId) return; input.value = '';
             renderMessage({ contenido: text, enviado_por_rol: 'dueño' });
-            await supabase.from('mensajes').insert({ tienda_id: currentUser.id, cliente_id: activeChatClientId, enviado_por_rol: 'dueño', contenido: text });
+            await _supabase.from('mensajes').insert({ tienda_id: currentUser.id, cliente_id: activeChatClientId, enviado_por_rol: 'dueño', contenido: text });
         }
         function notifyTyping() { if(activeChannel) activeChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); }
 
@@ -1183,10 +1188,10 @@ async function shareStoreLink() {
                 btnConfirm.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo...'; btnConfirm.disabled = true;
                 try {
                     const fileName = `logo_${currentUser.id}_${Date.now()}.png`;
-                    const { error: uploadErr } = await supabase.storage.from('tienda-logos').upload(fileName, blob, { contentType: 'image/png', upsert: true });
+                    const { error: uploadErr } = await _supabase.storage.from('tienda-logos').upload(fileName, blob, { contentType: 'image/png', upsert: true });
                     if (uploadErr) throw uploadErr;
-                    const { data: urlData } = supabase.storage.from('tienda-logos').getPublicUrl(fileName);
-                    await supabase.from('usuarios').update({ logo_url: urlData.publicUrl }).eq('id', currentUser.id);
+                    const { data: urlData } = _supabase.storage.from('tienda-logos').getPublicUrl(fileName);
+                    await _supabase.from('usuarios').update({ logo_url: urlData.publicUrl }).eq('id', currentUser.id);
                     showToast("¡Logo actualizado!", "Ya aparece en tu tienda."); 
                     updateAdminLogoUI(urlData.publicUrl); cancelCrop();
                 } catch (error) { showToast("Error", error.message); } finally { btnConfirm.innerHTML = txtOriginal; btnConfirm.disabled = false; }
@@ -1235,7 +1240,7 @@ async function shareStoreLink() {
         }
 
         async function loadConfig() {
-            const { data } = await supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
+            const { data } = await _supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
             if (!data) return;
             
             document.getElementById('conf-nombre-admin').value = data.nombre || '';
@@ -1263,8 +1268,8 @@ async function shareStoreLink() {
                 const file = document.getElementById('qr-input').files[0]; let qrUrl = document.getElementById('qr-preview').src; 
                 if (file) {
                     const fileName = `qr_${currentUser.id}_${Date.now()}.${file.name.split('.').pop()}`;
-                    await supabase.storage.from('imagenes-pagos').upload(fileName, file, { upsert: true });
-                    const { data } = supabase.storage.from('imagenes-pagos').getPublicUrl(fileName); qrUrl = data.publicUrl;
+                    await _supabase.storage.from('imagenes-pagos').upload(fileName, file, { upsert: true });
+                    const { data } = _supabase.storage.from('imagenes-pagos').getPublicUrl(fileName); qrUrl = data.publicUrl;
                 }
 
                 const aliasInput = document.getElementById('conf-alias').value.trim().toLowerCase();
@@ -1283,7 +1288,7 @@ async function shareStoreLink() {
                     pwa_icono_b64: document.getElementById('conf-pwa-b64').value
                 };
                 
-                const { error } = await supabase.from('usuarios').update(updates).eq('id', currentUser.id);
+                const { error } = await _supabase.from('usuarios').update(updates).eq('id', currentUser.id);
                 if (error) {
                     if (error.code === '23505') throw new Error("¡Ese nombre de tienda ya existe!");
                     throw error;
