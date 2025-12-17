@@ -2557,55 +2557,48 @@ function goBackToCatalog() {
         }
     }
 
+// Reemplaza la función shareProduct() existente en index.html
+
 function shareProduct() {
     if (!currentProductPageData) return;
     
-    // Usar window.location.origin obtiene el dominio actual automáticamente
-const vercelUrl = window.location.origin;
-    const storeCode = session.storeCode || new URL(window.location.href).searchParams.get('u');
-    const product = currentProductPageData.id;
+    // Obtener dominio actual automáticamente
+    const domain = window.location.origin;
     
-    // Opción A: URL corta y limpia (recomendada)
-    const cleanUrl = `${vercelUrl}/tienda/${storeCode}/${product}`;
+    // Obtener identificadores
+    // Intentamos obtener el código de tienda de la sesión o URL
+    const storeCode = session.storeCode || new URL(window.location.search).searchParams.get('u');
+    const productId = currentProductPageData.id;
     
-    // Opción B: URL con parámetros
-    // const cleanUrl = `${vercelUrl}/api/product-preview?u=${storeCode}&product=${product}`;
+    // 1. Generar URL compatible con preview.js
+    // Esta ruta /tienda/CODIGO/PRODUCTO activa la función serverless
+    const shareUrl = `${domain}/tienda/${storeCode}/${productId}`;
+    
+    // 2. Obtener calificación actual visual para el texto del mensaje
+    // (Aprovechamos que ya lo calculamos en el cliente para el texto del mensaje)
+    const ratingEl = document.getElementById('page-overall-rating');
+    const ratingVal = ratingEl ? ratingEl.textContent : '0.0';
+    const starEmoji = ratingVal !== '0.0' ? `⭐ ${ratingVal}` : '✨ Nuevo';
     
     const productName = currentProductPageData.nombre;
     const productPrice = currentProductPageData.precio;
     
     const shareData = {
-        title: `${productName} - $${productPrice} | Tienda Online`,
-        text: `¡Mira ${productName} por solo $${productPrice}! Disponible en mi tienda online. ${cleanUrl}`,
-        url: cleanUrl
+        title: productName,
+        text: `${starEmoji} | ${productName} a solo $${productPrice}. ¡Pídelo aquí!`,
+        url: shareUrl
     };
 
-    // Intentar compartir nativamente (Web Share API)
+    // Usar API nativa si existe
     if (navigator.share) {
         navigator.share(shareData)
-            .then(() => {
-                console.log('✅ Compartido exitosamente');
-                // Registrar el share para estadísticas
-                if (session.clientId) {
-                    _supabase.from('product_shares').insert({
-                        producto_id: product,
-                        cliente_id: session.clientId,
-                        tienda_id: session.storeId
-                    }).catch(e => console.error('Error registrando share:', e));
-                }
-            })
-            .catch((error) => {
-                if (error.name !== 'AbortError') {
-                    console.log('Fallback a copiar enlace:', error);
-                    copyToClipboardWithFeedback(cleanUrl);
-                }
-            });
+            .then(() => console.log('Compartido exitosamente'))
+            .catch((err) => console.log('Error compartiendo:', err));
     } else {
-        // Fallback para navegadores sin Web Share API
-        copyToClipboardWithFeedback(cleanUrl);
+        // Fallback: Copiar al portapapeles
+        copyToClipboardWithFeedback(shareUrl);
     }
 }
-
 function copyToClipboardWithFeedback(url) {
     navigator.clipboard.writeText(url).then(() => {
         // Mostrar notificación de éxito
