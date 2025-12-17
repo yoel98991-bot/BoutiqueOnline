@@ -893,46 +893,40 @@
             setTimeout(() => { if (currentUser) setupGlobalRealtime(); }, 5000);
         }
 
-        // CÓDIGO NUEVO A PEGAR EN admin.html
+    // Reemplaza la función shareStoreLink() en admin.html
+
 async function shareStoreLink() {
-    // Usamos alias (conf-alias) si existe, o el ID de usuario si no
-    const aliasInput = document.getElementById('conf-alias').value.trim(); 
-    const identifier = aliasInput || currentUser.id;
+    // Preferir el Alias (slug) si existe, sino el código de tienda o ID
+    const aliasInput = document.getElementById('conf-alias').value.trim();
+    // storeCode se define en initAdmin()
+    const identifier = aliasInput || storeCode || currentUser.id; 
 
-    // 1. Crear la URL que activa el Preview (USANDO /tienda/)
-    let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-    // Si estás en localhost o vercel.app, la URL final es la base + la ruta reescrita /tienda/
-    const shareUrl = `${baseUrl}/tienda/${identifier}`;
+    // Construir URL limpia que activa preview.js
+    const domain = window.location.origin;
+    const shareUrl = `${domain}/tienda/${identifier}`;
 
-    // 2. Datos para compartir
-    const shareTitle = currentUser.nombre_negocio || 'Mi Tienda Online';
-    const shareText = `¡Hola! Visita mi tienda online ${shareTitle}.`;
+    const storeName = document.getElementById('conf-pwa-nombre').value || 'Mi Tienda Online';
 
     if (navigator.share) {
         try {
             await navigator.share({
-                title: shareTitle,
-                text: shareText,
+                title: storeName,
+                text: `¡Hola! Visita mi tienda online ${storeName} y mira el catálogo completo:`,
                 url: shareUrl
             });
-            showToast("Compartido", "Tienda compartida exitosamente.");
+            showToast("Compartido", "Enlace de tienda compartido.");
         } catch (err) {
-            console.log('Error al compartir:', err);
+            console.log(err);
         }
     } else {
-        // Fallback: Copiar al portapapeles
         navigator.clipboard.writeText(shareUrl).then(() => {
-            showToast("Enlace copiado", "El enlace de tu tienda ha sido copiado.");
-        }).catch(err => {
-            showToast("Error", "No se pudo copiar el enlace.");
+            showToast("Copiado", "Enlace copiado al portapapeles.");
         });
     }
 
-    // Opcional: Para el Onboarding (Si el usuario tiene la tienda configurada)
-    if (aliasInput) {
-        localStorage.setItem(`hasSharedLink_${currentUser.id}`, 'true');
-        checkOnboarding();
-    }
+    // Actualizar paso de onboarding si aplica
+    localStorage.setItem(`hasSharedLink_${currentUser.id}`, 'true');
+    checkOnboarding();
 }
 
         function copyCode() { navigator.clipboard.writeText(storeCode); showToast("Código Copiado", storeCode); }
