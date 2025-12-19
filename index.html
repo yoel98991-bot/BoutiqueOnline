@@ -87,9 +87,27 @@
         .chat-header { background: var(--accent); color: white; padding: 15px; font-weight: 600; display: flex; justify-content: space-between; }
         .chat-body { flex: 1; padding: 15px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 10px; }
         .chat-footer { padding: 10px; border-top: 1px solid #eee; display: flex; gap: 10px; background: white; align-items: center; }
-        .msg { max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; word-wrap: break-word; }
-        .msg.me { background: var(--accent); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .msg.store { background: white; color: var(--text-main); align-self: flex-start; border-bottom-left-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .chat-msgs-area { display: flex; flex-direction: column; gap: 15px; padding-bottom: 10px; }
+
+        .msg-row-client { display: flex; align-items: flex-end; gap: 8px; margin-bottom: 10px; }
+        .msg-row-client.me { flex-direction: row-reverse; } 
+        .msg-row-client.store { flex-direction: row; }
+
+        .msg-avatar-client { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; }
+
+        .msg-bubble-client {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            word-wrap: break-word;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            line-height: 1.4;
+        }
+        .msg-row-client.me .msg-bubble-client { background: var(--accent); color: white; border-bottom-right-radius: 2px; }
+        .msg-row-client.store .msg-bubble-client { background: white; color: var(--text-main); border-bottom-left-radius: 2px; border: 1px solid #e2e8f0; }
+        
         .typing { font-size: 0.7rem; color: #94a3b8; margin-left: 10px; height: 15px; }
         .chat-img { max-width: 100%; border-radius: 8px; margin-top: 5px; border: 2px solid rgba(0,0,0,0.1); cursor: pointer; display: block; }
 
@@ -2805,11 +2823,39 @@ function copyToClipboardWithFeedback(url) {
         const b = document.getElementById('unread-badge');
         b.style.display = unreadCount > 0 ? 'flex' : 'none'; b.textContent = unreadCount;
     }
-    
-    function renderMsg(msg) {
-        const d = document.createElement('div'); d.className = `msg ${msg.enviado_por_rol === 'cliente' ? 'me' : 'store'}`;
-        d.innerHTML = msg.contenido.replace(/\n/g, '<br>');
-        document.getElementById('chat-msgs').appendChild(d); scrollToBottom();
+
+        function renderMsg(msg) {
+        const isMe = msg.enviado_por_rol === 'cliente';
+        
+        // Foto del cliente (si está logueado) o genérica
+        const myAvatar = session.clientAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(session.clientName || 'Yo')}&background=random`;
+        
+        // Logo de la tienda (si ya cargó) o icono genérico
+        const storeAvatar = (storePaymentInfo && storePaymentInfo.logo_url) 
+            ? storePaymentInfo.logo_url 
+            : 'https://cdn-icons-png.flaticon.com/512/1041/1041888.png';
+
+        const avatarUrl = isMe ? myAvatar : storeAvatar;
+
+        const row = document.createElement('div');
+        row.className = `msg-row-client ${isMe ? 'me' : 'store'}`;
+
+        let html = msg.contenido.replace(/\n/g, '<br>');
+        // Detectar imágenes si las hubiera (simple)
+        if(html.includes('<img')) {
+             // Si ya es imagen no hacemos nada extra
+        }
+        
+        row.innerHTML = `
+            <img src="${avatarUrl}" class="msg-avatar-client">
+            <div class="msg-bubble-client">
+                ${html}
+            </div>
+        `;
+
+        const container = document.getElementById('chat-msgs');
+        container.appendChild(row);
+        scrollToBottom();
     }
     
     async function sendChatMsg(e) {
