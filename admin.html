@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -412,12 +411,15 @@
                         <input type="number" step="0.01" id="precio" placeholder="Precio" required>
                     </div>
                     <textarea id="descripcion" rows="2" placeholder="Descripción"></textarea>
+                    
                     <div class="form-grid">
+                        <input type="text" id="marca" placeholder="Marca (Ej: Nike, Apple)" style="background: white;">
                         <input type="number" id="stock" value="10" placeholder="Stock">
-                        <div>
-                            <input type="text" id="categoria" list="lista-categorias" placeholder="Categoría (Escribe o selecciona)" style="width:100%; margin-bottom:15px;">
-                            <datalist id="lista-categorias"></datalist>
-                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom:15px;">
+                        <input type="text" id="categoria" list="lista-categorias" placeholder="Categoría (Escribe o selecciona)" style="width:100%;">
+                        <datalist id="lista-categorias"></datalist>
                     </div>
                     
                     <label style="margin-top:10px; display:block;">Galería de Imágenes (Máx 6)</label>
@@ -992,6 +994,10 @@ async function shareStoreLink() {
                     nombre: document.getElementById('nombre').value,
                     precio: parseFloat(document.getElementById('precio').value),
                     descripcion: document.getElementById('descripcion').value,
+                    
+                    // CAMBIO AQUI: SE GUARDA LA MARCA
+                    marca: document.getElementById('marca').value.trim(),
+                    
                     stock: parseInt(document.getElementById('stock').value),
                     categoria: document.getElementById('categoria').value,
                     destacado: document.getElementById('destacado').checked,
@@ -1028,6 +1034,10 @@ async function shareStoreLink() {
             editingId = id;
             document.getElementById('nombre').value = p.nombre; document.getElementById('precio').value = p.precio;
             document.getElementById('descripcion').value = p.descripcion || ''; document.getElementById('stock').value = p.stock;
+            
+            // CAMBIO AQUI: SE CARGA LA MARCA AL EDITAR
+            document.getElementById('marca').value = p.marca || '';
+
             document.getElementById('categoria').value = p.categoria || ''; document.getElementById('destacado').checked = p.destacado;
             galleryFiles = [];
             if (p.galeria && Array.isArray(p.galeria) && p.galeria.length > 0) {
