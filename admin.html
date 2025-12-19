@@ -133,22 +133,6 @@
         .order-item { padding: 15px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; background: white; transition: all 0.3s ease; }
         .badge-pending { background: #fff7ed; color: #c2410c; font-size: 0.7rem; padding: 4px 8px; border-radius: 10px; font-weight: bold;}
         
-        /* Chat */
-        .chat-list-item { display: flex; gap: 15px; padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; }
-        .chat-list-item.unread { background: #eff6ff; }
-        .avatar { width: 45px; height: 45px; background: #cbd5e1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; position: relative; }
-        .chat-window { display: none; height: 70vh; flex-direction: column; background: #f1f5f9; border-radius: var(--radius); overflow: hidden; }
-        .chat-window.active { display: flex; }
-        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .msg { max-width: 75%; padding: 10px 15px; border-radius: 15px; font-size: 0.95rem; }
-        .msg.me { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .msg.them { background: white; color: var(--text); align-self: flex-start; border-bottom-left-radius: 2px; }
-        .msg img { max-width: 100%; border-radius: 8px; margin-top: 5px; }
-        .map-btn { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; padding: 8px 12px; background: #e0e7ff; color: var(--accent); text-decoration: none; font-weight: 600; border-radius: 8px; font-size: 0.85rem; }
-        .chat-input-area { padding: 15px; background: white; display: flex; gap: 10px; border-top: 1px solid var(--border); }
-        .typing-indicator { font-size: 0.75rem; color: #64748b; margin-left: 55px; margin-top: -15px; margin-bottom: 10px; height: 15px; }
-        
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         /* CROPPER */
         #crop-modal { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index: 5000; display:none; justify-content:center; align-items:center; flex-direction:column; padding: 20px; }
@@ -262,6 +246,85 @@
             cursor: pointer; font-size: 1.1rem;
         }
         .close-onboarding:hover { color: white; }
+
+
+        /* --- NUEVOS ESTILOS DE CHAT (WHATSAPP STYLE) --- */
+
+/* Lista de Contactos Elegante */
+.chat-list-item { 
+    display: flex; 
+    gap: 15px; 
+    padding: 15px 20px; 
+    border-bottom: 1px solid #f1f5f9; 
+    cursor: pointer; 
+    transition: background 0.2s ease;
+    align-items: center;
+}
+.chat-list-item:hover { background: #f8fafc; }
+.chat-list-item.unread { background: #eff6ff; border-left: 3px solid var(--accent); }
+
+.chat-avatar-container { position: relative; }
+.chat-avatar-img { 
+    width: 50px; height: 50px; 
+    border-radius: 50%; 
+    object-fit: cover; 
+    border: 1px solid #e2e8f0;
+    background: #f1f5f9;
+}
+.chat-info { flex: 1; min-width: 0; } /* min-width helps truncation */
+.chat-name-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.chat-name { font-weight: 600; font-size: 0.95rem; color: #1e293b; }
+.chat-time { font-size: 0.75rem; color: #94a3b8; }
+.chat-preview { 
+    font-size: 0.85rem; 
+    color: #64748b; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+}
+.chat-list-item.unread .chat-name { color: var(--accent); font-weight: 700; }
+.chat-list-item.unread .chat-preview { color: #1e293b; font-weight: 500; }
+
+/* Ventana de Chat con Avatares */
+.chat-messages { padding: 20px; background: #e5e5e5; /* Fondo gris tipo WA */ }
+
+.msg-row { 
+    display: flex; 
+    align-items: flex-end; 
+    margin-bottom: 15px; 
+    gap: 8px; 
+}
+.msg-row.me { flex-direction: row-reverse; } /* Admin a la derecha */
+.msg-row.them { flex-direction: row; }     /* Cliente a la izquierda */
+
+.msg-avatar { 
+    width: 30px; height: 30px; 
+    border-radius: 50%; 
+    object-fit: cover; 
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.msg-bubble { 
+    max-width: 70%; 
+    padding: 10px 14px; 
+    border-radius: 12px; 
+    font-size: 0.95rem; 
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    line-height: 1.4;
+}
+
+.msg-row.me .msg-bubble { 
+    background: #dcf8c6; /* Verde WA */
+    color: #111; 
+    border-bottom-right-radius: 0;
+}
+.msg-row.them .msg-bubble { 
+    background: #ffffff; 
+    color: #111; 
+    border-bottom-left-radius: 0;
+}
 
     </style>
 </head>
@@ -593,6 +656,7 @@
         let isReconnecting = false;
         let modalCallback = null;
         let galleryFiles = [];
+        let currentStoreLogo = null;
 
         // --- ONBOARDING LOGIC ---
         function checkOnboarding() {
@@ -783,6 +847,7 @@
             if (!userData.codigo_tienda) await _supabase.from('usuarios').update({ codigo_tienda: storeCode }).eq('id', user.id);
 
             document.getElementById('store-code-display').textContent = "CÓDIGO: " + storeCode;
+            currentStoreLogo = userData.logo_url || 'https://cdn-icons-png.flaticon.com/512/1041/1041888.png';
             document.getElementById('login-container').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             
@@ -1143,40 +1208,109 @@ async function shareStoreLink() {
             if(t === 'chats') loadChatsList(); if(t === 'pedidos') loadOrders(); if(t === 'config') loadConfig(); if(t === 'resumen') loadSummary();
         }
 
-        async function loadChatsList() {
-            const { data } = await _supabase.from('mensajes').select('*, clientes(id, nombre)').eq('tienda_id', currentUser.id).order('created_at', { ascending: false }).limit(200);
+       async function loadChatsList() {
+            const { data } = await _supabase.from('mensajes')
+                .select('*, clientes(id, nombre, foto_b64)')
+                .eq('tienda_id', currentUser.id)
+                .order('created_at', { ascending: false })
+                .limit(200);
+
             const grouped = {};
-            data.forEach(msg => { if (!grouped[msg.cliente_id]) { grouped[msg.cliente_id] = { client: msg.clientes, lastMsg: msg }; } });
+            if(data) {
+                data.forEach(msg => { 
+                    if (msg.clientes && !grouped[msg.cliente_id]) { 
+                        grouped[msg.cliente_id] = { client: msg.clientes, lastMsg: msg }; 
+                    } 
+                });
+            }
+
             updateDashboardCounters();
-            document.getElementById('chats-list').innerHTML = Object.values(grouped).map(item => {
+            const listContainer = document.getElementById('chats-list');
+            
+            const chatsHTML = Object.values(grouped).map(item => {
                 const isUnread = !item.lastMsg.leido && item.lastMsg.enviado_por_rol === 'cliente';
-                return `<div class="chat-list-item ${isUnread ? 'unread' : ''}" onclick="openChat('${item.client.id}', '${item.client.nombre}')"><div class="avatar">${item.client.nombre.substring(0,2).toUpperCase()}</div><div style="flex:1;"><div style="font-weight:600;">${item.client.nombre}</div><div style="font-size:0.85rem; color:#64748b;">${item.lastMsg.contenido.substring(0, 30)}...</div></div></div>`;
-            }).join('') || '<div style="padding:20px; text-align:center;">No hay chats</div>';
+                const avatarSrc = item.client.foto_b64 || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.client.nombre)}&background=random`;
+                const dateObj = new Date(item.lastMsg.created_at);
+                const time = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const isMe = item.lastMsg.enviado_por_rol === 'dueño';
+
+                return `
+                <div class="chat-list-item ${isUnread ? 'unread' : ''}" onclick="openChat('${item.client.id}', '${item.client.nombre}', '${avatarSrc}')">
+                    <div class="chat-avatar-container">
+                        <img src="${avatarSrc}" class="chat-avatar-img">
+                    </div>
+                    <div class="chat-info">
+                        <div class="chat-name-row">
+                            <span class="chat-name">${item.client.nombre}</span>
+                            <span class="chat-time">${time}</span>
+                        </div>
+                        <div class="chat-preview">
+                            ${isMe ? '<i class="fas fa-check" style="font-size:0.7rem;"></i> ' : ''}
+                            ${item.lastMsg.contenido.substring(0, 30)}...
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            listContainer.innerHTML = chatsHTML || '<div style="padding:40px; text-align:center; color:#94a3b8;">No tienes chats activos</div>';
         }
-        async function openChat(clientId, clientName) {
+        
+       let activeClientAvatar = null; 
+
+        async function openChat(clientId, clientName, clientAvatarSrc) {
             activeChatClientId = clientId;
-            document.getElementById('chats-inbox').style.display = 'none'; document.getElementById('chat-interface').classList.add('active');
-            document.getElementById('current-chat-name').textContent = clientName; document.getElementById('current-chat-avatar').textContent = clientName.substring(0,2).toUpperCase();
-            document.getElementById('messages-container').innerHTML = 'Cargando...';
-            const { data } = await _supabase.from('mensajes').select('*').eq('tienda_id', currentUser.id).eq('cliente_id', clientId).order('created_at', { ascending: true });
-            document.getElementById('messages-container').innerHTML = ''; if(data) data.forEach(renderMessage);
+            activeClientAvatar = clientAvatarSrc || `https://ui-avatars.com/api/?name=${encodeURIComponent(clientName)}&background=random`;
+            
+            document.getElementById('chats-inbox').style.display = 'none'; 
+            document.getElementById('chat-interface').classList.add('active');
+            
+            document.getElementById('current-chat-name').textContent = clientName; 
+            // Mostramos el avatar del cliente en el encabezado
+            document.getElementById('current-chat-avatar').innerHTML = `<img src="${activeClientAvatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
+            
+            document.getElementById('messages-container').innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+            
+            const { data } = await _supabase.from('mensajes').select('*')
+                .eq('tienda_id', currentUser.id)
+                .eq('cliente_id', clientId)
+                .order('created_at', { ascending: true });
+            
+            document.getElementById('messages-container').innerHTML = ''; 
+            if(data) data.forEach(renderMessage);
+            
             await _supabase.from('mensajes').update({ leido: true }).eq('cliente_id', clientId).eq('enviado_por_rol', 'cliente');
             updateDashboardCounters();
+            
             if (activeChannel) await _supabase.removeChannel(activeChannel);
             activeChannel = _supabase.channel(`typing_${currentUser.id}_${clientId}`).on('broadcast', { event: 'typing' }, () => {
-                const ind = document.getElementById('typing-indicator'); ind.textContent = `${clientName} escribe...`; setTimeout(() => ind.textContent = '', 3000);
+                 const ind = document.getElementById('typing-indicator'); ind.textContent = `${clientName} escribe...`; setTimeout(() => ind.textContent = '', 3000);
             }).subscribe();
         }
         function closeChat() {
             activeChatClientId = null; if (activeChannel) { _supabase.removeChannel(activeChannel); activeChannel = null; }
             document.getElementById('chat-interface').classList.remove('active'); document.getElementById('chats-inbox').style.display = 'block'; loadChatsList();
         }
-        function renderMessage(msg) {
-            const div = document.createElement('div'); div.className = `msg ${msg.enviado_por_rol === 'dueño' ? 'me' : 'them'}`;
-            let html = msg.contenido.replace(/\n/g, '<br>');
-            if (!html.includes('<img')) html = html.replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank" class="map-btn">Ver Enlace</a>`);
-            div.innerHTML = html;
-            const c = document.getElementById('messages-container'); c.appendChild(div); c.scrollTop = c.scrollHeight;
+       function renderMessage(msg) {
+            const isMe = msg.enviado_por_rol === 'dueño';
+            const divRow = document.createElement('div');
+            divRow.className = `msg-row ${isMe ? 'me' : 'them'}`;
+            
+            // Usamos tu logo si eres tú, o la foto del cliente si es él
+            const avatarUrl = isMe ? currentStoreLogo : (activeClientAvatar || 'https://via.placeholder.com/30');
+            
+            let htmlContent = msg.contenido.replace(/\n/g, '<br>');
+            if (!htmlContent.includes('<img')) htmlContent = htmlContent.replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank" class="map-btn">Ver Enlace</a>`);
+
+            divRow.innerHTML = `
+                <img src="${avatarUrl}" class="msg-avatar">
+                <div class="msg-bubble">
+                    ${htmlContent}
+                </div>
+            `;
+            
+            const c = document.getElementById('messages-container'); 
+            c.appendChild(divRow); 
+            c.scrollTop = c.scrollHeight;
         }
         async function sendMessage(e) {
             e.preventDefault(); const input = document.getElementById('msg-input'); const text = input.value.trim();
