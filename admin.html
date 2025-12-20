@@ -76,7 +76,7 @@
         /* UI Components */
         .card { background: var(--surface); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 20px; }
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        label { display: block; margin-bottom: 6px; font-size: 0.8rem; font-weight: 600; color: #64748b; text-transform: uppercase; }
+        label { display: block; margin-bottom: 6px; font-size: 0.8rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
         input, textarea, select { width: 100%; padding: 14px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 12px; background: #f8fafc; font-family: 'Inter', sans-serif; font-size: 16px; appearance: none; }
         .btn { padding: 14px 20px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; width: 100%; }
         .btn-primary { background: var(--primary); color: white; }
@@ -595,6 +595,54 @@
                 border-radius: 20px 20px 0 0;
             }
         }
+
+        /* BOTÓN PARA COMPARTIR PRODUCTO EN INVENTARIO */
+        .btn-share-admin {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
+            white-space: nowrap;
+        }
+
+        .btn-share-admin:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-share-admin:active {
+            transform: translateY(0);
+        }
+
+        .btn-share-admin i {
+            font-size: 0.9rem;
+        }
+
+        /* Responsive para tabla */
+        @media (max-width: 768px) {
+            .table-container {
+                margin: 0 -15px;
+                padding: 0 15px;
+            }
+            
+            .btn-share-admin {
+                padding: 6px 8px;
+                font-size: 0.8rem;
+            }
+            
+            .btn-share-admin i {
+                font-size: 0.8rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -771,7 +819,20 @@
             </div>
             <div class="card">
                 <h3><i class="fas fa-layer-group"></i> Inventario</h3>
-                <div class="table-container"><table id="products-table"></table></div>
+                <div class="table-container">
+                    <table id="products-table">
+                        <thead>
+                            <tr>
+                                <th>FOTO</th>
+                                <th>DETALLE</th>
+                                <th>$</th>
+                                <th>COMPARTIR</th> <!-- NUEVA COLUMNA -->
+                                <th>ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -1468,10 +1529,100 @@ function resetOnboarding() {
         async function loadProducts() {
             const { data } = await _supabase.from('productos').select('*').eq('creado_por', currentUser.id).order('id', {ascending:false});
             productsCache = data || []; updateCategoryDatalist(); 
-            const table = document.getElementById('products-table');
-            if(!data || data.length === 0) { table.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Sin productos.</td></tr>'; checkOnboarding(); return; }
-            table.innerHTML = `<thead><tr><th>FOTO</th><th>DETALLE</th><th>$</th><th>ACCIONES</th></tr></thead><tbody>${data.map(p => `<tr><td><img src="${p.imagen_url || 'https://via.placeholder.com/50'}" class="product-img"></td><td><div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div><div style="font-size:0.75rem; color:#94a3b8;">Stock: ${p.stock}</div></td><td style="font-weight:bold;">${p.precio}</td><td><button class="btn-icon btn-edit" onclick="startEdit(${p.id})"><i class="fas fa-pen"></i></button><button class="btn-icon btn-danger" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>`;
+            const table = document.getElementById('products-table').querySelector('tbody');
+            
+            if(!data || data.length === 0) { 
+                table.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">Sin productos.</td></tr>'; 
+                checkOnboarding(); 
+                return; 
+            }
+            
+            table.innerHTML = data.map(p => `
+                <tr>
+                    <td><img src="${p.imagen_url || 'https://via.placeholder.com/50'}" class="product-img"></td>
+                    <td>
+                        <div style="font-weight:600; font-size:0.9rem;">${p.nombre}</div>
+                        <div style="font-size:0.75rem; color:#94a3b8;">Stock: ${p.stock}</div>
+                    </td>
+                    <td style="font-weight:bold;">${p.precio}</td>
+                    <td>
+                        <button class="btn-share-admin" onclick="shareProductAdmin(${p.id})" title="Compartir producto">
+                            <i class="fas fa-share-alt"></i> Compartir
+                        </button>
+                    </td>
+                    <td>
+                        <button class="btn-icon btn-edit" onclick="startEdit(${p.id})">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                        <button class="btn-icon btn-danger" onclick="deleteProduct(${p.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
             checkOnboarding();
+        }
+
+        // --- FUNCIÓN PARA COMPARTIR PRODUCTO DESDE ADMIN ---
+        async function shareProductAdmin(productId) {
+            try {
+                // Obtener datos del producto
+                const product = productsCache.find(p => p.id === productId);
+                if (!product) {
+                    showToast("Error", "Producto no encontrado");
+                    return;
+                }
+
+                // Obtener dominio actual
+                const domain = window.location.origin;
+                
+                // Intentar obtener el alias (slug) de la tienda, si no existe usar el código
+                let identifier = storeCode;
+                if (currentUser) {
+                    const { data: storeData } = await _supabase
+                        .from('usuarios')
+                        .select('slug')
+                        .eq('id', currentUser.id)
+                        .single();
+                    
+                    if (storeData && storeData.slug) {
+                        identifier = storeData.slug;
+                    }
+                }
+
+                // Generar URL con el mismo formato que en index.html
+                const shareUrl = `${domain}/tienda/${identifier}/${productId}`;
+                
+                // Crear texto para compartir
+                const productName = product.nombre;
+                const productPrice = product.precio;
+                
+                // Intentar usar la API de compartir nativa
+                if (navigator.share) {
+                    await navigator.share({
+                        title: productName,
+                        text: `🌟 ${productName} a solo $${productPrice}. ¡Disponible en mi tienda online!`,
+                        url: shareUrl
+                    });
+                    showToast("Compartido", "Producto compartido exitosamente");
+                } else {
+                    // Fallback: copiar al portapapeles
+                    await navigator.clipboard.writeText(`${productName} - $${productPrice}\n${shareUrl}`);
+                    showToast("Enlace copiado", "✅ El enlace fue copiado al portapapeles");
+                    
+                    // Mostrar confirmación para abrir WhatsApp
+                    setTimeout(() => {
+                        if (confirm('¿Quieres abrir WhatsApp para compartir el enlace?')) {
+                            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Mira este producto: ${shareUrl}`)}`;
+                            window.open(whatsappUrl, '_blank');
+                        }
+                    }, 500);
+                }
+                
+            } catch (error) {
+                console.error('Error al compartir:', error);
+                showToast("Error", "No se pudo compartir el producto");
+            }
         }
 
         function startEdit(id) {
