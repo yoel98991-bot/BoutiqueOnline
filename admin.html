@@ -223,7 +223,7 @@
             padding: 20px 15px;
             overflow-y: auto;
             background: #0c1317;
-            background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB4PSIwIiB5PSIwIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyMzUsMjM5LDIzOSwwLjAyKSIvPjxyZWN0IHg9IjIwIiB5PSIyMCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSJyZ2JhKDIzNSwyMzksMjM5LDAuMDIpIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI3BhdHRlcm4pIiBvcGFjaXR5PSIwLjA1Ii8+PC9zdmc+');
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB4PSIwIiB5PSIwIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyMzUsMjM5LDIzOSwwLjAyKSIvPjxyZWN0IHg9IjIwIiB5PSIyMCIgd2lkdGgPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyMzUsMjM5LDIzOSwwLjAyKSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIgb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==');
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -627,6 +627,21 @@
             font-size: 0.9rem;
         }
 
+        /* Estilo para el badge del alias */
+        #store-alias-display {
+            background: #f0fdf4 !important;
+            color: #15803d !important;
+            border-color: #22c55e !important;
+            border-style: solid !important;
+        }
+
+        #store-alias-display:hover {
+            background: #dcfce7 !important;
+            border-color: #16a34a !important;
+            transform: scale(1.05);
+            transition: all 0.2s ease;
+        }
+
         /* Responsive para tabla */
         @media (max-width: 768px) {
             .table-container {
@@ -685,10 +700,18 @@
                 <h2 style="margin:0; font-size:1.1rem; color: var(--primary);">Studio Panel</h2>
                 
                 <div style="display:flex; gap: 10px; margin-top: 5px; align-items: center;">
+                    <!-- Botón para copiar código -->
                     <div id="store-code-display" class="store-code-badge" onclick="copyCode()" title="Copiar código">
                         <i class="fas fa-spinner fa-spin"></i>
                     </div>
-
+                    
+                    <!-- NUEVO: Mostrar alias si existe -->
+                    <div id="store-alias-display" class="store-code-badge" 
+                         style="background: #f0fdf4; color: #15803d; border-color: #22c55e; display:none;" 
+                         onclick="copyAlias()" title="Copiar alias">
+                        <i class="fas fa-link"></i> <span id="alias-text"></span>
+                    </div>
+                    
                     <button onclick="shareStoreLink()" class="btn-icon" style="background: var(--accent); color: white; box-shadow: 0 2px 5px rgba(99, 102, 241, 0.4); width: auto; padding: 0 12px; font-size: 0.85rem; height: 32px;" title="Promocionar Tienda">
                         <i class="fas fa-share-alt"></i> <span style="margin-left:5px;">Promocionar</span>
                     </button>
@@ -947,9 +970,12 @@
                     <div style="margin-bottom: 20px; padding: 15px; background: #f0fdf4; border: 1px dashed #22c55e; border-radius: 12px;">
                         <label style="color: #15803d;">🔗 Enlace Personalizado (Alias)</label>
                         <div style="display: flex; gap: 5px; align-items: center;">
-                            <span style="font-weight: bold; color: #aaa;">?u=</span>
+                            <span style="font-weight: bold; color: #aaa;">tienda/</span>
                             <input type="text" id="conf-alias" placeholder="ej: modas-ana" style="margin:0; text-transform: lowercase; font-weight: bold;" oninput="this.value = this.value.replace(/[^a-z0-9-]/g, '')">
                         </div>
+                        <small style="color: #64748b; font-size: 0.8rem; display: block; margin-top: 5px;">
+                            Los clientes podrán acceder con: <strong>https://tudominio.com/tienda/<span id="alias-preview">[alias]</span></strong>
+                        </small>
                     </div>
 
                     <h4 style="margin-top:0; color:var(--primary); margin-bottom: 15px;">Datos Bancarios</h4>
@@ -1258,27 +1284,36 @@ function resetOnboarding() {
         });
 
         async function initAdmin(user) {
-            let { data: userData } = await _supabase.from('usuarios').select('*').eq('id', user.id).single();
-            if (!userData) {
-                userData = { id: user.id, email: user.email, nombre: 'Admin', rol: 'dueño' };
-                await _supabase.from('usuarios').insert(userData);
-            }
-            storeCode = userData.codigo_tienda || 'TIENDA-' + Math.random().toString(36).substring(2, 6).toUpperCase();
-            if (!userData.codigo_tienda) await _supabase.from('usuarios').update({ codigo_tienda: storeCode }).eq('id', user.id);
+    let { data: userData } = await _supabase.from('usuarios').select('*').eq('id', user.id).single();
+    if (!userData) {
+        userData = { id: user.id, email: user.email, nombre: 'Admin', rol: 'dueño' };
+        await _supabase.from('usuarios').insert(userData);
+    }
+    storeCode = userData.codigo_tienda || 'TIENDA-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+    if (!userData.codigo_tienda) await _supabase.from('usuarios').update({ codigo_tienda: storeCode }).eq('id', user.id);
 
-            document.getElementById('store-code-display').textContent = "CÓDIGO: " + storeCode;
-            currentStoreLogo = userData.logo_url || 'https://cdn-icons-png.flaticon.com/512/1041/1041888.png';
+    // MOSTRAR CÓDIGO
+    document.getElementById('store-code-display').innerHTML = 
+        `<i class="fas fa-hashtag"></i> ${storeCode}`;
+    
+    // MOSTRAR ALIAS SI EXISTE
+    if (userData.slug) {
+        document.getElementById('store-alias-display').style.display = 'flex';
+        document.getElementById('alias-text').textContent = userData.slug;
+    }
+    
+    currentStoreLogo = userData.logo_url || 'https://cdn-icons-png.flaticon.com/512/1041/1041888.png';
 
-            document.getElementById('login-container').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            
-            await loadProducts();
-            await loadOrders();
-            checkOnboarding();
-            
-            updateDashboardCounters();
-            setTimeout(() => setupGlobalRealtime(), 2000);
-        }
+    document.getElementById('login-container').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    
+    await loadProducts();
+    await loadOrders();
+    checkOnboarding();
+    
+    updateDashboardCounters();
+    setTimeout(() => setupGlobalRealtime(), 2000);
+}
 
         let isLoginMode = true;
 
@@ -1422,6 +1457,8 @@ function resetOnboarding() {
             const aliasInput = document.getElementById('conf-alias').value.trim();
             const identifier = aliasInput || storeCode || currentUser.id; 
             const domain = window.location.origin;
+            
+            // Usar el formato /tienda/[identificador]
             const shareUrl = `${domain}/tienda/${identifier}`;
             const storeName = document.getElementById('conf-pwa-nombre').value || 'Mi Tienda Online';
 
@@ -1429,24 +1466,51 @@ function resetOnboarding() {
                 try {
                     await navigator.share({
                         title: storeName,
-                        text: `¡Hola! Visita mi tienda online ${storeName} y mira el catálogo completo:`,
+                        text: `¡Hola! Visita mi tienda online ${storeName}`,
                         url: shareUrl
                     });
                     showToast("Compartido", "Enlace de tienda compartido.");
+                    
+                    // Marcar como compartido para el onboarding
+                    if (aliasInput) {
+                        localStorage.setItem(`hasSharedLink_${currentUser.id}`, 'true');
+                        checkOnboarding();
+                    }
+                    
                 } catch (err) {
                     console.log(err);
                 }
             } else {
                 navigator.clipboard.writeText(shareUrl).then(() => {
                     showToast("Copiado", "Enlace copiado al portapapeles.");
+                    
+                    if (aliasInput) {
+                        localStorage.setItem(`hasSharedLink_${currentUser.id}`, 'true');
+                        checkOnboarding();
+                    }
                 });
             }
-
-            localStorage.setItem(`hasSharedLink_${currentUser.id}`, 'true');
-            checkOnboarding();
         }
 
-        function copyCode() { navigator.clipboard.writeText(storeCode); showToast("Código Copiado", storeCode); }
+        function copyCode() { 
+            navigator.clipboard.writeText(storeCode); 
+            showToast("Código Copiado", storeCode); 
+        }
+
+        // Función para copiar alias
+        function copyAlias() {
+            const aliasInput = document.getElementById('conf-alias').value.trim();
+            if (!aliasInput) {
+                showToast("No hay alias", "Primero configura un alias en Configuración");
+                return;
+            }
+            
+            navigator.clipboard.writeText(aliasInput).then(() => {
+                showToast("Alias copiado", `¡${aliasInput} copiado!`);
+            }).catch(err => {
+                showToast("Error", "No se pudo copiar el alias");
+            });
+        }
 
         // --- GALERÍA DE IMÁGENES ---
         document.getElementById('imagen-input').addEventListener('change', function(e) {
@@ -1576,21 +1640,22 @@ function resetOnboarding() {
                 // Obtener dominio actual
                 const domain = window.location.origin;
                 
-                // Intentar obtener el alias (slug) de la tienda, si no existe usar el código
+                // Obtener el ALIAS actual (si está configurado)
                 let identifier = storeCode;
-                if (currentUser) {
-                    const { data: storeData } = await _supabase
-                        .from('usuarios')
-                        .select('slug')
-                        .eq('id', currentUser.id)
-                        .single();
-                    
-                    if (storeData && storeData.slug) {
-                        identifier = storeData.slug;
+                const aliasInput = document.getElementById('conf-alias').value.trim();
+                
+                if (aliasInput) {
+                    identifier = aliasInput;
+                } else {
+                    // Si no hay alias, mostrar advertencia
+                    if (confirm('⚠️ No has configurado un alias para tu tienda.\n\n¿Quieres configurarlo ahora?')) {
+                        switchTab('config');
+                        document.getElementById('conf-alias').focus();
+                        return;
                     }
                 }
 
-                // Generar URL con el mismo formato que en index.html
+                // Generar URL con el formato: /tienda/[alias]/[producto_id]
                 const shareUrl = `${domain}/tienda/${identifier}/${productId}`;
                 
                 // Crear texto para compartir
@@ -2149,10 +2214,6 @@ function resetOnboarding() {
 async function openChat(clientId, clientName, clientAvatarSrc) {
     console.log('📱 Abriendo chat en pantalla completa con:', clientName);
     
-    // --- CORRECCIÓN AQUÍ ---
-    // NO ocultes el dashboard. Esto causaba la pantalla blanca.
-    // document.getElementById('dashboard').style.display = 'none'; 
-    
     // Mostrar el chat
     const chatWindow = document.getElementById('chat-interface');
     chatWindow.style.display = 'flex';
@@ -2464,65 +2525,138 @@ async function openChat(clientId, clientName, clientAvatarSrc) {
         }
 
         async function loadConfig() {
-            const { data } = await _supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
-            if (!data) return;
+    const { data } = await _supabase.from('usuarios').select('*').eq('id', currentUser.id).single();
+    if (!data) return;
+    
+    document.getElementById('conf-nombre-admin').value = data.nombre || '';
+    document.getElementById('conf-telefono').value = data.telefono || '';
+    document.getElementById('conf-banco').value = data.banco_nombre || '';
+    document.getElementById('conf-titular').value = data.banco_titular || '';
+    document.getElementById('conf-ci').value = data.banco_ci || '';
+    document.getElementById('conf-numero').value = data.banco_numero || '';
+    if(data.banco_tipo) document.getElementById('conf-tipo').value = data.banco_tipo;
+    if(data.logo_url) updateAdminLogoUI(data.logo_url);
+    
+    // IMPORTANTE: CARGAR ALIAS
+    if(data.slug) {
+        document.getElementById('conf-alias').value = data.slug;
+        document.getElementById('alias-preview').textContent = data.slug;
+        // Mostrar en el header
+        document.getElementById('store-alias-display').style.display = 'flex';
+        document.getElementById('alias-text').textContent = data.slug;
+    } else {
+        document.getElementById('store-alias-display').style.display = 'none';
+        document.getElementById('alias-preview').textContent = '[alias]';
+    }
+    
+    // Actualizar preview de alias en tiempo real
+    document.getElementById('conf-alias').addEventListener('input', function() {
+        const aliasVal = this.value.trim().toLowerCase();
+        document.getElementById('alias-preview').textContent = aliasVal || '[alias]';
+    });
+    
+    if (data.qr_imagen_url) { 
+        document.getElementById('qr-preview').src = data.qr_imagen_url; 
+        document.getElementById('qr-preview').style.display = 'block'; 
+    }
+    
+    if(data.pwa_nombre_app) document.getElementById('conf-pwa-nombre').value = data.pwa_nombre_app;
+    if(data.pwa_icono_b64) {
+        document.getElementById('conf-pwa-b64').value = data.pwa_icono_b64;
+        document.getElementById('pwa-preview').src = data.pwa_icono_b64;
+        document.getElementById('pwa-preview').style.display = 'block';
+    }
+}
+
+        document.getElementById('config-form').addEventListener('submit', async (e) => {
+    e.preventDefault(); 
+    const btn = document.getElementById('btn-save-config'); 
+    btn.textContent = "Guardando..."; 
+    btn.disabled = true;
+    
+    try {
+        // Validación del alias
+        const aliasInput = document.getElementById('conf-alias').value.trim().toLowerCase();
+        
+        // Validar formato: solo letras minúsculas, números y guiones
+        if (aliasInput && !/^[a-z0-9-]+$/.test(aliasInput)) {
+            showToast("Error", "El alias solo puede contener letras minúsculas, números y guiones.");
+            btn.disabled = false;
+            btn.textContent = "Guardar Configuración";
+            return;
+        }
+        
+        // Verificar que el alias no esté en uso por otra tienda
+        if (aliasInput) {
+            const { data: existingStore } = await _supabase
+                .from('usuarios')
+                .select('id')
+                .eq('slug', aliasInput)
+                .neq('id', currentUser.id)
+                .single();
             
-            document.getElementById('conf-nombre-admin').value = data.nombre || '';
-            document.getElementById('conf-telefono').value = data.telefono || '';
-            document.getElementById('conf-banco').value = data.banco_nombre || '';
-            document.getElementById('conf-titular').value = data.banco_titular || '';
-            document.getElementById('conf-ci').value = data.banco_ci || '';
-            document.getElementById('conf-numero').value = data.banco_numero || '';
-            if(data.banco_tipo) document.getElementById('conf-tipo').value = data.banco_tipo;
-            if(data.logo_url) updateAdminLogoUI(data.logo_url);
-            if(data.slug) document.getElementById('conf-alias').value = data.slug;
-            if (data.qr_imagen_url) { document.getElementById('qr-preview').src = data.qr_imagen_url; document.getElementById('qr-preview').style.display = 'block'; }
-            
-            if(data.pwa_nombre_app) document.getElementById('conf-pwa-nombre').value = data.pwa_nombre_app;
-            if(data.pwa_icono_b64) {
-                document.getElementById('conf-pwa-b64').value = data.pwa_icono_b64;
-                document.getElementById('pwa-preview').src = data.pwa_icono_b64;
-                document.getElementById('pwa-preview').style.display = 'block';
+            if (existingStore) {
+                showToast("Error", "¡Este alias ya está en uso por otra tienda!");
+                btn.disabled = false;
+                btn.textContent = "Guardar Configuración";
+                return;
             }
         }
 
-        document.getElementById('config-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); const btn = document.getElementById('btn-save-config'); btn.textContent = "Guardando..."; btn.disabled = true;
-            try {
-                const file = document.getElementById('qr-input').files[0]; let qrUrl = document.getElementById('qr-preview').src; 
-                if (file) {
-                    const fileName = `qr_${currentUser.id}_${Date.now()}.${file.name.split('.').pop()}`;
-                    await _supabase.storage.from('imagenes-pagos').upload(fileName, file, { upsert: true });
-                    const { data } = _supabase.storage.from('imagenes-pagos').getPublicUrl(fileName); qrUrl = data.publicUrl;
-                }
+        const file = document.getElementById('qr-input').files[0]; 
+        let qrUrl = document.getElementById('qr-preview').src; 
+        
+        if (file) {
+            const fileName = `qr_${currentUser.id}_${Date.now()}.${file.name.split('.').pop()}`;
+            await _supabase.storage.from('imagenes-pagos').upload(fileName, file, { upsert: true });
+            const { data } = _supabase.storage.from('imagenes-pagos').getPublicUrl(fileName); 
+            qrUrl = data.publicUrl;
+        }
 
-                const aliasInput = document.getElementById('conf-alias').value.trim().toLowerCase();
-                
-                const updates = {
-                    nombre: document.getElementById('conf-nombre-admin').value,
-                    telefono: document.getElementById('conf-telefono').value,
-                    banco_nombre: document.getElementById('conf-banco').value,
-                    banco_titular: document.getElementById('conf-titular').value,
-                    banco_ci: document.getElementById('conf-ci').value,
-                    banco_numero: document.getElementById('conf-numero').value,
-                    banco_tipo: document.getElementById('conf-tipo').value,
-                    slug: aliasInput || null, 
-                    qr_imagen_url: qrUrl && qrUrl.startsWith('http') ? qrUrl : null,
-                    pwa_nombre_app: document.getElementById('conf-pwa-nombre').value.trim(),
-                    pwa_icono_b64: document.getElementById('conf-pwa-b64').value
-                };
-                
-                const { error } = await _supabase.from('usuarios').update(updates).eq('id', currentUser.id);
-                if (error) {
-                    if (error.code === '23505') throw new Error("¡Ese nombre de tienda ya existe!");
-                    throw error;
-                }
+        const updates = {
+            nombre: document.getElementById('conf-nombre-admin').value,
+            telefono: document.getElementById('conf-telefono').value,
+            banco_nombre: document.getElementById('conf-banco').value,
+            banco_titular: document.getElementById('conf-titular').value,
+            banco_ci: document.getElementById('conf-ci').value,
+            banco_numero: document.getElementById('conf-numero').value,
+            banco_tipo: document.getElementById('conf-tipo').value,
+            slug: aliasInput || null, 
+            qr_imagen_url: qrUrl && qrUrl.startsWith('http') ? qrUrl : null,
+            pwa_nombre_app: document.getElementById('conf-pwa-nombre').value.trim(),
+            pwa_icono_b64: document.getElementById('conf-pwa-b64').value
+        };
+        
+        const { error } = await _supabase.from('usuarios').update(updates).eq('id', currentUser.id);
+        
+        if (error) {
+            if (error.code === '23505') {
+                showToast("Error", "¡Este alias ya está en uso!");
+            } else {
+                showToast("Error", "Error al guardar: " + error.message);
+            }
+        } else {
+            showToast("¡Configuración guardada!", "Datos actualizados.");
+            
+            // Actualizar visualización del alias en el header
+            if (aliasInput) {
+                document.getElementById('store-alias-display').style.display = 'flex';
+                document.getElementById('alias-text').textContent = aliasInput;
+                localStorage.setItem(`hasSharedLink_${currentUser.id}`, 'true');
+            } else {
+                document.getElementById('store-alias-display').style.display = 'none';
+            }
+            
+            checkOnboarding();
+        }
 
-                showToast("¡Configuración guardada!", "Datos actualizados.");
-                if(aliasInput) { localStorage.setItem(`hasSharedLink_${currentUser.id}`, 'true'); checkOnboarding(); }
-
-            } catch (err) { showToast("Error", err.message); } finally { btn.disabled = false; btn.textContent = "Guardar Configuración"; }
-        });
+    } catch (err) { 
+        showToast("Error", err.message); 
+    } finally { 
+        btn.disabled = false; 
+        btn.textContent = "Guardar Configuración"; 
+    }
+});
 
         // PWA INSTALL LOGIC
         let deferredPrompt;
