@@ -142,15 +142,29 @@
             width: 100vw;
             height: 100vh;
             background: #0c1317;
-            z-index: 2000;
+            z-index: 9999;
             flex-direction: column;
             border-radius: 0;
             box-shadow: none;
+            opacity: 0;
+            transition: opacity 0.3s ease-out;
         }
 
         .chat-window.active { 
-            display: flex; 
-            animation: slideInUp 0.3s ease-out;
+            display: flex;
+            opacity: 1;
+            animation: chatSlideIn 0.3s ease-out forwards;
+        }
+
+        @keyframes chatSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Header fijo estilo WhatsApp */
@@ -391,17 +405,6 @@
         }
 
         /* Efectos de entrada/salida */
-        @keyframes slideInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         /* CROPPER */
@@ -814,52 +817,6 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- VENTANA DE CHAT EN PANTALLA COMPLETA -->
-            <div id="chat-interface" class="chat-window">
-                <div class="chat-header">
-                    <button class="btn btn-outline" onclick="closeChat()" style="border: none; padding: 8px;">
-                        <i class="fas fa-arrow-left"></i>
-                    </button>
-                    
-                    <div id="current-chat-avatar">
-                        <img src="" class="chat-header-avatar" id="chat-avatar-img">
-                    </div>
-                    
-                    <div class="chat-header-info">
-                        <div id="current-chat-name">Cliente</div>
-                        <div id="current-chat-status">En línea</div>
-                    </div>
-                    
-                    <button class="btn btn-outline" onclick="showClientInfo()" title="Información del cliente" style="border: none; padding: 8px;">
-                        <i class="fas fa-info-circle"></i>
-                    </button>
-                </div>
-                
-                <!-- Área de mensajes -->
-                <div class="chat-messages" id="messages-container">
-                    <!-- Los mensajes se cargan aquí -->
-                    <div style="text-align: center; padding: 40px 20px; color: rgba(255,255,255,0.5);">
-                        <i class="fas fa-comments" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.3;"></i>
-                        <p>Inicia la conversación con tu cliente</p>
-                        <small style="font-size: 0.8rem;">Los mensajes se sincronizan en tiempo real</small>
-                    </div>
-                </div>
-                
-                <!-- Indicador de escritura -->
-                <div class="typing-indicator" id="typing-indicator"></div>
-                
-                <!-- Área de entrada fija -->
-                <form class="chat-input-area" onsubmit="sendMessage(event)">
-                    <input type="text" 
-                           id="msg-input" 
-                           placeholder="Escribe un mensaje..."
-                           autocomplete="off">
-                    <button type="submit" id="send-button">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </form>
-            </div>
         </div>
 
         <div id="tab-pedidos" class="panel-section">
@@ -969,6 +926,52 @@
         </div>
     </div>
 
+    <!-- CHAT FUERA DEL DASHBOARD - COMPLETAMENTE INDEPENDIENTE -->
+    <div id="chat-interface" class="chat-window">
+        <div class="chat-header">
+            <button class="btn btn-outline" onclick="closeChat()" style="border: none; padding: 8px;">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            
+            <div id="current-chat-avatar">
+                <img src="" class="chat-header-avatar" id="chat-avatar-img">
+            </div>
+            
+            <div class="chat-header-info">
+                <div id="current-chat-name">Cliente</div>
+                <div id="current-chat-status">En línea</div>
+            </div>
+            
+            <button class="btn btn-outline" onclick="showClientInfo()" title="Información del cliente" style="border: none; padding: 8px;">
+                <i class="fas fa-info-circle"></i>
+            </button>
+        </div>
+        
+        <!-- Área de mensajes -->
+        <div class="chat-messages" id="messages-container">
+            <!-- Los mensajes se cargan aquí -->
+            <div style="text-align: center; padding: 40px 20px; color: rgba(255,255,255,0.5);">
+                <i class="fas fa-comments" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.3;"></i>
+                <p>Inicia la conversación con tu cliente</p>
+                <small style="font-size: 0.8rem;">Los mensajes se sincronizan en tiempo real</small>
+            </div>
+        </div>
+        
+        <!-- Indicador de escritura -->
+        <div class="typing-indicator" id="typing-indicator"></div>
+        
+        <!-- Área de entrada fija -->
+        <form class="chat-input-area" onsubmit="sendMessage(event)">
+            <input type="text" 
+                   id="msg-input" 
+                   placeholder="Escribe un mensaje..."
+                   autocomplete="off">
+            <button type="submit" id="send-button">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </form>
+    </div>
+
     <script>
         const SUPABASE_URL = 'https://cirrapytmbnjlhxunkaq.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnJhcHl0bWJuamxoeHVua2FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NzAyMDAsImV4cCI6MjA3ODU0NjIwMH0.OtJiLGj1EvhPICFaA9ruL02Z9kSQ2jT0t3Smqph81C4';
@@ -989,6 +992,8 @@
         const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
         let globalChannel = null;
         let isReconnecting = false;
+        let reconnectAttempts = 0;
+        const MAX_RECONNECT_ATTEMPTS = 5;
         let modalCallback = null;
         let galleryFiles = [];
 
@@ -1264,13 +1269,22 @@
         async function setupGlobalRealtime() {
             if (globalChannel && ['SUBSCRIBED', 'JOINED'].includes(globalChannel.state)) return;
             if (globalChannel) await _supabase.removeChannel(globalChannel);
+            
             globalChannel = _supabase.channel(`admin-global-${currentUser.id}-${Date.now()}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `tienda_id=eq.${currentUser.id}` }, payload => {
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'mensajes', 
+                filter: `tienda_id=eq.${currentUser.id}` 
+            }, payload => {
                 if(payload.new.tienda_id != currentUser.id) return;
                 if(payload.new.enviado_por_rol === 'cliente') {
                     const incomingClientId = String(payload.new.cliente_id);
                     const currentChatId = String(activeChatClientId);
-                    if (currentChatId !== incomingClientId) { showToast('Nuevo Mensaje', 'Cliente envió mensaje'); updateDashboardCounters(); }
+                    if (currentChatId !== incomingClientId) { 
+                        showToast('Nuevo Mensaje', 'Cliente envió mensaje'); 
+                        updateDashboardCounters(); 
+                    }
                 }
                 if(document.getElementById('tab-chats').classList.contains('active')) loadChatsList();
                 const incomingClientId = String(payload.new.cliente_id);
@@ -1280,20 +1294,40 @@
             })
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, (payload) => {
                 if (payload.new.tienda_id !== currentUser.id) return; 
-                showToast('Nuevo Pedido', '¡Revisa la lista!'); updateDashboardCounters();
+                showToast('Nuevo Pedido', '¡Revisa la lista!'); 
+                updateDashboardCounters();
                 if(document.getElementById('tab-pedidos').classList.contains('active')) loadOrders();
                 checkOnboarding();
             })
             .subscribe((status) => {
-                if (status === 'SUBSCRIBED') { isReconnecting = false; document.getElementById('store-code-display').style.borderColor = '#22c55e'; }
-                else if (status === 'TIMED_OUT' || status === 'CLOSED') { if (!isReconnecting) handleConnectionDrop(); }
+                if (status === 'SUBSCRIBED') { 
+                    isReconnecting = false; 
+                    reconnectAttempts = 0;
+                    document.getElementById('store-code-display').style.borderColor = '#22c55e'; 
+                }
+                else if (status === 'TIMED_OUT' || status === 'CLOSED' || status === 'CHANNEL_ERROR') { 
+                    if (!isReconnecting && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                        handleConnectionDrop(); 
+                    }
+                }
             });
         }
         
         function handleConnectionDrop() {
-            if (isReconnecting) return; isReconnecting = true;
+            if (isReconnecting) return; 
+            isReconnecting = true;
+            reconnectAttempts++;
+            
             document.getElementById('store-code-display').style.borderColor = '#ef4444'; 
-            setTimeout(() => { if (currentUser) setupGlobalRealtime(); }, 5000);
+            console.log(`Intento de reconexión ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`);
+            
+            const delay = Math.min(1000 * reconnectAttempts, 10000); // Retorno exponencial
+            
+            setTimeout(() => { 
+                if (currentUser) {
+                    setupGlobalRealtime(); 
+                }
+            }, delay);
         }
 
         // --- SHARE STORE LINK ---
@@ -1520,11 +1554,30 @@
         }
         
         function switchTab(t) {
+            // Si hay un chat abierto, cerrarlo primero
+            const chatWindow = document.getElementById('chat-interface');
+            if (chatWindow.classList.contains('active') || chatWindow.style.display === 'flex') {
+                closeChat();
+                // Pequeño delay para que se cierre antes de cambiar de tab
+                setTimeout(() => {
+                    actuallySwitchTab(t);
+                }, 100);
+            } else {
+                actuallySwitchTab(t);
+            }
+        }
+
+        function actuallySwitchTab(t) {
             document.querySelectorAll('.panel-section').forEach(s => s.classList.remove('active'));
             document.getElementById('tab-'+t).classList.add('active');
             document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-            const btn = event.target.closest('.tab'); if(btn) btn.classList.add('active');
-            if(t === 'chats') loadChatsList(); if(t === 'pedidos') loadOrders(); if(t === 'config') loadConfig(); if(t === 'resumen') loadSummary();
+            const btn = event.target.closest('.tab'); 
+            if(btn) btn.classList.add('active');
+            
+            if(t === 'chats') loadChatsList(); 
+            if(t === 'pedidos') loadOrders(); 
+            if(t === 'config') loadConfig(); 
+            if(t === 'resumen') loadSummary();
         }
 
         // --- FUNCIÓN MEJORADA PARA CARGAR LISTA DE CONTACTOS ---
@@ -1919,12 +1972,19 @@
         async function openChat(clientId, clientName, clientAvatarSrc) {
             console.log('📱 Abriendo chat en pantalla completa con:', clientName);
             
+            // Ocultar el dashboard completamente
+            document.getElementById('dashboard').style.display = 'none';
+            
+            // Mostrar el chat
+            const chatWindow = document.getElementById('chat-interface');
+            chatWindow.style.display = 'flex';
+            
+            // Forzar reflow para activar la animación
+            chatWindow.offsetHeight;
+            chatWindow.classList.add('active');
+            
             activeChatClientId = clientId;
             activeClientAvatar = clientAvatarSrc || `https://ui-avatars.com/api/?name=${encodeURIComponent(clientName)}&background=005c4b&color=fff`;
-            
-            // Ocultar todo el dashboard y mostrar solo el chat
-            document.getElementById('dashboard').style.display = 'none';
-            document.getElementById('chat-interface').classList.add('active');
             
             // Actualizar header del chat
             document.getElementById('current-chat-name').textContent = clientName;
@@ -1943,7 +2003,7 @@
             // Enfocar el campo de entrada
             setTimeout(() => {
                 document.getElementById('msg-input').focus();
-            }, 300);
+            }, 500);
             
             // Actualizar contadores
             updateDashboardCounters();
@@ -2020,10 +2080,9 @@
             container.appendChild(divRow);
             
             // Scroll automático solo para nuevos mensajes
-            if (container.children.length > 1) {
-                const lastChild = container.lastElementChild;
-                lastChild.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            }
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight;
+            }, 100);
         }
 
         async function markMessagesAsRead(clientId) {
@@ -2083,28 +2142,58 @@
                 activeChannel = null;
             }
             
-            // Cerrar el chat y volver al dashboard
-            document.getElementById('chat-interface').classList.remove('active');
-            document.getElementById('dashboard').style.display = 'block';
+            // Cerrar animación
+            const chatWindow = document.getElementById('chat-interface');
+            chatWindow.classList.remove('active');
             
-            // Recargar lista de contactos
-            loadChatsList();
-            
-            // Limpiar campo de entrada
-            document.getElementById('msg-input').value = '';
-            
-            // Quitar indicador de escritura
-            document.getElementById('typing-indicator').textContent = '';
+            // Esperar a que termine la animación antes de ocultar
+            setTimeout(() => {
+                chatWindow.style.display = 'none';
+                // Mostrar el dashboard
+                document.getElementById('dashboard').style.display = 'block';
+                
+                // Recargar lista de contactos
+                loadChatsList();
+                
+                // Limpiar campo de entrada
+                document.getElementById('msg-input').value = '';
+                
+                // Quitar indicador de escritura
+                document.getElementById('typing-indicator').textContent = '';
+            }, 300);
         }
 
         async function sendMessage(e) {
-            e.preventDefault(); const input = document.getElementById('msg-input'); const text = input.value.trim();
-            if(!text || !activeChatClientId) return; input.value = '';
-            renderMessage({ contenido: text, enviado_por_rol: 'dueño' });
-            await _supabase.from('mensajes').insert({ tienda_id: currentUser.id, cliente_id: activeChatClientId, enviado_por_rol: 'dueño', contenido: text });
+            e.preventDefault(); 
+            const input = document.getElementById('msg-input'); 
+            const text = input.value.trim();
+            if(!text || !activeChatClientId) return; 
+            
+            // Enviar mensaje
+            renderMessage({ contenido: text, enviado_por_rol: 'dueño', created_at: new Date() });
+            input.value = '';
+            
+            // Enfocar de nuevo el input
+            input.focus();
+            
+            await _supabase.from('mensajes').insert({ 
+                tienda_id: currentUser.id, 
+                cliente_id: activeChatClientId, 
+                enviado_por_rol: 'dueño', 
+                contenido: text 
+            });
         }
         
-        function notifyTyping() { if(activeChannel) activeChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); }
+        function notifyTyping() { 
+            if(activeChannel) activeChannel.send({ 
+                type: 'broadcast', 
+                event: 'typing', 
+                payload: { 
+                    clientId: activeChatClientId, 
+                    name: document.getElementById('current-chat-name').textContent 
+                } 
+            }); 
+        }
 
         function showClientInfo() {
             if (!activeChatClientId) return;
