@@ -133,62 +133,275 @@
         .order-item { padding: 15px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; background: white; transition: all 0.3s ease; }
         .badge-pending { background: #fff7ed; color: #c2410c; font-size: 0.7rem; padding: 4px 8px; border-radius: 10px; font-weight: bold;}
         
-        /* Ventana de Chat */
-        .chat-window { display: none; height: 75vh; flex-direction: column; background: #efe7dd; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
-        .chat-window.active { display: flex; }
-        
-        .chat-header { 
-            padding: 10px 15px; 
-            background: var(--primary);
+        /* --- CHAT EN PANTALLA COMPLETA (WhatsApp Style) --- */
+        .chat-window { 
+            display: none; 
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #0c1317;
+            z-index: 2000;
+            flex-direction: column;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        .chat-window.active { 
+            display: flex; 
+            animation: slideInUp 0.3s ease-out;
+        }
+
+        /* Header fijo estilo WhatsApp */
+        .chat-header {
+            background: #202c33;
             color: white;
-            display: flex; align-items: center; gap: 10px; 
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-shrink: 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            height: 70px;
         }
-        .chat-header .btn-outline { color: white; border-color: rgba(255,255,255,0.3); }
-        
-        /* Avatar pequeño en header */
-        .chat-header-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.2); }
 
-        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: #efe7dd; }
-        
-        /* Filas de Mensajes (Avatar + Burbuja) */
-        .msg-row { display: flex; align-items: flex-end; gap: 8px; max-width: 85%; }
-        .msg-row.me { align-self: flex-end; flex-direction: row-reverse; }
-        .msg-row.them { align-self: flex-start; }
+        .chat-header .btn-outline {
+            color: white;
+            border-color: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+        }
 
-        .msg-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; box-shadow: 0 1px 2px rgba(0,0,0,0.1); flex-shrink: 0; }
-        
-        .msg-bubble { 
-            padding: 8px 12px; 
-            border-radius: 12px; 
-            font-size: 0.9rem; 
-            position: relative; 
-            box-shadow: 0 1px 2px rgba(0,0,0,0.15); 
-            line-height: 1.4; 
+        .chat-header-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .chat-header-info {
+            flex: 1;
+        }
+
+        .chat-header-info div:first-child {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 3px;
+        }
+
+        .chat-header-info div:last-child {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.6);
+        }
+
+        /* Área de mensajes - fondo WhatsApp */
+        .chat-messages {
+            flex: 1;
+            padding: 20px 15px;
+            overflow-y: auto;
+            background: #0c1317;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB4PSIwIiB5PSIwIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyMzUsMjM5LDIzOSwwLjAyKSIvPjxyZWN0IHg9IjIwIiB5PSIyMCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSJyZ2JhKDIzNSwyMzksMjM5LDAuMDIpIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI3BhdHRlcm4pIiBvcGFjaXR5PSIwLjA1Ii8+PC9zdmc+');
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-bottom: 100px;
+        }
+
+        /* Filas de mensajes mejoradas */
+        .msg-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            max-width: 85%;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .msg-row.me {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .msg-row.them {
+            align-self: flex-start;
+        }
+
+        .msg-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        /* Burbujas de mensaje estilo WhatsApp */
+        .msg-bubble {
+            padding: 8px 12px;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            position: relative;
+            line-height: 1.4;
             word-wrap: break-word;
-        }
-        .msg-row.me .msg-bubble { background: #dcf8c6; color: #111; border-bottom-right-radius: 0; }
-        .msg-row.them .msg-bubble { background: #ffffff; color: #111; border-bottom-left-radius: 0; }
-        
-        /* --- CONTROL ESTRICTO DE IMÁGENES EN CHAT --- */
-        .msg-bubble img { 
             max-width: 100%;
-            width: auto !important; 
-            height: auto !important;
-            max-height: 250px !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .msg-row.me .msg-bubble {
+            background: #005c4b;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-row.them .msg-bubble {
+            background: #202c33;
+            color: #e9edef;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Indicador de tiempo en mensajes */
+        .msg-time {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.6);
+            margin-top: 3px;
+            text-align: right;
+            display: block;
+        }
+
+        .msg-row.them .msg-time {
+            color: rgba(255,255,255,0.5);
+            text-align: left;
+        }
+
+        /* Control estricto de imágenes en chat */
+        .msg-bubble img {
+            max-width: 100%;
+            max-height: 250px;
             border-radius: 8px;
             margin-top: 5px;
             display: block;
-            object-fit: contain;
+            object-fit: cover;
         }
-        /* Si la burbuja tiene imagen, limitamos su ancho máximo */
+
         .msg-bubble:has(img) {
             max-width: 280px;
+            background: transparent !important;
+            padding: 0;
         }
-        
-        .map-btn { display: inline-flex; align-items: center; gap: 5px; margin-top: 5px; padding: 5px 10px; background: #e0e7ff; color: var(--accent); text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 0.8rem; }
-        .chat-input-area { padding: 10px; background: white; display: flex; gap: 10px; border-top: 1px solid var(--border); align-items: center; }
-        .typing-indicator { font-size: 0.75rem; color: #64748b; margin-left: 55px; margin-top: -15px; margin-bottom: 5px; height: 15px; font-style: italic; }
-        
+
+        /* Área de entrada fija en la parte inferior */
+        .chat-input-area {
+            padding: 15px 20px;
+            background: #202c33;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-shrink: 0;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            background: #2a3942;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .chat-input-area input::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+
+        .chat-input-area button {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #005c4b;
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: background 0.2s;
+        }
+
+        .chat-input-area button:hover {
+            background: #006e5a;
+        }
+
+        /* Indicador de escritura */
+        .typing-indicator {
+            padding: 0 20px;
+            color: rgba(255,255,255,0.6);
+            font-size: 0.85rem;
+            font-style: italic;
+            height: 20px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .typing-indicator::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            background: #005c4b;
+            border-radius: 50%;
+            animation: typingPulse 1.5s infinite;
+        }
+
+        @keyframes typingPulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        /* Scrollbar personalizada para el chat */
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Efectos de entrada/salida */
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         /* CROPPER */
@@ -357,6 +570,26 @@
             background: #94a3b8;
         }
 
+        /* Para pantallas grandes (modo escritorio) */
+        @media (min-width: 768px) {
+            .chat-window {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 90%;
+                max-width: 500px;
+                height: 90vh;
+                max-height: 800px;
+                border-radius: 20px;
+                overflow: hidden;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            }
+            
+            .chat-header {
+                border-radius: 20px 20px 0 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -582,25 +815,47 @@
                 </div>
             </div>
             
-            <!-- VENTANA DE CHAT -->
+            <!-- VENTANA DE CHAT EN PANTALLA COMPLETA -->
             <div id="chat-interface" class="chat-window">
                 <div class="chat-header">
-                    <button class="btn btn-outline" style="padding: 5px 10px; border:none;" onclick="closeChat()">
+                    <button class="btn btn-outline" onclick="closeChat()" style="border: none; padding: 8px;">
                         <i class="fas fa-arrow-left"></i>
                     </button>
-                    <div id="current-chat-avatar" style="width: 36px; height: 36px;"></div>
-                    <div>
-                        <div style="font-weight:600; font-size:1rem;" id="current-chat-name">Cliente</div>
+                    
+                    <div id="current-chat-avatar">
+                        <img src="" class="chat-header-avatar" id="chat-avatar-img">
+                    </div>
+                    
+                    <div class="chat-header-info">
+                        <div id="current-chat-name">Cliente</div>
+                        <div id="current-chat-status">En línea</div>
+                    </div>
+                    
+                    <button class="btn btn-outline" onclick="showClientInfo()" title="Información del cliente" style="border: none; padding: 8px;">
+                        <i class="fas fa-info-circle"></i>
+                    </button>
+                </div>
+                
+                <!-- Área de mensajes -->
+                <div class="chat-messages" id="messages-container">
+                    <!-- Los mensajes se cargan aquí -->
+                    <div style="text-align: center; padding: 40px 20px; color: rgba(255,255,255,0.5);">
+                        <i class="fas fa-comments" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.3;"></i>
+                        <p>Inicia la conversación con tu cliente</p>
+                        <small style="font-size: 0.8rem;">Los mensajes se sincronizan en tiempo real</small>
                     </div>
                 </div>
                 
-                <div class="chat-messages" id="messages-container"></div>
-                
+                <!-- Indicador de escritura -->
                 <div class="typing-indicator" id="typing-indicator"></div>
                 
+                <!-- Área de entrada fija -->
                 <form class="chat-input-area" onsubmit="sendMessage(event)">
-                    <input type="text" id="msg-input" placeholder="Escribe un mensaje..." style="margin:0; border:none; background:#f1f5f9; padding:12px 15px; border-radius:20px;" oninput="notifyTyping()">
-                    <button type="submit" class="btn btn-primary" style="width:45px; height:45px; border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center;">
+                    <input type="text" 
+                           id="msg-input" 
+                           placeholder="Escribe un mensaje..."
+                           autocomplete="off">
+                    <button type="submit" id="send-button">
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </form>
@@ -872,7 +1127,7 @@
         }
 
         async function registerServiceWorker() {
-            if ('serviceWorker' in navigator && 'PushManager' in window) {
+            if ('serviceWorker' in navigator) {
                 try {
                     const registration = await navigator.serviceWorker.register('./sw.js');
                     return registration;
@@ -1660,87 +1915,186 @@
             }
         }
 
+        // --- FUNCIONES PARA CHAT EN PANTALLA COMPLETA ---
         async function openChat(clientId, clientName, clientAvatarSrc) {
-            console.log('Abriendo chat con:', { clientId, clientName, clientAvatarSrc });
+            console.log('📱 Abriendo chat en pantalla completa con:', clientName);
             
             activeChatClientId = clientId;
-            activeClientAvatar = clientAvatarSrc || `https://ui-avatars.com/api/?name=${encodeURIComponent(clientName)}&background=random`;
+            activeClientAvatar = clientAvatarSrc || `https://ui-avatars.com/api/?name=${encodeURIComponent(clientName)}&background=005c4b&color=fff`;
             
-            document.getElementById('chats-inbox').style.display = 'none'; 
+            // Ocultar todo el dashboard y mostrar solo el chat
+            document.getElementById('dashboard').style.display = 'none';
             document.getElementById('chat-interface').classList.add('active');
             
-            document.getElementById('current-chat-name').textContent = clientName; 
-            document.getElementById('current-chat-avatar').innerHTML = `<img src="${activeClientAvatar}" class="chat-header-avatar">`;
+            // Actualizar header del chat
+            document.getElementById('current-chat-name').textContent = clientName;
+            document.getElementById('chat-avatar-img').src = activeClientAvatar;
+            document.getElementById('current-chat-status').textContent = 'Conectado';
             
-            document.getElementById('messages-container').innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;"><i class="fas fa-spinner fa-spin"></i> Cargando historial...</div>';
+            // Cargar historial de mensajes
+            await loadChatHistory(clientId);
             
+            // Marcar mensajes como leídos
+            await markMessagesAsRead(clientId);
+            
+            // Configurar canal en tiempo real
+            setupChatRealtime(clientId);
+            
+            // Enfocar el campo de entrada
+            setTimeout(() => {
+                document.getElementById('msg-input').focus();
+            }, 300);
+            
+            // Actualizar contadores
+            updateDashboardCounters();
+        }
+
+        async function loadChatHistory(clientId) {
             try {
                 const { data } = await _supabase.from('mensajes').select('*')
                     .eq('tienda_id', currentUser.id)
                     .eq('cliente_id', clientId)
                     .order('created_at', { ascending: true });
                 
-                document.getElementById('messages-container').innerHTML = ''; 
-                if(data) data.forEach(renderMessage);
+                const container = document.getElementById('messages-container');
+                container.innerHTML = '';
                 
+                if (!data || data.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 40px 20px; color: rgba(255,255,255,0.5);">
+                            <i class="fas fa-comments" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.3;"></i>
+                            <p>No hay mensajes aún</p>
+                            <small style="font-size: 0.8rem;">Envía el primer mensaje</small>
+                        </div>`;
+                    return;
+                }
+                
+                data.forEach(msg => {
+                    renderMessage(msg);
+                });
+                
+                // Scroll al final
+                container.scrollTop = container.scrollHeight;
+                
+            } catch (error) {
+                console.error('Error cargando historial:', error);
+            }
+        }
+
+        function renderMessage(msg) {
+            const isMe = msg.enviado_por_rol === 'dueño';
+            const avatarUrl = isMe 
+                ? (currentStoreLogo || 'https://cdn-icons-png.flaticon.com/512/1041/1041888.png') 
+                : (activeClientAvatar || `https://ui-avatars.com/api/?name=Cliente&background=202c33&color=fff`);
+            
+            const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const divRow = document.createElement('div');
+            divRow.className = `msg-row ${isMe ? 'me' : 'them'}`;
+            divRow.style.animation = 'fadeIn 0.3s ease';
+            
+            let content = msg.contenido || '';
+            
+            // Detectar si es imagen
+            if (content.includes('<img')) {
+                divRow.innerHTML = `
+                    <img src="${avatarUrl}" class="msg-avatar">
+                    <div class="msg-bubble">
+                        ${content}
+                        <span class="msg-time">${time}</span>
+                    </div>
+                `;
+            } else {
+                // Formatear texto normal
+                const textContent = content.replace(/\n/g, '<br>');
+                divRow.innerHTML = `
+                    <img src="${avatarUrl}" class="msg-avatar">
+                    <div class="msg-bubble">
+                        ${textContent}
+                        <span class="msg-time">${time}</span>
+                    </div>
+                `;
+            }
+            
+            const container = document.getElementById('messages-container');
+            container.appendChild(divRow);
+            
+            // Scroll automático solo para nuevos mensajes
+            if (container.children.length > 1) {
+                const lastChild = container.lastElementChild;
+                lastChild.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+        }
+
+        async function markMessagesAsRead(clientId) {
+            try {
                 await _supabase.from('mensajes').update({ leido: true })
                     .eq('cliente_id', clientId)
                     .eq('tienda_id', currentUser.id)
                     .eq('enviado_por_rol', 'cliente')
                     .eq('leido', false);
-                    
-                updateDashboardCounters();
-                
-                if (activeChannel) await _supabase.removeChannel(activeChannel);
-                activeChannel = _supabase.channel(`typing_${currentUser.id}_${clientId}`)
-                    .on('broadcast', { event: 'typing' }, () => {
-                        const ind = document.getElementById('typing-indicator'); 
-                        ind.textContent = `${clientName} escribe...`; 
-                        setTimeout(() => ind.textContent = '', 3000);
-                    })
-                    .subscribe();
-                    
             } catch (error) {
-                console.error('Error cargando mensajes:', error);
-                document.getElementById('messages-container').innerHTML = `
-                    <div style="text-align:center; padding:40px; color:#ef4444;">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <p>Error al cargar mensajes</p>
-                    </div>`;
+                console.error('Error marcando mensajes como leídos:', error);
             }
+        }
+
+        function setupChatRealtime(clientId) {
+            if (activeChannel) {
+                _supabase.removeChannel(activeChannel);
+            }
+            
+            activeChannel = _supabase.channel(`chat_${currentUser.id}_${clientId}`)
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'mensajes',
+                    filter: `cliente_id=eq.${clientId}`
+                }, payload => {
+                    if (payload.new.tienda_id === currentUser.id) {
+                        renderMessage(payload.new);
+                        
+                        // Marcar como leído automáticamente
+                        if (payload.new.enviado_por_rol === 'cliente') {
+                            _supabase.from('mensajes').update({ leido: true })
+                                .eq('id', payload.new.id);
+                        }
+                    }
+                })
+                .on('broadcast', { event: 'typing' }, (payload) => {
+                    const indicator = document.getElementById('typing-indicator');
+                    if (payload.clientId === clientId) {
+                        indicator.textContent = `${payload.name} está escribiendo...`;
+                        setTimeout(() => {
+                            indicator.textContent = '';
+                        }, 2000);
+                    }
+                })
+                .subscribe();
         }
 
         function closeChat() {
-            activeChatClientId = null; 
+            console.log('🔙 Cerrando chat');
+            
+            activeChatClientId = null;
             activeClientAvatar = null;
-            if (activeChannel) { _supabase.removeChannel(activeChannel); activeChannel = null; }
-            document.getElementById('chat-interface').classList.remove('active'); 
-            document.getElementById('chats-inbox').style.display = 'block'; 
-            loadChatsList();
-        }
-
-        function renderMessage(msg) {
-            const isMe = msg.enviado_por_rol === 'dueño';
-            const divRow = document.createElement('div');
-            divRow.className = `msg-row ${isMe ? 'me' : 'them'}`;
             
-            const avatarUrl = isMe ? (currentStoreLogo || 'https://via.placeholder.com/30') : (activeClientAvatar || 'https://via.placeholder.com/30');
-            
-            let htmlContent = msg.contenido.replace(/\n/g, '<br>');
-            if (!htmlContent.includes('<img')) {
-                htmlContent = htmlContent.replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank" class="map-btn"><i class="fas fa-external-link-alt"></i> Ver Enlace</a>`);
+            if (activeChannel) {
+                _supabase.removeChannel(activeChannel);
+                activeChannel = null;
             }
-
-            divRow.innerHTML = `
-                <img src="${avatarUrl}" class="msg-avatar">
-                <div class="msg-bubble">
-                    ${htmlContent}
-                </div>
-            `;
             
-            const c = document.getElementById('messages-container'); 
-            c.appendChild(divRow); 
-            c.scrollTop = c.scrollHeight;
+            // Cerrar el chat y volver al dashboard
+            document.getElementById('chat-interface').classList.remove('active');
+            document.getElementById('dashboard').style.display = 'block';
+            
+            // Recargar lista de contactos
+            loadChatsList();
+            
+            // Limpiar campo de entrada
+            document.getElementById('msg-input').value = '';
+            
+            // Quitar indicador de escritura
+            document.getElementById('typing-indicator').textContent = '';
         }
 
         async function sendMessage(e) {
@@ -1751,6 +2105,25 @@
         }
         
         function notifyTyping() { if(activeChannel) activeChannel.send({ type: 'broadcast', event: 'typing', payload: {} }); }
+
+        function showClientInfo() {
+            if (!activeChatClientId) return;
+            
+            const clientName = document.getElementById('current-chat-name').textContent;
+            const clientAvatar = document.getElementById('chat-avatar-img').src;
+            
+            // Aquí puedes implementar un modal con información del cliente
+            customConfirm(
+                'Información del Cliente',
+                `<div style="text-align:center;">
+                    <img src="${clientAvatar}" style="width:80px;height:80px;border-radius:50%;margin-bottom:15px;">
+                    <h4 style="margin:10px 0;">${clientName}</h4>
+                    <p style="color:#64748b;">Cliente ID: ${activeChatClientId}</p>
+                </div>`,
+                'info',
+                () => {}
+            );
+        }
 
         // --- CROPPER Y CONFIG ---
         let cropper; const logoInput = document.getElementById('logo-input'); const cropModal = document.getElementById('crop-modal'); const imageTarget = document.getElementById('crop-image-target');
