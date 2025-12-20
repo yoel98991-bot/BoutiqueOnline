@@ -1968,46 +1968,50 @@
             }
         }
 
-        // --- FUNCIONES PARA CHAT EN PANTALLA COMPLETA ---
-        async function openChat(clientId, clientName, clientAvatarSrc) {
-            console.log('📱 Abriendo chat en pantalla completa con:', clientName);
-            
-            // Ocultar el dashboard completamente
-            document.getElementById('dashboard').style.display = 'none';
-            
-            // Mostrar el chat
-            const chatWindow = document.getElementById('chat-interface');
-            chatWindow.style.display = 'flex';
-            
-            // Forzar reflow para activar la animación
-            chatWindow.offsetHeight;
-            chatWindow.classList.add('active');
-            
-            activeChatClientId = clientId;
-            activeClientAvatar = clientAvatarSrc || `https://ui-avatars.com/api/?name=${encodeURIComponent(clientName)}&background=005c4b&color=fff`;
-            
-            // Actualizar header del chat
-            document.getElementById('current-chat-name').textContent = clientName;
-            document.getElementById('chat-avatar-img').src = activeClientAvatar;
-            document.getElementById('current-chat-status').textContent = 'Conectado';
-            
-            // Cargar historial de mensajes
-            await loadChatHistory(clientId);
-            
-            // Marcar mensajes como leídos
-            await markMessagesAsRead(clientId);
-            
-            // Configurar canal en tiempo real
-            setupChatRealtime(clientId);
-            
-            // Enfocar el campo de entrada
-            setTimeout(() => {
-                document.getElementById('msg-input').focus();
-            }, 500);
-            
-            // Actualizar contadores
-            updateDashboardCounters();
-        }
+
+async function openChat(clientId, clientName, clientAvatarSrc) {
+    console.log('📱 Abriendo chat en pantalla completa con:', clientName);
+    
+    // --- CORRECCIÓN AQUÍ ---
+    // NO ocultes el dashboard. Esto causaba la pantalla blanca.
+    // document.getElementById('dashboard').style.display = 'none'; 
+    
+    // Mostrar el chat
+    const chatWindow = document.getElementById('chat-interface');
+    chatWindow.style.display = 'flex';
+    
+    // Usamos requestAnimationFrame para asegurar que la animación
+    // ocurra DESPUÉS de que el elemento sea visible.
+    requestAnimationFrame(() => {
+        chatWindow.classList.add('active');
+    });
+    
+    activeChatClientId = clientId;
+    activeClientAvatar = clientAvatarSrc || `https://ui-avatars.com/api/?name=${encodeURIComponent(clientName)}&background=005c4b&color=fff`;
+    
+    // Actualizar header del chat
+    document.getElementById('current-chat-name').textContent = clientName;
+    document.getElementById('chat-avatar-img').src = activeClientAvatar;
+    document.getElementById('current-chat-status').textContent = 'Conectado';
+    
+    // Cargar historial de mensajes
+    await loadChatHistory(clientId);
+    
+    // Marcar mensajes como leídos
+    await markMessagesAsRead(clientId);
+    
+    // Configurar canal en tiempo real
+    setupChatRealtime(clientId);
+    
+    // Enfocar el campo de entrada
+    setTimeout(() => {
+        document.getElementById('msg-input').focus();
+    }, 500);
+    
+    // Actualizar contadores
+    updateDashboardCounters();
+}
+        
 
         async function loadChatHistory(clientId) {
             try {
