@@ -6,8 +6,8 @@
     <meta name="theme-color" content="#f8f9fa">
     
     <meta property="og:type" content="website">
-    <meta property="og:url" content="__OG_URL__">
     <meta property="og:title" content="__OG_TITLE__">
+    <meta property="og:url" content="__OG_URL__">
     <meta property="og:description" content="__OG_DESCRIPTION__">
     <meta property="og:image" content="__OG_IMAGE__">
     <meta property="og:image:width" content="1200">
@@ -1419,6 +1419,8 @@
     let session = {
         storeId: localStorage.getItem('storeId'),
         storeCode: localStorage.getItem('storeCode'),
+        storeSlug: localStorage.getItem('storeSlug'), // <-- NUEVO
+    storeName: localStorage.getItem('storeName'), // <-- NUEVO
         clientId: localStorage.getItem('clientId'),
         clientName: localStorage.getItem('clientName'),
         clientAvatar: localStorage.getItem('clientAvatar')
@@ -1455,22 +1457,68 @@
         else promptStoreCode();
     });
 
-    // --- AUTH & SETUP ---
-    async function resolveStore(codeOrSlug) {
-        try {
-            const { data: store, error } = await _supabase
-                .from('usuarios')
-                .select('id, codigo_tienda, nombre, logo_url, pwa_nombre_app, pwa_icono_b64')
-                .or(`codigo_tienda.eq.${codeOrSlug.toUpperCase()},slug.eq.${codeOrSlug}`)
-                .single();
-            if (error || !store) throw new Error("Tienda no encontrada");
-            localStorage.setItem('storeId', store.id);
-            localStorage.setItem('storeCode', store.codigo_tienda);
-            session.storeId = store.id; session.storeCode = store.codigo_tienda;
-            setDynamicManifest(store);
-            initApp();
-        } catch (e) { alert("Tienda no encontrada."); promptStoreCode(); }
+   async function resolveStore(codeOrSlug) {
+    try {
+        // Convertir a minúsculas para búsqueda case-insensitive
+        const searchTerm = codeOrSlug.toLowerCase();
+        
+        console.log("🔍 Buscando tienda con término:", searchTerm);
+        
+        const { data: store, error } = await _supabase
+            .from('usuarios')
+            .select('id, codigo_tienda, nombre, logo_url, pwa_nombre_app, pwa_icono_b64, slug')
+            .or(`codigo_tienda.eq.${searchTerm.toUpperCase()},slug.eq.${searchTerm}`)
+            .single();
+            
+        if (error || !store) {
+            console.error("❌ Tienda no encontrada:", error);
+            throw new Error("Tienda no encontrada");
+        }
+        
+        console.log("✅ Tienda encontrada:", store.nombre, "Slug:", store.slug);
+        
+        // Guardar en localStorage y sesión
+        localStorage.setItem('storeId', store.id);
+        localStorage.setItem('storeCode', store.codigo_tienda);
+        localStorage.setItem('storeSlug', store.slug || store.codigo_tienda);
+        localStorage.setItem('storeName', store.pwa_nombre_app || store.nombre);
+        
+        session.storeId = store.id; 
+        session.storeCode = store.codigo_tienda;
+        session.storeSlug = store.slug || store.codigo_tienda;
+        
+        // Actualizar URL en el navegador para mostrar el alias limpio
+        updateBrowserURL(store.slug || store.codigo_tienda);
+        
+        setDynamicManifest(store);
+        initApp();
+        
+    } catch (e) { 
+        console.error("Error en resolveStore:", e);
+        alert("Tienda no encontrada. Verifica el enlace.");
+        promptStoreCode(); 
     }
+}
+
+// Función para actualizar la URL del navegador con el alias
+function updateBrowserURL(identifier) {
+    const url = new URL(window.location.href);
+    const params = new URLSearchParams(url.search);
+    
+    // Eliminar parámetros antiguos
+    params.delete('tienda');
+    params.delete('u');
+    
+    // Agregar nuevo parámetro con el identificador
+    params.set('u', identifier.toLowerCase());
+    
+    // Crear nueva URL limpia
+    const newURL = `${url.origin}${url.pathname}?${params.toString()}`;
+    
+    // Actualizar en el historial sin recargar
+    window.history.replaceState({}, '', newURL);
+    console.log("🔄 URL actualizada:", newURL);
+}
 
     function setDynamicManifest(store) {
         document.title = store.pwa_nombre_app || store.nombre || "Mi Tienda";
@@ -1987,29 +2035,42 @@ async function loadCatalog() {
         updatePageCartCount();
     }
 
-function goBackToCatalog() {
-        document.getElementById('product-page').style.display = 'none';
-        document.querySelector('.container').style.display = 'block';
-        
-        // Restaura elementos UI
-        document.querySelector('.chat-btn').style.display = 'flex';
-        document.querySelector('.cart-float').style.display = 'flex';
-        
-        // --- NUEVO: RESTAURAR TÍTULO Y URL LIMPIA ---
-        // Recuperamos el nombre de la tienda del manifest o sesión
-        const storeName = localStorage.getItem('storeName') || "Tienda"; // Asegúrate de guardar el nombre en loadCatalog si quieres
-        document.title = storeName; 
-        
-        // Limpiar el parámetro ?product=X de la URL sin recargar
-        const url = new URL(window.location.href);
-        url.searchParams.delete('product');
-        window.history.pushState({}, '', url);
-        // --------------------------------------------
 
-        currentProductPageData = null;
-        currentProductId = null;
+
+        function goBackToCatalog() {
+    document.getElementById('product-page').style.display = 'none';
+    document.querySelector('.container').style.display = 'block';
+    
+    // Restaura elementos UI
+    document.querySelector('.chat-btn').style.display = 'flex';
+    document.querySelector('.cart-float').style.display = 'flex';
+    
+    // --- ACTUALIZADO: MANTENER ALIAS EN URL ---
+    // Recuperamos el identificador principal (slug o código)
+    const identifier = session.storeSlug || session.storeCode;
+    const storeName = localStorage.getItem('storeName') || "Tienda";
+    document.title = storeName;
+    
+    // Limpiar parámetros específicos de producto pero mantener el identificador
+    const url = new URL(window.location.href);
+    const params = new URLSearchParams(url.search);
+    
+    // Eliminar solo el parámetro de producto
+    params.delete('product');
+    
+    // Asegurarnos de que el parámetro 'u' tenga el identificador correcto
+    if (identifier) {
+        params.set('u', identifier.toLowerCase());
+    }
+    
+    // Actualizar URL
+    const newURL = `${url.origin}${url.pathname}?${params.toString()}`;
+    window.history.pushState({}, '', newURL);
+    // --------------------------------------------
+
+    currentProductPageData = null;
+    currentProductId = null;
 }
-
     function loadProductPageData(product) {
         // Configurar slider
         const images = product.galeria && product.galeria.length ? product.galeria : 
@@ -2580,20 +2641,24 @@ function goBackToCatalog() {
 function shareProduct() {
     if (!currentProductPageData) return;
     
-    // Obtener dominio actual automáticamente
+    // Obtener dominio actual
     const domain = window.location.origin;
     
-    // Obtener identificadores
-    // Intentamos obtener el código de tienda de la sesión o URL
-    const storeCode = session.storeCode || new URL(window.location.search).searchParams.get('u');
+    // Obtener identificador PRINCIPAL (preferir slug, luego código)
+    // NOTA: session.storeSlug se establece en resolveStore
+    const identifier = session.storeSlug || session.storeCode;
     const productId = currentProductPageData.id;
     
-    // 1. Generar URL compatible con preview.js
-    // Esta ruta /tienda/CODIGO/PRODUCTO activa la función serverless
-    const shareUrl = `${domain}/tienda/${storeCode}/${productId}`;
+    // 1. Generar URL canónica con el identificador principal
+    const shareUrl = `${domain}/tienda/${identifier}/${productId}`;
     
-    // 2. Obtener calificación actual visual para el texto del mensaje
-    // (Aprovechamos que ya lo calculamos en el cliente para el texto del mensaje)
+    console.log("🔗 Generando enlace:", {
+        identifier: identifier,
+        productId: productId,
+        fullUrl: shareUrl
+    });
+    
+    // 2. Obtener calificación actual
     const ratingEl = document.getElementById('page-overall-rating');
     const ratingVal = ratingEl ? ratingEl.textContent : '0.0';
     const starEmoji = ratingVal !== '0.0' ? `⭐ ${ratingVal}` : '✨ Nuevo';
@@ -2607,7 +2672,7 @@ function shareProduct() {
         url: shareUrl
     };
 
-    // Usar API nativa si existe
+    // 3. Usar API nativa si existe
     if (navigator.share) {
         navigator.share(shareData)
             .then(() => console.log('Compartido exitosamente'))
@@ -2617,6 +2682,41 @@ function shareProduct() {
         copyToClipboardWithFeedback(shareUrl);
     }
 }
+
+// Función para extraer identificador de la URL
+function extractIdentifierFromURL() {
+    const url = new URL(window.location.href);
+    const pathParts = url.pathname.split('/');
+    
+    // Patrón: /tienda/[identificador]/[producto?]
+    if (pathParts[1] === 'tienda' && pathParts[2]) {
+        return pathParts[2].toLowerCase(); // Devuelve el identificador
+    }
+    
+    // Patrón antiguo: ?u=identificador o ?tienda=identificador
+    const params = new URLSearchParams(url.search);
+    return params.get('u') || params.get('tienda');
+}
+
+// Modifica el evento DOMContentLoaded para usar el nuevo sistema:
+window.addEventListener('DOMContentLoaded', async () => {
+    // Primero intentar obtener identificador de la URL
+    const identifier = extractIdentifierFromURL();
+    
+    console.log("🚀 Iniciando app con identificador:", identifier);
+    
+    if (identifier) {
+        // Intentar resolver con el identificador (puede ser slug o código)
+        await resolveStore(identifier);
+    } else if (session.storeId) {
+        // Si ya hay sesión, iniciar app
+        initApp();
+    } else {
+        // Si no hay nada, pedir código (modo retrocompatible)
+        promptStoreCode();
+    }
+});
+        
 function copyToClipboardWithFeedback(url) {
     navigator.clipboard.writeText(url).then(() => {
         // Mostrar notificación de éxito
