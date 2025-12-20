@@ -148,6 +148,8 @@
             box-shadow: none;
             opacity: 0;
             transition: opacity 0.3s ease-out;
+            will-change: opacity; /* <--- AGREGA ESTO SI PUEDES */
+            
         }
 
         .chat-window.active { 
@@ -2136,36 +2138,37 @@ async function openChat(clientId, clientName, clientAvatarSrc) {
         }
 
         function closeChat() {
-            console.log('🔙 Cerrando chat');
-            
-            activeChatClientId = null;
-            activeClientAvatar = null;
-            
-            if (activeChannel) {
-                _supabase.removeChannel(activeChannel);
-                activeChannel = null;
-            }
-            
-            // Cerrar animación
-            const chatWindow = document.getElementById('chat-interface');
-            chatWindow.classList.remove('active');
-            
-            // Esperar a que termine la animación antes de ocultar
-            setTimeout(() => {
-                chatWindow.style.display = 'none';
-                // Mostrar el dashboard
-                document.getElementById('dashboard').style.display = 'block';
-                
-                // Recargar lista de contactos
-                loadChatsList();
-                
-                // Limpiar campo de entrada
-                document.getElementById('msg-input').value = '';
-                
-                // Quitar indicador de escritura
-                document.getElementById('typing-indicator').textContent = '';
-            }, 300);
-        }
+    console.log('🔙 Cerrando chat');
+    
+    activeChatClientId = null;
+    activeClientAvatar = null;
+    
+    if (activeChannel) {
+        _supabase.removeChannel(activeChannel);
+        activeChannel = null;
+    }
+    
+    // Cerrar animación
+    const chatWindow = document.getElementById('chat-interface');
+    chatWindow.classList.remove('active');
+    
+    // Esperar a que termine la animación antes de ocultar
+    setTimeout(() => {
+        chatWindow.style.display = 'none';
+        
+        // Asegurarnos que el dashboard esté visible (por si acaso)
+        document.getElementById('dashboard').style.display = 'block';
+        
+        // Recargar lista de contactos
+        loadChatsList();
+        
+        // Limpiar campo de entrada
+        document.getElementById('msg-input').value = '';
+        
+        // Quitar indicador de escritura
+        document.getElementById('typing-indicator').textContent = '';
+    }, 300);
+}
 
         async function sendMessage(e) {
             e.preventDefault(); 
