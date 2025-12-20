@@ -999,74 +999,82 @@
         let modalCallback = null;
         let galleryFiles = [];
 
-        // --- ONBOARDING LOGIC ---
-        function checkOnboarding() {
-            if(!currentUser) return;
-            if(localStorage.getItem(`hideOnboarding_${currentUser.id}`) === 'true') {
-                document.getElementById('onboarding-card').style.display = 'none';
-                return;
-            }
+      // --- ONBOARDING LOGIC MODIFICADA ---
+function checkOnboarding() {
+    if(!currentUser) return;
+    
+    // Verificar si el usuario ya completó el 100% previamente
+    if(localStorage.getItem(`onboardingCompleted_${currentUser.id}`) === 'true') {
+        document.getElementById('onboarding-card').style.display = 'none';
+        return;
+    }
+    
+    // Paso 1: Productos
+    const hasProducts = productsCache.length > 0;
+    const step1 = document.getElementById('step-1');
+    const btn1 = step1.querySelector('.step-action');
+    if(hasProducts) {
+        step1.classList.add('done');
+        step1.querySelector('.step-icon').innerHTML = '<i class="fas fa-check"></i>';
+        btn1.style.display = 'none';
+    } else {
+        step1.classList.remove('done');
+        step1.querySelector('.step-icon').innerHTML = '<i class="fas fa-box"></i>';
+        btn1.style.display = 'block';
+    }
 
-            // Paso 1: Productos
-            const hasProducts = productsCache.length > 0;
-            const step1 = document.getElementById('step-1');
-            const btn1 = step1.querySelector('.step-action');
-            if(hasProducts) {
-                step1.classList.add('done');
-                step1.querySelector('.step-icon').innerHTML = '<i class="fas fa-check"></i>';
-                btn1.style.display = 'none';
-            } else {
-                step1.classList.remove('done');
-                step1.querySelector('.step-icon').innerHTML = '<i class="fas fa-box"></i>';
-                btn1.style.display = 'block';
-            }
+    // Paso 2: Compartir
+    const hasShared = localStorage.getItem(`hasSharedLink_${currentUser.id}`) === 'true';
+    const step2 = document.getElementById('step-2');
+    const btn2 = step2.querySelector('.step-action');
+    if(hasShared) {
+        step2.classList.add('done');
+        step2.querySelector('.step-icon').innerHTML = '<i class="fas fa-check"></i>';
+        btn2.textContent = "Listo";
+        btn2.disabled = true;
+        btn2.style.background = 'none'; btn2.style.color = '#fff';
+    } else {
+        step2.classList.remove('done');
+        step2.querySelector('.step-icon').innerHTML = '<i class="fas fa-share-alt"></i>';
+        btn2.textContent = "Compartir";
+        btn2.disabled = false;
+    }
 
-            // Paso 2: Compartir
-            const hasShared = localStorage.getItem(`hasSharedLink_${currentUser.id}`) === 'true';
-            const step2 = document.getElementById('step-2');
-            const btn2 = step2.querySelector('.step-action');
-            if(hasShared) {
-                step2.classList.add('done');
-                step2.querySelector('.step-icon').innerHTML = '<i class="fas fa-check"></i>';
-                btn2.textContent = "Listo";
-                btn2.disabled = true;
-                btn2.style.background = 'none'; btn2.style.color = '#fff';
-            } else {
-                step2.classList.remove('done');
-                step2.querySelector('.step-icon').innerHTML = '<i class="fas fa-share-alt"></i>';
-                btn2.textContent = "Compartir";
-                btn2.disabled = false;
-            }
+    // Paso 3: Ventas
+    const hasSales = ordersCache.length > 0;
+    const step3 = document.getElementById('step-3');
+    if(hasSales) {
+        step3.classList.add('done');
+        step3.querySelector('.step-icon').innerHTML = '<i class="fas fa-check"></i>';
+        step3.querySelector('span:last-child').textContent = "¡Primera venta lograda!";
+    } else {
+        step3.classList.remove('done');
+        step3.querySelector('.step-icon').innerHTML = '<i class="fas fa-star"></i>';
+        step3.querySelector('span:last-child').textContent = "Esperando ventas...";
+    }
 
-            // Paso 3: Ventas
-            const hasSales = ordersCache.length > 0;
-            const step3 = document.getElementById('step-3');
-            if(hasSales) {
-                step3.classList.add('done');
-                step3.querySelector('.step-icon').innerHTML = '<i class="fas fa-check"></i>';
-                step3.querySelector('span:last-child').textContent = "¡Primera venta lograda!";
-            } else {
-                step3.classList.remove('done');
-                step3.querySelector('.step-icon').innerHTML = '<i class="fas fa-star"></i>';
-                step3.querySelector('span:last-child').textContent = "Esperando ventas...";
-            }
+    // Calcular Progreso
+    let completed = 0;
+    if(hasProducts) completed++;
+    if(hasShared) completed++;
+    if(hasSales) completed++;
+    
+    const pct = Math.floor((completed / 3) * 100);
+    document.getElementById('ob-progress-fill').style.width = pct + '%';
+    document.getElementById('ob-progress-text').textContent = pct + '% Completado';
 
-            // Calcular Progreso
-            let completed = 0;
-            if(hasProducts) completed++;
-            if(hasShared) completed++;
-            if(hasSales) completed++;
-            
-            const pct = Math.floor((completed / 3) * 100);
-            document.getElementById('ob-progress-fill').style.width = pct + '%';
-            document.getElementById('ob-progress-text').textContent = pct + '% Completado';
-
-            document.getElementById('onboarding-card').style.display = 'block';
-
-            if(pct === 100) {
-                 document.getElementById('ob-progress-text').textContent = "¡Increíble! 🎉 Tienda activa.";
-            }
-        }
+    // Mostrar/ocultar según condiciones
+    if(pct === 100) {
+        // Completado al 100% - Ocultar y marcar como completado permanentemente
+        document.getElementById('onboarding-card').style.display = 'none';
+        localStorage.setItem(`onboardingCompleted_${currentUser.id}`, 'true');
+        document.getElementById('ob-progress-text').textContent = "¡Increíble! 🎉 Tienda activa.";
+    } else {
+        // Mostrar solo si no está oculto manualmente
+        const isManuallyHidden = localStorage.getItem(`hideOnboarding_${currentUser.id}`) === 'true';
+        document.getElementById('onboarding-card').style.display = isManuallyHidden ? 'none' : 'block';
+    }
+}
 
         function goToAddProduct() {
             switchTab('productos');
@@ -1083,12 +1091,28 @@
             showToast("¡Paso completado!", "Enlace compartido.");
         }
 
-        function hideOnboarding() {
-            if(confirm("¿Ocultar la guía de inicio?")) {
-                document.getElementById('onboarding-card').style.display = 'none';
-                if(currentUser) localStorage.setItem(`hideOnboarding_${currentUser.id}`, 'true');
-            }
-        }
+        // Modificar la función hideOnboarding para que sea permanente
+function hideOnboarding() {
+    document.getElementById('onboarding-card').style.display = 'none';
+    if(currentUser) {
+        localStorage.setItem(`hideOnboarding_${currentUser.id}`, 'true');
+        // También marcar como completado para no mostrar más
+        localStorage.setItem(`onboardingCompleted_${currentUser.id}`, 'true');
+    }
+    showToast("Guía ocultada", "Puedes reactivarla desde Configuración si lo necesitas.");
+}
+
+        // Función para reactivar la guía (opcional, si quieres dar la opción)
+function resetOnboarding() {
+    if(currentUser) {
+        localStorage.removeItem(`hideOnboarding_${currentUser.id}`);
+        localStorage.removeItem(`onboardingCompleted_${currentUser.id}`);
+        localStorage.removeItem(`hasSharedLink_${currentUser.id}`);
+        document.getElementById('onboarding-card').style.display = 'block';
+        checkOnboarding();
+        showToast("Guía reactivada", "La guía de inicio ha sido restablecida.");
+    }
+}
 
         // --- SISTEMA DE MODALES PERSONALIZADO ---
         function customConfirm(title, message, type = 'info', callback) {
