@@ -1389,7 +1389,14 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnJhcHl0bWJuamxoeHVua2FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NzAyMDAsImV4cCI6MjA3ODU0NjIwMH0.OtJiLGj1EvhPICFaA9ruL02Z9kSQ2jT0t3Smqph81C4';
     
     // CORRECCIÓN: Usamos _supabase para evitar conflicto con la librería global 'supabase'
-    const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+   // Desactivamos persistSession para evitar conflictos con tokens viejos o de admin
+const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+    }
+});
 
     // --- SERVICE WORKER (PWA) ---
     if ('serviceWorker' in navigator) {
@@ -2892,7 +2899,7 @@ function loadCartFromStorage() {
         }, () => { alert("Error GPS"); btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Reintentar'; });
     }
 
-  async function checkout() {
+async function checkout() {
     if (!cart.length) return alert("Carrito vacío");
     if (!session.clientId) { toggleCart(); promptClientRegister(); return; }
     
@@ -2908,56 +2915,57 @@ function loadCartFromStorage() {
     btnCheckout.textContent = "Procesando...";
 
     try {
-        // 1. Guardar en Supabase (como respaldo)
-        const { data: orderData, error } = await _supabase.from('pedidos').insert({ 
+        // 1. Guardar en Supabase (QUITAMOS EL .select().single() para evitar error 401)
+        const { error } = await _supabase.from('pedidos').insert({ 
             cliente_id: session.clientId, 
             total: total, 
             productos: cart.map(p=>({id:p.id, name:p.nombre, price:p.precio})), 
             estado: 'pendiente', 
             tienda_id: session.storeId 
-        }).select().single();
+        });
 
         if (error) throw error;
 
-        // 2. Construir mensaje de WhatsApp
-        const orderId = orderData.id; 
+        // 2. Generar ID visual para el mensaje (Timestamp corto)
+        // Como no podemos leer el ID de la BD por permisos, generamos uno para referencia
+        const orderIdRef = Date.now().toString().slice(-6); 
         const itemsList = cart.map(p => `• ${p.nombre} ($${p.precio})`).join('\n');
         
-        let msg = `*¡Hola! Nuevo Pedido #${orderId}* 🛒\n\n`;
+        let msg = `*¡Hola! Nuevo Pedido (Ref: ${orderIdRef})* 🛒\n\n`;
         msg += `*Cliente:* ${session.clientName}\n`;
         msg += `*Productos:*\n${itemsList}\n\n`;
         msg += `*Total a Pagar:* $${total.toFixed(2)}\n`;
         msg += `*Entrega:* ${method === 'delivery' ? '🛵 Delivery (' + address + ')' : '📍 Retiro en Tienda'}\n\n`;
         msg += `_Quedo atento a los datos de pago._`;
 
-        // 3. Enviar mensaje interno en el sistema (opcional, para historial)
-        await _supabase.from('mensajes').insert({ 
-            tienda_id: session.storeId, 
-            cliente_id: session.clientId, 
-            enviado_por_rol: 'cliente', 
-            contenido: `Pedido #${orderId} generado. Total: $${total}` 
-        });
+        // 3. Enviar mensaje interno (Opcional - puede fallar si no hay permisos, lo envolvemos en try/catch silencioso)
+        try {
+            await _supabase.from('mensajes').insert({ 
+                tienda_id: session.storeId, 
+                cliente_id: session.clientId, 
+                enviado_por_rol: 'cliente', 
+                contenido: `Pedido generado (Ref: ${orderIdRef}). Total: $${total}` 
+            });
+        } catch(errMsg) { console.log("No se pudo guardar el mensaje interno, pero el pedido sí"); }
 
         // 4. Limpiar Carrito
         cart = []; 
-        saveCartToStorage(); // Limpiar localStorage
+        saveCartToStorage(); 
         updateCartUI(); 
         toggleCart();
 
-        // 5. ABRIR WHATSAPP (La clave para cerrar la venta)
-        // Necesitas el teléfono de la tienda. Lo tenemos en storePaymentInfo o storeData
+        // 5. ABRIR WHATSAPP
         let storePhone = "";
         if (storePaymentInfo && storePaymentInfo.telefono) {
              storePhone = storePaymentInfo.telefono.replace(/\+/g, '').replace(/\s/g, '');
         }
         
-        // Si no tienes el teléfono de la tienda a mano en la variable, usa uno genérico o trata de obtenerlo
         const waLink = `https://wa.me/${storePhone}?text=${encodeURIComponent(msg)}`;
         
-        // Usar setTimeout para asegurar que la UI se actualice antes de cambiar de ventana
         setTimeout(() => {
             window.open(waLink, '_blank');
-            alert("¡Pedido creado! Te hemos redirigido a WhatsApp para concretar el pago.");
+            // Usamos un alert más amigable o una notificación
+            showNotification("¡Pedido enviado!", "success");
         }, 500);
 
     } catch (e) { 
